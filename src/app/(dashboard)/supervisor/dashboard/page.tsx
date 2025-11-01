@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ChevronRight } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
@@ -31,10 +32,12 @@ export default function SupervisorDashboardPage() {
       <section className="w-full max-w-[1076px] space-y-6">
         <GlassCard className="rounded-3xl overflow-hidden border-0 shadow-none">
           <div className="relative w-full min-h-[180px] bg-[#0D63F3]">
-            <img
+            <Image
               src="/header-supervisor.svg"
               alt="SkyBase supervisor header"
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              priority
             />
           </div>
         </GlassCard>

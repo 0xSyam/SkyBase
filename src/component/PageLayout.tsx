@@ -10,10 +10,9 @@ interface PageLayoutProps {
   sidebarRole?: SidebarRole;
 }
 
-const PageLayout: React.FC<PageLayoutProps> = ({ 
-  children, 
+const PageLayout: React.FC<PageLayoutProps> = ({
+  children,
   showTopBar = true,
-  maxWidth = "1076px",
   contentClassName = "",
   sidebarRole = "groundcrew",
 }) => {

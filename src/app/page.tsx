@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import { ButtonBlue } from "../component/ButtonBlue";
 import { useRouter } from "next/navigation";
 
@@ -12,14 +13,8 @@ export const Login = () => {
   };
 
   return (
-    <div className="bg-[#fffeff] w-full h-screen relative overflow-hidden">
-      <img
-        className="absolute top-0 right-0 w-[50%] h-full object-contain"
-        alt="Frame"
-        src="/plane.svg"
-      />
-
-      <div className="absolute top-0 left-0 w-[50%] h-full flex items-center justify-center">
+    <div className="bg-[#fffeff] flex w-full h-screen overflow-hidden">
+      <div className="w-1/2 flex items-center justify-center">
         <div className="flex mt-[-108px] h-[332px] w-[398px] relative flex-col items-center gap-[47px]">
           <div className="relative self-stretch mt-[-1.00px] font-global-tokens-headings-h-5 text-[#01295F] text-[32px] text-center tracking-[var(--global-tokens-headings-h-5-letter-spacing)] leading-[48px] font-[700] [font-style:normal] [font-family:'Plus Jakarta Sans']">
             Welcome back!
@@ -68,6 +63,16 @@ export const Login = () => {
             onClick={handleLogin}
           />
         </div>
+      </div>
+
+      <div className="relative w-1/2 h-full">
+        <Image
+          className="object-contain"
+          alt="Frame"
+          src="/plane.svg"
+          fill
+          priority
+        />
       </div>
     </div>
   );

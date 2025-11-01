@@ -514,19 +514,19 @@ const StokBarangPage = () => {
               const isOpen = expandedGroupId === group.id;
               return (
                 <div key={group.id}>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleGroup(group.id)}
-                    className="flex w-full items-center justify-between px-6 py-4 text-left transition hover:bg-[#F7FAFC]"
-                  >
-                    <div className="flex items-center gap-3">
+                  <div className="flex w-full items-center justify-between px-6 py-4 transition hover:bg-[#F7FAFC]">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleGroup(group.id)}
+                      className="flex items-center gap-3 text-left flex-1"
+                    >
                       <span className="text-base font-semibold text-[#111827]">
                         {group.title}
                       </span>
                       <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-xs font-semibold text-[#4F46E5]">
                         {group.items.length} dokumen
                       </span>
-                    </div>
+                    </button>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -538,10 +538,13 @@ const StokBarangPage = () => {
                           +
                         </span>
                       </button>
-                      <span
+                      <button
+                        type="button"
+                        onClick={() => handleToggleGroup(group.id)}
                         className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${
                           isOpen ? "rotate-180 border-[#0D63F3]" : ""
                         }`}
+                        aria-label={isOpen ? "Tutup" : "Buka"}
                       >
                         <svg
                           width="16"
@@ -558,9 +561,9 @@ const StokBarangPage = () => {
                             strokeLinejoin="round"
                           />
                         </svg>
-                      </span>
+                      </button>
                     </div>
-                  </button>
+                  </div>
 
                   {isOpen && (
                     <div className="px-6 pb-6">

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { Plus } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
@@ -57,10 +58,10 @@ export default function SupervisorManajemenAkunPage() {
           <div className="flex items-center gap-3">
             <div className="h-9 w-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700">
               {row.avatar ? (
-                <img src={row.avatar} alt={value} className="h-full w-full object-cover" />
+                <Image src={row.avatar} alt={value as string} fill className="object-cover" />
               ) : (
                 <span className="flex h-full w-full items-center justify-center text-white text-sm font-semibold">
-                  {value.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  {(value as string).split(" ").map((n: string) => n[0]).join("").slice(0, 2)}
                 </span>
               )}
             </div>

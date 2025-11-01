@@ -5,6 +5,7 @@ export interface ColumnDef<T> {
   key: string;
   header: string;
   align?: "left" | "center" | "right";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   render?: (value: any, row: T, index: number) => React.ReactNode;
   className?: string;
 }
@@ -17,16 +18,7 @@ interface GlassDataTableProps<T> {
   variant?: "glass" | "flat";
 }
 
-/** WhiteCard di dalam GlassCard */
-const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
-  children,
-  className = "",
-}) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-[#E9EEF3] ${className}`}>
-    {children}
-  </div>
-);
-
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function GlassDataTable<T extends Record<string, any>>({
   columns,
   data,

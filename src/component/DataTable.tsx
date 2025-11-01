@@ -4,6 +4,7 @@ export interface ColumnDef<T> {
   key: string;
   header: string;
   align?: "left" | "center" | "right";
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   render?: (value: any, row: T, index: number) => React.ReactNode;
   className?: string;
 }
@@ -15,7 +16,8 @@ interface DataTableProps<T> {
   emptyMessage?: string;
 }
 
-function DataTable<T extends Record<string, any>>({ 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function DataTable<T extends Record<string, any>>({
   columns, 
   data, 
   className = "",

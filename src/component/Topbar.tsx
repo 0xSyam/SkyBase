@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Bell } from "lucide-react";
 import GlassCard from "./Glasscard";
 import type { SidebarRole } from "./Sidebar";
@@ -59,8 +60,9 @@ export default function TopBar({
         {/* Avatar */}
         <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
           {userAvatar ? (
-            <img
-              className="w-full h-full object-cover"
+            <Image
+              fill
+              className="object-cover"
               alt={`Profile picture of ${userName}`}
               src={userAvatar}
             />

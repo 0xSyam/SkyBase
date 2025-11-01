@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 
@@ -138,9 +139,11 @@ export default function WarehouseDashboardPage() {
 
   return (
     <PageLayout sidebarRole="warehouse">
-      <img
+      <Image
         src="/OBJECTS.svg"
         alt="Airplane illustration"
+        width={640}
+        height={640}
         className="
           pointer-events-none
           fixed right-0
@@ -150,6 +153,7 @@ export default function WarehouseDashboardPage() {
           select-none opacity-90
           z-0
         "
+        priority
       />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">

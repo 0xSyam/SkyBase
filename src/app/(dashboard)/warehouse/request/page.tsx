@@ -69,7 +69,8 @@ export default function RequestPage() {
   }, [rejectReason, selectedRequest]);
 
   const renderActions = useCallback(
-    (type: RequestType) => (_: unknown, row: RequestRow) => (
+    (type: RequestType) => {
+      const ActionButtons = (_: unknown, row: RequestRow) => (
       <div className="flex justify-end gap-2">
         <button
           type="button"
@@ -88,7 +89,10 @@ export default function RequestPage() {
           <Check className="h-4 w-4" />
         </button>
       </div>
-    ),
+      );
+      ActionButtons.displayName = `ActionButtons_${type}`;
+      return ActionButtons;
+    },
     [handleApproveClick, handleRejectClick],
   );
 
