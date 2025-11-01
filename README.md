@@ -45,6 +45,14 @@ SkyBase adalah prototipe dashboard operasional untuk Groundcrew, Warehouse, dan 
    ```
 3. Buka [http://localhost:3000](http://localhost:3000) di browser untuk melihat aplikasi.
 
+### Akses Dashboard
+
+Untuk mengakses dashboard sesuai peran, tambahkan path berikut setelah URL aplikasi:
+
+- **Groundcrew**: `/groundcrew/dashboard`
+- **Warehouse**: `/warehouse/dashboard`
+- **Supervisor**: `/supervisor/dashboard`
+
 ### Skrip NPM
 
 - `npm run dev` - menjalankan Next.js dengan Turbopack.
