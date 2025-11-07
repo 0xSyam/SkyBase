@@ -1,15 +1,28 @@
 import React from "react";
 import GlassCard from "./Glasscard";
 
-export interface ColumnDef<T> {
-  key: string;
-  header: string;
-  align?: "left" | "center" | "right";
-  render?: (value: any, row: T, index: number) => React.ReactNode;
-  className?: string;
-}
+type Align = "left" | "center" | "right";
+type ActionKey = "action" | "aksi";
 
-interface GlassDataTableProps<T> {
+type DataColumn<T, K extends Extract<keyof T, string> = Extract<keyof T, string>> = {
+  key: K;
+  header: string;
+  align?: Align;
+  render?: (value: T[K], row: T, index: number) => React.ReactNode;
+  className?: string;
+};
+
+type ActionColumn<T> = {
+  key: ActionKey;
+  header: string;
+  align?: Align;
+  render?: (value: undefined, row: T, index: number) => React.ReactNode;
+  className?: string;
+};
+
+export type ColumnDef<T> = DataColumn<T> | ActionColumn<T>;
+
+interface GlassDataTableProps<T extends object> {
   columns: ColumnDef<T>[];
   data: T[];
   className?: string;
@@ -18,7 +31,7 @@ interface GlassDataTableProps<T> {
   hideHeaderOnMobile?: boolean;
 }
 
-function GlassDataTable<T extends Record<string, any>>({
+function GlassDataTable<T extends object>({
   columns,
   data,
   className = "",
@@ -27,7 +40,9 @@ function GlassDataTable<T extends Record<string, any>>({
   hideHeaderOnMobile = false,
 }: GlassDataTableProps<T>) {
   const Header = () => {
-    const actionIndex = columns.findIndex((c) => c.key === "action");
+    const actionIndex = columns.findIndex(
+      (c) => c.key === "action" || c.key === "aksi"
+    );
     return (
       <div className={`${hideHeaderOnMobile ? "hidden sm:flex" : "flex"} h-[60px] px-4 items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]`}>
         {columns.map((column, idx) => {
@@ -36,7 +51,7 @@ function GlassDataTable<T extends Record<string, any>>({
           const hiddenOnMobile = !isFirst && !isAction;
           return (
             <div
-              key={column.key}
+              key={String(column.key)}
               className={`${hiddenOnMobile ? "hidden sm:flex" : "flex"} ${
                 isAction
                   ? "w-28 sm:w-44 sm:flex-shrink-0"
@@ -77,14 +92,54 @@ function GlassDataTable<T extends Record<string, any>>({
               className="hidden sm:flex h-[60px] px-4 items-center text-[#222222]"
             >
               {columns.map((column, colIndex) => {
-                const value = row[column.key];
-                const content = column.render
-                  ? column.render(value, row, rowIndex)
-                  : value ?? "-";
+                if (column.key === "action" || column.key === "aksi") {
+                  const render = (column as ActionColumn<T>).render;
+                  const content = render
+                    ? render(undefined, row, rowIndex)
+                    : null;
+                  return (
+                    <div
+                      key={String(column.key)}
+                      className={`${column.className || "w-28 sm:w-44 sm:flex-shrink-0"} ${
+                        colIndex === 0
+                          ? "font-medium tracking-tight"
+                          : "text-[15px]"
+                      } ${
+                        column.align === "center"
+                          ? "text-center"
+                          : column.align === "right"
+                          ? "text-right"
+                          : "text-left"
+                      } flex items-center ${
+                        column.align === "right"
+                          ? "justify-end"
+                          : column.align === "center"
+                          ? "justify-center"
+                          : "justify-start"
+                      }`}
+                    >
+                      {content}
+                    </div>
+                  );
+                }
+
+                const dataColumn = column as Exclude<ColumnDef<T>, ActionColumn<T>>;
+                const value = row[dataColumn.key];
+                const render = dataColumn.render;
+                const content = render
+                  ? render(
+                      // value is T[K] here
+                      value as never,
+                      row,
+                      rowIndex
+                    )
+                  : value !== null && value !== undefined
+                  ? String(value as unknown)
+                  : "-";
 
                 return (
                   <div
-                    key={column.key}
+                    key={String(column.key)}
                     className={`${column.className || "flex-1"} ${
                       colIndex === 0
                         ? "font-medium tracking-tight"
@@ -115,22 +170,35 @@ function GlassDataTable<T extends Record<string, any>>({
               <div className="text-lg font-semibold text-[#0E1D3D]">
                 {(() => {
                   const firstCol = columns[0];
+                  if (firstCol.key === "action" || firstCol.key === "aksi") return null;
                   const value = row[firstCol.key];
                   return firstCol.render
-                    ? firstCol.render(value, row, rowIndex)
-                    : value ?? "-";
+                    ? (firstCol.render as (
+                        v: never,
+                        r: T,
+                        i: number
+                      ) => React.ReactNode)(value as never, row, rowIndex)
+                    : value !== null && value !== undefined
+                    ? String(value as unknown)
+                    : "-";
                 })()}
               </div>
 
               <div className="mt-3 grid grid-cols-[auto_auto_1fr] gap-x-2 gap-y-2 text-[#0E1D3D]">
                 {columns.slice(1).map((column) => {
-                  if (column.key === "action") return null;
+                  if (column.key === "action" || column.key === "aksi") return null;
                   const value = row[column.key];
                   const content = column.render
-                    ? column.render(value, row, rowIndex)
-                    : value ?? "-";
+                    ? (column.render as (
+                        v: never,
+                        r: T,
+                        i: number
+                      ) => React.ReactNode)(value as never, row, rowIndex)
+                    : value !== null && value !== undefined
+                    ? String(value as unknown)
+                    : "-";
                   return (
-                    <React.Fragment key={`m-${column.key}`}>
+                    <React.Fragment key={`m-${String(column.key)}`}>
                       <div className="text-sm font-semibold">
                         {column.header}
                       </div>
@@ -141,14 +209,16 @@ function GlassDataTable<T extends Record<string, any>>({
                 })}
               </div>
 
-              {columns.find((c) => c.key === "action") && (
+              {columns.find((c) => c.key === "action" || c.key === "aksi") && (
                 <div className="mt-3 flex justify-end">
                   {(() => {
-                    const actionCol = columns.find((c) => c.key === "action");
+                    const actionCol = columns.find(
+                      (c) => c.key === "action" || c.key === "aksi"
+                    );
                     if (!actionCol) return null;
-                    const value = row[actionCol.key];
-                    return actionCol.render
-                      ? actionCol.render(value, row, rowIndex)
+                    const render = (actionCol as ActionColumn<T>).render;
+                    return render
+                      ? render(undefined, row, rowIndex)
                       : null;
                   })()}
                 </div>
