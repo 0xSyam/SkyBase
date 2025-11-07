@@ -107,7 +107,7 @@ const DateField: React.FC<DateFieldProps> = ({
   return (
     <label
       htmlFor={id}
-      className="group relative inline-flex items-center gap-2 rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
+      className="group relative inline-flex w-full md:w-auto flex-1 items-center gap-2 rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
     >
       <Calendar className="h-4 w-4 flex-shrink-0 text-[#0D63F3]" strokeWidth={2.5} />
       <input
@@ -116,7 +116,7 @@ const DateField: React.FC<DateFieldProps> = ({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
+        className="w-full md:w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
       />
     </label>
   );
@@ -132,24 +132,27 @@ export default function GroundcrewLaporanPage() {
         <PageHeader
           title="Laporan"
           description="Lihat dan generate laporan terkini."
+          align="center"
           action={
-            <div className="flex flex-wrap items-center justify-end gap-3 text-sm font-medium text-[#111827]">
-              <span className="whitespace-nowrap text-sm font-semibold">
+            <div className="w-full flex flex-wrap items-center justify-center gap-3 text-sm font-medium text-[#111827]">
+              <span className="w-full text-center md:w-auto whitespace-nowrap text-sm font-semibold">
                 Pilih tanggal laporan :
               </span>
-              <DateField
-                id="laporan-start-date"
-                value={startDate}
-                onChange={setStartDate}
-                placeholder="dd/mm/yyyy"
-              />
-              <span className="text-lg font-semibold text-[#94A3B8]">-</span>
-              <DateField
-                id="laporan-end-date"
-                value={endDate}
-                onChange={setEndDate}
-                placeholder="dd/mm/yyyy"
-              />
+              <div className="flex w-full md:w-auto items-center gap-3">
+                <DateField
+                  id="laporan-start-date"
+                  value={startDate}
+                  onChange={setStartDate}
+                  placeholder="dd/mm/yyyy"
+                />
+                <span className="text-lg font-semibold text-[#94A3B8]">-</span>
+                <DateField
+                  id="laporan-end-date"
+                  value={endDate}
+                  onChange={setEndDate}
+                  placeholder="dd/mm/yyyy"
+                />
+              </div>
             </div>
           }
           className="mb-0"
@@ -162,22 +165,31 @@ export default function GroundcrewLaporanPage() {
               className="overflow-hidden rounded-[32px] border border-white/40"
             >
               <div className="bg-white/80">
-                <div className="flex flex-wrap items-center justify-between gap-4 px-8 py-6">
-                  <h2 className="text-2xl font-semibold text-[#111827]">
+                <div className="flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 md:py-6">
+                  <h2 className="text-xl md:text-2xl font-semibold text-[#111827]">
                     {section.title}
                   </h2>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
-                  >
-                    <Download className="h-4 w-4" strokeWidth={2} />
-                    Unduh Laporan
-                  </button>
+                  <div className="flex items-center">
+                    <button
+                      type="button"
+                      className="sm:hidden grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
+                      aria-label="Unduh Laporan"
+                    >
+                      <Download className="h-5 w-5" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
+                    >
+                      <Download className="h-4 w-4" strokeWidth={2} />
+                      Unduh Laporan
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between bg-[#EEF5FF] px-8 py-4 text-sm font-semibold text-[#111827]">
+                <div className="flex items-center justify-between bg-[#EEF5FF] px-4 md:px-8 py-3 md:py-4 text-sm font-semibold text-[#111827]">
                   <span>Jadwal</span>
-                  <span>Action</span>
+                  <span className="hidden sm:inline">Action</span>
                 </div>
               </div>
 
@@ -185,15 +197,15 @@ export default function GroundcrewLaporanPage() {
                 {section.schedules.map((schedule, index) => (
                   <div
                     key={schedule.id}
-                    className={`flex flex-wrap items-center justify-between gap-4 px-8 py-5 ${
+                    className={`flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 ${
                       index === 0 ? "" : "border-t border-[#E4E9F2]"
                     }`}
                   >
                     <div className="space-y-2">
-                      <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
+                      <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
                         {schedule.timeRange}
                       </p>
-                      <p className="text-lg font-semibold text-[#111827]">
+                      <p className="text-base md:text-lg font-semibold text-[#111827]">
                         {schedule.aircraft}{" "}
                         <span className="font-semibold">{schedule.registration}</span>
                       </p>

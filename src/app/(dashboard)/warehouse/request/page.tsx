@@ -75,18 +75,18 @@ export default function RequestPage() {
         <button
           type="button"
           onClick={() => handleRejectClick(type, row)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#F04438] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#D6352A] active:scale-95"
+          className="inline-flex items-center justify-center rounded-xl bg-[#F04438] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#D6352A] active:scale-95"
         >
-          Tolak
-          <X className="h-4 w-4" />
+          <span className="hidden sm:inline">Tolak</span>
+          <X className="h-4 w-4 sm:ml-2" />
         </button>
         <button
           type="button"
           onClick={() => handleApproveClick(type, row)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#0B53D0] active:scale-95"
+          className="inline-flex items-center justify-center rounded-xl bg-[#0D63F3] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#0B53D0] active:scale-95"
         >
-          Setujui
-          <Check className="h-4 w-4" />
+          <span className="hidden sm:inline">Setujui</span>
+          <Check className="h-4 w-4 sm:ml-2" />
         </button>
       </div>
       );
@@ -97,7 +97,7 @@ export default function RequestPage() {
   );
 
   const documentColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
-    { key: "jenis", header: "Jenis Dokumen", align: "left" },
+    { key: "jenis", header: "Dokumen", align: "left" },
     { key: "tanggal", header: "Tanggal", align: "left" },
     { key: "jam", header: "Jam", align: "left" },
     { key: "jumlah", header: "Jumlah Request", align: "left" },
@@ -111,7 +111,7 @@ export default function RequestPage() {
   ], [renderActions]);
 
   const itemColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
-    { key: "jenis", header: "Jenis Barang", align: "left" },
+    { key: "jenis", header: "Barang", align: "left" },
     { key: "tanggal", header: "Tanggal", align: "left" },
     { key: "jam", header: "Jam", align: "left" },
     { key: "jumlah", header: "Jumlah Request", align: "left" },

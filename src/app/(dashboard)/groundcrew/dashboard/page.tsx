@@ -69,7 +69,7 @@ const ScheduleGroup: React.FC<{ title: string; items: ScheduleItem[] }> = ({
   items,
 }) => (
   <GlassCard className="p-0">
-    <div className="flex h-[60px] px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
+    <div className="flex h-[56px] md:h-[60px] px-4 md:px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
       <span>{title}</span>
       <span>Arrival</span>
       <span>Action</span>
@@ -78,10 +78,10 @@ const ScheduleGroup: React.FC<{ title: string; items: ScheduleItem[] }> = ({
       {items.map((it, idx) => (
         <div
           key={idx}
-          className="flex h-[60px] px-3 justify-between items-center text-[#222222]"
+          className="flex h-[60px] px-4 md:px-3 justify-between items-center text-[#222222]"
         >
           <span className="font-medium tracking-tight">{it.reg}</span>
-          <span className="text-[15px]">{it.time}</span>
+          <span className="text-sm md:text-[15px]">{it.time}</span>
           <button
             className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
             aria-label="Detail"
@@ -135,6 +135,19 @@ const StockTable: React.FC<{ title: string; data: StockRow[]; onMore?: () => voi
 export default function DashboardPage() {
   const groups = chunk(scheduleData, 5);
   const handleSelengkapnya = () => console.log("Selengkapnya clicked");
+  const todayLabel = React.useMemo(() => {
+    try {
+      const fmt = new Intl.DateTimeFormat("id-ID", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+      return fmt.format(new Date());
+    } catch {
+      return "Hari ini";
+    }
+  }, []);
 
   return (
     <PageLayout>
@@ -144,10 +157,10 @@ export default function DashboardPage() {
         width={640}
         height={640}
         className="
-          pointer-events-none
+          pointer-events-none hidden md:block
           fixed right-0
           top-12 md:top-8 lg:top-4
-          w-[320px] md:w-[460px] lg:w-[560px] xl:w-[640px]
+          w-[460px] lg:w-[560px] xl:w-[640px]
           h-auto
           select-none opacity-90
           z-0
@@ -159,12 +172,12 @@ export default function DashboardPage() {
         <section className="md:col-span-2 p-0">
           <div className="mb-4 grid grid-cols-2">
             <div>
-              <div className="text-sm mb-8 text-[#222222]">Senin, 12 Agustus 2025</div>
-              <h2 className="text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
+              <div className="text-sm mb-3 md:mb-8 text-[#222222] capitalize">{todayLabel}</div>
+              <h2 className="text-2xl md:text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
             </div>
             <div className="text-right">
-              <div className="text-sm mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
-              <div className="text-2xl font-semibold text-[#222222]">
+              <div className="text-sm mb-3 md:mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
+              <div className="text-2xl md:text-3xl font-semibold text-[#222222]">
                 {scheduleData.length} Pesawat
               </div>
             </div>

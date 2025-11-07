@@ -86,6 +86,12 @@ const stockGroups: StockGroup[] = [
 
 const columns: ColumnDef<StockItem>[] = [
   {
+    key: "namaDokumen",
+    header: "Dokumen",
+    align: "left",
+    className: "sm:hidden",
+  },
+  {
     key: "nomor",
     header: "Nomor",
     align: "left",
@@ -222,13 +228,10 @@ const WarehouseInventarisPage = () => {
     <PageLayout sidebarRole="warehouse">
       <section className="w-full max-w-[1076px]">
         <header className="mb-6 flex flex-col gap-4">
-          <div>
-            <h1 className="text-[28px] font-bold text-[#000000]">
-              Inventaris Warehouse
-            </h1>
-            <p className="mt-2 max-w-[520px] text-[14px] leading-relaxed text-[#6B7280]">
-              Pantau dan kelola stok dokumen serta peralatan warehouse untuk
-              mendukung kebutuhan operasional groundcrew.
+          <div className="text-center">
+            <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Inventaris</h1>
+            <p className="mt-2 text-gray-600 max-w-prose mx-auto">
+              Terima laporan dan validasi request item dari ground crew
             </p>
           </div>
 
@@ -239,7 +242,7 @@ const WarehouseInventarisPage = () => {
                 placeholder="Nama, Nomor, Revisi"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-lg border-2 border-[#0D63F3] bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]"
+                className="w-full rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white py-3 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]"
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]"
@@ -258,8 +261,8 @@ const WarehouseInventarisPage = () => {
                 />
               </svg>
             </div>
-            <button className="flex items-center gap-2 rounded-lg bg-[#0D63F3] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A4EC1]">
-              Filter
+            <button className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2">
+              <span className="hidden md:inline">Filter</span>
               <svg
                 width="18"
                 height="18"
@@ -291,7 +294,7 @@ const WarehouseInventarisPage = () => {
               const isOpen = expandedGroupId === group.id;
               return (
                 <div key={group.id}>
-                  <div className="flex w-full items-center justify-between px-6 py-4 transition hover:bg-[#F7FAFC]">
+                  <div className="flex w-full items-center justify-between px-4 md:px-6 py-4 transition hover:bg-[#F7FAFC]">
                     <button
                       type="button"
                       onClick={() => handleToggleGroup(group.id)}
@@ -308,7 +311,7 @@ const WarehouseInventarisPage = () => {
                       <button
                         type="button"
                         onClick={(event) => handleAddItem(event, group)}
-                        className="flex items-center gap-2 rounded-lg bg-[#0D63F3] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0A4EC1]"
+                        className="hidden sm:flex items-center gap-2 rounded-lg bg-[#0D63F3] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0A4EC1]"
                       >
                         Tambah
                         <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[#0D63F3] text-xs leading-none">
@@ -318,38 +321,41 @@ const WarehouseInventarisPage = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleGroup(group.id)}
-                        className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${
-                          isOpen ? "rotate-180 border-[#0D63F3]" : ""
+                        className={`grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-sm transition ${
+                          isOpen ? "" : ""
                         }`}
                         aria-label={isOpen ? "Tutup" : "Buka"}
                       >
-                        <svg
-                          width="16"
-                          height="16"
-                          viewBox="0 0 16 16"
-                          fill="none"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M4 6L8 10L12 6"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                        {isOpen ? (
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        ) : (
+                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        )}
                       </button>
                     </div>
                   </div>
 
                   {isOpen && (
-                    <div className="px-6 pb-6">
-                      <GlassDataTable
-                        columns={columns}
-                        data={group.items}
-                        variant="flat"
-                        emptyMessage="Tidak ada data inventaris"
-                      />
+                    <div className="px-3 md:px-6 pb-6">
+                      {/* Header dalam kartu ketika terbuka (sesuai mock) */}
+                      <div className="rounded-2xl overflow-hidden border border-[#E9EEF3] bg-white">
+                        <div className="flex items-center justify-between bg-[#F4F8FB] px-4 py-3">
+                          <div className="text-base font-semibold text-[#0E1D3D]">{group.title}</div>
+                        </div>
+                        <div className="p-0">
+                          <GlassDataTable
+                            columns={columns}
+                            data={group.items}
+                            variant="flat"
+                            hideHeaderOnMobile
+                            emptyMessage="Tidak ada data inventaris"
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>

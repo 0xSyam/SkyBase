@@ -55,7 +55,6 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-/** CARD putih di dalam GlassCard */
 const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   children,
   className = "",
@@ -95,18 +94,20 @@ const ScheduleGroup: React.FC<{ title: string; items: ScheduleItem[] }> = ({
   </GlassCard>
 );
 
-const StockTable: React.FC<{ title: string; data: StockRow[]; onMore?: () => void }> = ({
-  title,
-  data,
-  onMore,
-}) => (
+const StockTable: React.FC<{
+  title: string;
+  data: StockRow[];
+  onMore?: () => void;
+  leftHeader?: string;
+  rightHeader?: string;
+}> = ({ title, data, onMore, leftHeader = "Document", rightHeader = "Jumlah" }) => (
   <GlassCard className="w-full p-4">
     <div className="mb-4 flex items-center justify-between">
       <h2 className="text-2xl font-semibold text-[#222222]">{title}</h2>
       {onMore && (
         <button
           onClick={onMore}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
         >
           Selengkapnya <span>&gt;</span>
         </button>
@@ -115,8 +116,8 @@ const StockTable: React.FC<{ title: string; data: StockRow[]; onMore?: () => voi
 
     <WhiteCard className="overflow-hidden">
       <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-        <span>Document</span>
-        <span className="text-right">Jumlah</span>
+        <span>{leftHeader}</span>
+        <span className="text-right">{rightHeader}</span>
       </div>
       <div className="divide-y divide-[#E9EEF3]">
         {data.map((row, i) => (
@@ -146,9 +147,9 @@ export default function WarehouseDashboardPage() {
         height={640}
         className="
           pointer-events-none
-          fixed right-0
+          hidden md:block fixed right-0
           top-12 md:top-8 lg:top-4
-          w-[320px] md:w-[460px] lg:w-[560px] xl:w-[640px]
+          w-[460px] lg:w-[560px] xl:w-[640px]
           h-auto
           select-none opacity-90
           z-0
@@ -158,20 +159,20 @@ export default function WarehouseDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         <section className="md:col-span-2 p-0">
-          <div className="mb-4 grid grid-cols-2">
+          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-0">
             <div>
-              <div className="text-sm mb-8 text-[#222222]">Senin, 12 Agustus 2025</div>
-              <h2 className="text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
+              <div className="text-sm mb-3 sm:mb-8 text-[#222222]">Senin, 12 Agustus 2025</div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
             </div>
-            <div className="text-right">
-              <div className="text-sm mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
-              <div className="text-2xl font-semibold text-[#222222]">
+            <div className="sm:text-right">
+              <div className="text-sm mb-1 sm:mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
+              <div className="text-xl sm:text-2xl font-semibold text-[#222222]">
                 {scheduleData.length} Pesawat
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {groups.map((items, idx) => (
               <ScheduleGroup
                 key={idx}
@@ -183,21 +184,43 @@ export default function WarehouseDashboardPage() {
         </section>
 
         <aside className="flex flex-col gap-6">
-          <StockTable title="Stok Barang" data={stokBarangData} onMore={handleSelengkapnya} />
+          <StockTable
+            title="Request Item"
+            data={stokBarangData}
+            onMore={handleSelengkapnya}
+            leftHeader="Jenis Dokumen"
+            rightHeader="Jumlah Request"
+          />
+
+          <StockTable
+            title="Request Item"
+            data={aseData}
+            onMore={handleSelengkapnya}
+            leftHeader="Jenis Dokumen"
+            rightHeader="Jumlah Request"
+          />
 
           <GlassCard className="w-full p-4">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-[#222222]">ASE</h2>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-[#222222]">Riwayat</h2>
+              <button
+                onClick={handleSelengkapnya}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
+              >
+                Selengkapnya <span>&gt;</span>
+              </button>
             </div>
+            <div className="text-sm mb-4 text-[#222222]">Senin, 29 September 2025</div>
+
             <WhiteCard className="overflow-hidden">
               <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-                <span>ASE</span>
+                <span>Document</span>
                 <span className="text-right">Jumlah</span>
               </div>
               <div className="divide-y divide-[#E9EEF3]">
-                {aseData.map((row, i) => (
+                {stokBarangData.map((row, i) => (
                   <div
-                    key={`${row.document}-${i}`}
+                    key={`his-${row.document}-${i}`}
                     className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
                   >
                     <span className="truncate font-medium">{row.document}</span>

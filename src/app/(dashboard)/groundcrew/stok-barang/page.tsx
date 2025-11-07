@@ -455,14 +455,14 @@ const StokBarangPage = () => {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="relative w-full max-w-[320px] justify-end">
+          <div className="flex items-center gap-3">
+            <div className="relative w-full">
               <input
                 type="text"
                 placeholder="Nama, Nomor, Revisi"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-lg border-2 border-[#0D63F3] bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]"
+                className="w-full rounded-xl border-2 border-[#0D63F3] bg-white py-3 pl-11 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]"
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]"
@@ -481,7 +481,24 @@ const StokBarangPage = () => {
                 />
               </svg>
             </div>
-            <button className="flex items-center gap-2 rounded-lg bg-[#0D63F3] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A4EC1]">
+            <button className="grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white transition hover:bg-[#0A4EC1] md:hidden">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M3.75 5.25H14.25L9.75 10.5V13.5L8.25 15V10.5L3.75 5.25Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+            <button className="hidden md:flex items-center gap-2 rounded-lg bg-[#0D63F3] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A4EC1]">
               Filter
               <svg
                 width="18"
@@ -502,7 +519,92 @@ const StokBarangPage = () => {
           </div>
         </header>
 
-        <GlassCard className="overflow-hidden rounded-2xl">
+        <div className="md:hidden space-y-4">
+          <GlassCard className="p-4">
+            <h2 className="text-2xl font-semibold text-[#111827] mb-3">Dokumen</h2>
+            <div className="space-y-4">
+              {filteredGroups.map((group) => {
+                const isOpen = expandedGroupId === group.id;
+                return (
+                  <GlassCard key={group.id} className="p-0">
+                    <div className="flex items-center justify-between px-4 py-3 bg-[#F4F8FB] rounded-t-xl">
+                      <div className="text-base font-semibold text-[#111827]">{group.title}</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => handleAddItem(event, group)}
+                          className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
+                          aria-label="Tambah"
+                        >
+                          <span className="text-lg leading-none">+</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleGroup(group.id)}
+                          className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
+                          aria-label={isOpen ? "Tutup" : "Buka"}
+                        >
+                          <svg width="18" height="18" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    {isOpen && (
+                      <div className="">
+                        <div className="divide-y divide-[#E9EEF3]">
+                          {group.items.map((item, idx) => (
+                            <div key={idx} className="px-4 py-4 grid grid-cols-[1fr_136px] gap-3">
+                              <div className="min-w-0 grid grid-cols-[92px_1fr] gap-x-3 gap-y-2 text-sm text-[#111]">
+                                <span className="text-[#6B7280]">Nomor</span>
+                                <span className="font-medium">: {item.nomor}</span>
+                                <span className="text-[#6B7280]">Revisi</span>
+                                <span className="font-medium">: {item.revisi}</span>
+                                <span className="text-[#6B7280]">Efektif</span>
+                                <span className="font-medium inline-flex items-center gap-2">: {item.efektif}{item.hasAlert && <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]"/>}</span>
+                                <span className="text-[#6B7280]">Jumlah</span>
+                                <span className="font-medium">: {item.jumlah}</span>
+                              </div>
+                              <div className="flex items-center gap-2 self-center justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => handleEditClick(item)}
+                                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#F5C044] text-white"
+                                  aria-label="Edit"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteClick(item)}
+                                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#F04438] text-white"
+                                  aria-label="Delete"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRequestClick(item)}
+                                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white"
+                                  aria-label="Request"
+                                >
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.25 10.5L8.75 7L5.25 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </GlassCard>
+                );
+              })}
+            </div>
+          </GlassCard>
+        </div>
+
+        <GlassCard className="hidden md:block overflow-hidden rounded-2xl">
           <div className="flex items-center justify-between bg-[#F4F8FB] px-6 py-5">
             <div>
               <h2 className="text-lg font-semibold text-[#111827]">Dokumen</h2>

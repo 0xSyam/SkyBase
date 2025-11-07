@@ -106,7 +106,7 @@ const DateField: React.FC<DateFieldProps> = ({
 }) => (
   <label
     htmlFor={id}
-    className="group relative inline-flex items-center gap-2 rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
+    className="group relative inline-flex items-center gap-2 rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2.5 md:py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
   >
     <Calendar className="h-4 w-4 flex-shrink-0 text-[#0D63F3]" strokeWidth={2.5} />
     <input
@@ -115,7 +115,7 @@ const DateField: React.FC<DateFieldProps> = ({
       value={value}
       onChange={(event) => onChange(event.target.value)}
       placeholder={placeholder}
-      className="w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
+      className="w-[120px] md:w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
     />
   </label>
 );
@@ -130,18 +130,16 @@ export default function WarehouseLaporanPage() {
         <PageHeader
           title="Laporan"
           description="Lihat dan generate laporan terkini."
+          align="center"
           action={
-            <div className="flex flex-wrap items-center justify-end gap-3 text-sm font-medium text-[#111827]">
-              <span className="whitespace-nowrap text-sm font-semibold">
-                Pilih tanggal laporan :
-              </span>
+            <div className="flex items-center justify-center gap-2 md:gap-3">
               <DateField
                 id="warehouse-laporan-start-date"
                 value={startDate}
                 onChange={setStartDate}
                 placeholder="dd/mm/yyyy"
               />
-              <span className="text-lg font-semibold text-[#94A3B8]">-</span>
+              <span className="text-lg font-semibold text-[#0D63F3]">-</span>
               <DateField
                 id="warehouse-laporan-end-date"
                 value={endDate}
@@ -160,20 +158,29 @@ export default function WarehouseLaporanPage() {
               className="overflow-hidden rounded-[32px] border border-white/40"
             >
               <div className="bg-white/80">
-                <div className="flex flex-wrap items-center justify-between gap-4 px-8 py-6">
-                  <h2 className="text-2xl font-semibold text-[#111827]">
+                <div className="flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-6">
+                  <h2 className="text-xl md:text-2xl font-semibold text-[#111827]">
                     {section.title}
                   </h2>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
-                  >
-                    <Download className="h-4 w-4" strokeWidth={2} />
-                    Unduh Laporan
-                  </button>
+                  <div>
+                    <button
+                      type="button"
+                      className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 md:hidden"
+                      aria-label="Unduh Laporan"
+                    >
+                      <Download className="h-5 w-5" strokeWidth={2} />
+                    </button>
+                    <button
+                      type="button"
+                      className="hidden md:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
+                    >
+                      <Download className="h-4 w-4" strokeWidth={2} />
+                      Unduh Laporan
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-center justify-between bg-[#EEF5FF] px-8 py-4 text-sm font-semibold text-[#111827]">
+                <div className="flex items-center justify-between bg-[#EEF5FF] px-4 md:px-8 py-4 text-sm font-semibold text-[#111827]">
                   <span>Jadwal</span>
                   <span>Action</span>
                 </div>
@@ -183,7 +190,7 @@ export default function WarehouseLaporanPage() {
                 {section.schedules.map((schedule, index) => (
                   <div
                     key={schedule.id}
-                    className={`flex flex-wrap items-center justify-between gap-4 px-8 py-5 ${
+                    className={`flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 ${
                       index === 0 ? "" : "border-t border-[#E4E9F2]"
                     }`}
                   >
@@ -191,7 +198,7 @@ export default function WarehouseLaporanPage() {
                       <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
                         {schedule.timeRange}
                       </p>
-                      <p className="text-lg font-semibold text-[#111827]">
+                      <p className="text-base md:text-lg font-semibold text-[#111827]">
                         {schedule.aircraft}{" "}
                         <span className="font-semibold">{schedule.registration}</span>
                       </p>
@@ -205,7 +212,7 @@ export default function WarehouseLaporanPage() {
 
                     <button
                       type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-[#0D63F3] text-white shadow-[0_12px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
+                      className="grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_12px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
                       aria-label={`Lihat laporan ${schedule.registration}`}
                     >
                       <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
@@ -220,3 +227,9 @@ export default function WarehouseLaporanPage() {
     </PageLayout>
   );
 }
+
+
+
+
+
+
