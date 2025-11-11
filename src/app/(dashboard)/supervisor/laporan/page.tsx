@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { ArrowRight, Calendar, Download } from "lucide-react";
+import skybase from "@/lib/api/skybase";
+import { useRouter } from "next/navigation";
 
 interface ReportSchedule {
   id: string;
@@ -19,76 +21,7 @@ interface ReportSection {
   schedules: ReportSchedule[];
 }
 
-const reportSections: ReportSection[] = [
-  {
-    id: "2025-10-17",
-    title: "Jum'at, 17 Oktober 2025",
-    schedules: [
-      {
-        id: "17-1",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-2",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-3",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-4",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-    ],
-  },
-  {
-    id: "2025-10-18",
-    title: "Sabtu, 18 Oktober 2025",
-    schedules: [
-      {
-        id: "18-1",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-2",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-3",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-4",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-    ],
-  },
-];
+// Data will be fetched and grouped by date from /flights
 
 interface DateFieldProps {
   id: string;
@@ -120,8 +53,115 @@ const DateField: React.FC<DateFieldProps> = ({
 );
 
 export default function SupervisorLaporanPage() {
+  const router = useRouter();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sections, setSections] = useState<ReportSection[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await skybase.flights.list();
+        const data = (res as any)?.data;
+        const list: any[] = Array.isArray(data?.flights)
+          ? data.flights
+          : Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data)
+              ? data
+              : Array.isArray(res as any)
+                ? (res as any)
+                : [];
+
+        if (!ignore) {
+          // group flights by local date (based on sched_dep or created_at)
+          const byDate = new Map<string, ReportSection>();
+          const fmtDate = (d: Date) => {
+            try {
+              return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+            } catch {
+              return d.toDateString();
+            }
+          };
+          const toTime = (s?: string | null) => {
+            if (!s) return "--:-- WIB";
+            try {
+              const d = new Date(s);
+              return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+            } catch {
+              return "--:-- WIB";
+            }
+          };
+          for (const f of list) {
+            const basis = f?.sched_dep || f?.created_at || f?.sched_arr || null;
+            if (!basis) continue;
+            const dt = new Date(basis);
+            const id = dt.toISOString().slice(0, 10); // YYYY-MM-DD
+            const title = fmtDate(dt);
+            const sec = byDate.get(id) ?? { id, title, schedules: [] };
+            const schedule: ReportSchedule = {
+              id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
+              timeRange: `${toTime(f?.sched_dep ?? null)} - ${toTime(f?.sched_arr ?? null)}`,
+              aircraft: f?.aircraft?.type ?? "-",
+              registration: f?.aircraft?.registration_code ?? f?.registration_code ?? "-",
+              destination: f?.route_to ?? "-",
+            };
+            sec.schedules.push(schedule);
+            byDate.set(id, sec);
+          }
+          // sort by date desc
+          const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
+          setSections(sorted);
+        }
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+        if (!ignore) setSections([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, [router]);
+
+  const parseInputDate = (s: string): Date | null => {
+    const t = s.trim();
+    if (!t) return null;
+    // dd/mm/yyyy or dd-mm-yyyy
+    const m = t.match(/^([0-3]?\d)[\/-]([0-1]?\d)[\/-](\d{4})$/);
+    if (m) {
+      const dd = Number(m[1]);
+      const mm = Number(m[2]);
+      const yyyy = Number(m[3]);
+      const d = new Date(Date.UTC(yyyy, mm - 1, dd));
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const d2 = new Date(t);
+    return isNaN(d2.getTime()) ? null : d2;
+  };
+
+  const filteredSections = useMemo(() => {
+    const from = parseInputDate(startDate);
+    const to = parseInputDate(endDate);
+    if (!from && !to) return sections;
+    return sections
+      .filter((sec) => {
+        // sec.id is YYYY-MM-DD in UTC; compare by date boundaries
+        const secDate = new Date(sec.id + "T00:00:00Z");
+        if (from && secDate < from) return false;
+        if (to) {
+          const toEnd = new Date(to);
+          // include the end day fully
+          toEnd.setUTCHours(23, 59, 59, 999);
+          if (secDate > toEnd) return false;
+        }
+        return true;
+      })
+      .map((sec) => ({ ...sec }));
+  }, [sections, startDate, endDate]);
 
   return (
     <PageLayout sidebarRole="supervisor">
@@ -153,7 +193,13 @@ export default function SupervisorLaporanPage() {
         </div>
 
         <div className="space-y-8">
-          {reportSections.map((section) => (
+          {loading && filteredSections.length === 0 && (
+            <div className="text-sm text-gray-500">Memuat laporan...</div>
+          )}
+          {!loading && filteredSections.length === 0 && (
+            <div className="text-sm text-gray-500">Tidak ada data laporan pada rentang tanggal ini.</div>
+          )}
+          {filteredSections.map((section) => (
             <GlassCard key={section.id} className="overflow-hidden rounded-[32px] border border-white/40">
               <div className="flex items-center justify-between gap-4 px-6 md:px-8 py-5 bg-white/80">
                 <h2 className="text-2xl font-semibold text-[#111827]">{section.title}</h2>

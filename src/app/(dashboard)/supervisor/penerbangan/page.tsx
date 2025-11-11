@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { Clock, Plus, ChevronDown, Filter, Pencil, Trash2 } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import skybase from "@/lib/api/skybase";
+import { useRouter } from "next/navigation";
 
 interface FlightRow {
   jenisPesawat: string;
@@ -14,18 +16,11 @@ interface FlightRow {
   takeOff: string;
 }
 
-const initialFlights: FlightRow[] = [
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-  { jenisPesawat: "B738 NG", idPesawat: "PK-GFD", destinasi: "Jakarta", arrival: "18:00 WIB", takeOff: "19:30 WIB" },
-];
-
 export default function SupervisorPenerbanganPage() {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [rows, setRows] = useState<FlightRow[]>(initialFlights);
+  const [rows, setRows] = useState<FlightRow[]>([]);
+  const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FlightRow | null>(null);
@@ -37,6 +32,52 @@ export default function SupervisorPenerbanganPage() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    const loadFlights = async () => {
+      setLoading(true);
+      try {
+        const res = await skybase.flights.list();
+        const data = (res as any)?.data;
+        const list: any[] = Array.isArray(data?.flights)
+          ? data.flights
+          : Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data)
+              ? data
+              : Array.isArray(res as any)
+                ? (res as any)
+                : [];
+        if (!ignore) {
+          const fmtTime = (d?: string | null) => {
+            if (!d) return "--:-- WIB";
+            try {
+              const dt = new Date(d);
+              return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+            } catch {
+              return "--:-- WIB";
+            }
+          };
+          const mapped: FlightRow[] = list.map((f) => ({
+            jenisPesawat: f?.aircraft?.type ?? "-",
+            idPesawat: f?.aircraft?.registration_code ?? f?.registration_code ?? "-",
+            destinasi: f?.route_to ?? "-",
+            arrival: fmtTime(f?.sched_dep ?? null),
+            takeOff: fmtTime(f?.sched_arr ?? null),
+          }));
+          setRows(mapped);
+        }
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+        if (!ignore) setRows([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    loadFlights();
+    return () => { ignore = true; };
+  }, [router]);
 
   const uniqueJenisPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.jenisPesawat))), [rows]);
   const uniqueIdPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.idPesawat))), [rows]);
@@ -176,7 +217,9 @@ export default function SupervisorPenerbanganPage() {
             <div className="w-28 sm:w-44 text-right">Action</div>
           </div>
           <div className="divide-y divide-[#E9EEF3]">
-            {filteredFlights.length === 0 ? (
+            {loading && filteredFlights.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-gray-500">Memuat penerbangan...</div>
+            ) : filteredFlights.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm text-gray-500">Belum ada jadwal penerbangan</div>
             ) : (
               filteredFlights.map((item, index) => (

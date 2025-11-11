@@ -10,40 +10,18 @@ import skybase from "@/lib/api/skybase";
 
 
 type ScheduleItem = {
-  start: string; 
-  end: string; 
-  jenis: string; 
-  idPesawat: string; 
-  destination: string; 
+  start: string;
+  end: string;
+  jenis: string;
+  idPesawat: string;
+  destination: string;
 };
-
-const scheduleData: ScheduleItem[] = [
-  {
-    start: "18:00 WIB",
-    end: "19:30 WIB",
-    jenis: "B738 NG",
-    idPesawat: "PK-GFD",
-    destination: "Jakarta",
-  },
-  {
-    start: "18:00 WIB",
-    end: "19:30 WIB",
-    jenis: "B738 NG",
-    idPesawat: "PK-GFD",
-    destination: "Jakarta",
-  },
-  {
-    start: "18:00 WIB",
-    end: "19:30 WIB",
-    jenis: "B738 NG",
-    idPesawat: "PK-GFD",
-    destination: "Jakarta",
-  },
-];
 
 export default function SupervisorDashboardPage() {
   const router = useRouter();
   const [welcome, setWelcome] = React.useState<string | null>(null);
+  const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
+  const [loadingFlights, setLoadingFlights] = React.useState(false);
   React.useEffect(() => {
     let ignore = false;
     const run = async () => {
@@ -55,6 +33,51 @@ export default function SupervisorDashboardPage() {
       }
     };
     run();
+    return () => { ignore = true; };
+  }, [router]);
+  React.useEffect(() => {
+    let ignore = false;
+    const loadFlights = async () => {
+      setLoadingFlights(true);
+      try {
+        const res = await skybase.flights.list();
+        const data = (res as any)?.data;
+        const list: any[] = Array.isArray(data?.flights)
+          ? data.flights
+          : Array.isArray(data?.items)
+            ? data.items
+            : Array.isArray(data)
+              ? data
+              : Array.isArray(res as any)
+                ? (res as any)
+                : [];
+        if (!ignore) {
+          const fmtTime = (d?: string | null) => {
+            if (!d) return "--:-- WIB";
+            try {
+              const dt = new Date(d);
+              return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+            } catch {
+              return "--:-- WIB";
+            }
+          };
+          const mapped: ScheduleItem[] = list.map((f) => ({
+            start: fmtTime(f?.sched_dep ?? null),
+            end: fmtTime(f?.sched_arr ?? null),
+            jenis: f?.aircraft?.type ?? "-",
+            idPesawat: f?.aircraft?.registration_code ?? "-",
+            destination: f?.route_to ?? "-",
+          }));
+          setScheduleData(mapped);
+        }
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+        if (!ignore) setScheduleData([]);
+      } finally {
+        if (!ignore) setLoadingFlights(false);
+      }
+    };
+    loadFlights();
     return () => { ignore = true; };
   }, [router]);
   const today = React.useMemo(() => {
@@ -111,7 +134,11 @@ export default function SupervisorDashboardPage() {
             </div>
 
             <div className="divide-y divide-[#E9EEF3]">
-              {scheduleData.length === 0 ? (
+              {loadingFlights && scheduleData.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-gray-500">
+                  Memuat jadwal...
+                </div>
+              ) : scheduleData.length === 0 ? (
                 <div className="px-4 py-8 text-center text-sm text-gray-500">
                   Tidak ada jadwal hari ini
                 </div>
