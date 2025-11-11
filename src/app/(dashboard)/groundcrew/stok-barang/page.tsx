@@ -687,7 +687,7 @@ const StokBarangPage = () => {
           activeDialog &&
           createPortal(
             <div
-              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto"
               onClick={handleDialogClose}
             >
               <div
@@ -702,8 +702,8 @@ const StokBarangPage = () => {
                     ? "add-stock-title"
                     : "edit-stock-title"
                 }
-                className={`relative rounded-[32px] bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] ${
-                  activeDialog === "delete" ? "w-[360px]" : "w-[420px]"
+                className={`relative rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] w-full mx-4 sm:mx-0 max-h-[85vh] overflow-y-auto ${
+                  activeDialog === "delete" ? "max-w-[360px]" : "max-w-[420px]"
                 }`}
                 onClick={(event) => event.stopPropagation()}
               >

@@ -2,10 +2,9 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Clock, Plus, ChevronDown } from "lucide-react";
+import { Clock, Plus, ChevronDown, Filter, Pencil, Trash2 } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
-import PageHeader from "@/component/PageHeader";
-import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
+import GlassCard from "@/component/Glasscard";
 
 interface FlightRow {
   jenisPesawat: string;
@@ -124,108 +123,106 @@ export default function SupervisorPenerbanganPage() {
     setIsEditOpen(true);
   };
 
-  const columns: ColumnDef<FlightRow>[] = useMemo(
-    () => [
-      { key: "jenisPesawat", header: "Jenis Pesawat", align: "left" },
-      { key: "idPesawat", header: "Id pesawat", align: "left" },
-      { key: "destinasi", header: "Destinasi", align: "left" },
-      { key: "arrival", header: "Arrival", align: "left" },
-      { key: "takeOff", header: "Take of", align: "left" },
-      {
-        key: "action",
-        header: "Action",
-        align: "right",
-        className: "w-28 flex-shrink-0",
-        render: (_value, row, index) => (
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => openEditDialog(row, index)}
-              className="grid h-8 w-8 place-items-center rounded-lg bg-yellow-400 text-white transition hover:bg-yellow-500 active:scale-95"
-              aria-label="Edit jadwal"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-            <button
-              type="button"
-              className="grid h-8 w-8 place-items-center rounded-lg bg-red-500 text-white transition hover:bg-red-600 active:scale-95"
-              aria-label="Hapus jadwal"
-              onClick={() => openDeleteConfirm(index)}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
-        ),
-      },
-    ],
-    [openEditDialog],
-  );
-
-  const headerAction = (
-    <div className="flex items-center gap-3">
-      <div className="relative w-[260px]">
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(event) => setSearchTerm(event.target.value)}
-          placeholder="Cari Jenis, id, destinasi, dll"
-          className="w-full rounded-lg border-2 border-[#0D63F3] bg-white py-2.5 pl-10 pr-4 text-sm font-medium text-[#0D63F3] placeholder:text-[#0D63F3] focus:outline-none focus:ring-0"
-        />
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]"
-          width="18"
-          height="18"
-          viewBox="0 0 18 18"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" />
-          <path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      </div>
-      <button
-        type="button"
-        className="rounded-lg bg-[#0D63F3] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-      >
-        Filter
-      </button>
-      <button
-        type="button"
-        className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-        onClick={openCreateDialog}
-      >
-        Tambah Jadwal
-        <Plus className="h-4 w-4" />
-      </button>
-    </div>
-  );
 
   return (
     <PageLayout sidebarRole="supervisor">
       <section className="w-full max-w-[1076px] space-y-6">
-        <PageHeader
-          title="Manajemen Penerbangan"
-          description="Kelola dan tambah jadwal penerbangan terkini"
-          action={headerAction}
-        />
+        <div className="flex flex-col items-center text-center gap-2 mt-2">
+          <h1 className="text-3xl md:text-4xl font-semibold text-[#111827]">Manajemen Penerbangan</h1>
+          <p className="text-[#6B7280]">Kelola dan tambah jadwal penerbangan terkini</p>
+        </div>
 
-        <GlassDataTable
-          columns={columns}
-          data={filteredFlights}
-          emptyMessage="Belum ada jadwal penerbangan"
-        />
+        <div className="flex items-center gap-3">
+          <div className="relative flex-1">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari Jenis, id, destinasi, dll"
+              className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-[#0D63F3] bg-white text-[#0D63F3] placeholder:text-[#0D63F3] font-medium focus:outline-none"
+            />
+            <svg
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0D63F3]"
+              width="22"
+              height="22"
+              viewBox="0 0 18 18"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" />
+              <path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </div>
+          <button
+            type="button"
+            className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
+            aria-label="Filter"
+          >
+            <Filter className="w-5 h-5" />
+          </button>
+          <button
+            type="button"
+            className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
+            aria-label="Tambah Jadwal"
+            onClick={openCreateDialog}
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
+
+        <GlassCard className="overflow-hidden">
+          <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl">
+            <div className="flex-1">Jadwal</div>
+            <div className="w-28 sm:w-44 text-right">Action</div>
+          </div>
+          <div className="divide-y divide-[#E9EEF3]">
+            {filteredFlights.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-gray-500">Belum ada jadwal penerbangan</div>
+            ) : (
+              filteredFlights.map((item, index) => (
+                <div key={index} className="px-4 py-4 sm:py-5 flex items-start">
+                  <div className="flex-1 pr-4">
+                    <div className="text-[13px] sm:text-sm text-[#4B5563]">
+                      {item.arrival} - {item.takeOff}
+                    </div>
+                    <div className="mt-1 text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
+                      {item.jenisPesawat} <span className="font-semibold">{item.idPesawat}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-[#111827]">
+                      Destination : <span className="font-semibold">{item.destinasi}</span>
+                    </div>
+                  </div>
+                  <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#FACC15] text-white active:scale-95 transition hover:brightness-95"
+                      aria-label="Edit jadwal"
+                      onClick={() => openEditDialog(item, index)}
+                    >
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EF4444] text-white active:scale-95 transition hover:bg-red-600"
+                      aria-label="Hapus jadwal"
+                      onClick={() => openDeleteConfirm(index)}
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </GlassCard>
       </section>
 
       {isMounted &&
         isEditOpen &&
         editForm &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-[480px] rounded-[32px] bg-white p-8 shadow-[0px_28px_60px_rgba(14,29,61,0.12)]">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
+            <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-8 shadow-[0px_28px_60px_rgba(14,29,61,0.12)] max-h-[85vh] overflow-y-auto">
               <h2 className="text-center text-2xl font-semibold text-[#0E1D3D]">
                 {isCreateMode ? "Tambah Jadwal Penerbangan" : "Edit Jadwal Penerbangan"}
               </h2>
@@ -344,8 +341,8 @@ export default function SupervisorPenerbanganPage() {
       {isMounted &&
         isDeleteConfirmOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm">
-            <div className="w-full max-w-sm rounded-[32px] bg-white p-8 text-center shadow-[0px_18px_50px_rgba(7,34,82,0.20)]">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
+            <div className="w-full max-w-sm rounded-[32px] bg-white p-6 sm:p-8 text-center shadow-[0px_18px_50px_rgba(7,34,82,0.20)] max-h-[85vh] overflow-y-auto">
               <h2 className="text-2xl font-semibold text-[#11264D]">Hapus Jadwal?</h2>
               {pendingDeleteRow && (
                 <p className="mt-3 text-sm text-[#5B5F6B]">

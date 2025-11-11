@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Bell, Menu, X } from "lucide-react";
 import GlassCard from "./Glasscard";
-import Sidebar, { type SidebarRole } from "./Sidebar";
+import { type SidebarRole, navigationByRole } from "./Sidebar";
 
 interface TopBarProps {
   userName?: string;
@@ -19,17 +19,27 @@ export default function TopBar({
   sidebarRole,
 }: TopBarProps) {
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [dropdownHeight, setDropdownHeight] = React.useState(0);
+  const menuContentRef = React.useRef<HTMLDivElement | null>(null);
   const handleNotificationClick = () => {
     console.log("Notification clicked");
   };
+
   React.useEffect(() => {
-    if (typeof document === "undefined") return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = menuOpen ? "hidden" : prev || "";
+    const el = menuContentRef.current;
+    if (!el) return;
+    const measure = () => setDropdownHeight(el.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    window.addEventListener("orientationchange", measure);
+    window.addEventListener("resize", measure);
     return () => {
-      document.body.style.overflow = prev;
+      ro.disconnect();
+      window.removeEventListener("orientationchange", measure);
+      window.removeEventListener("resize", measure);
     };
-  }, [menuOpen]);
+  }, [sidebarRole]);
 
   const initials = userName
     .split(" ")
@@ -87,12 +97,16 @@ export default function TopBar({
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => setMenuOpen(true)}
+          onClick={() => setMenuOpen((v) => !v)}
           className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700 md:hidden"
-          aria-label="Buka menu"
+          aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
           type="button"
         >
-          <Menu className="w-5 h-5 text-white" strokeWidth={2} />
+          {menuOpen ? (
+            <X className="w-5 h-5 text-white" strokeWidth={2.25} />
+          ) : (
+            <Menu className="w-5 h-5 text-white" strokeWidth={2} />
+          )}
         </button>
         <button
           onClick={handleNotificationClick}
@@ -105,23 +119,28 @@ export default function TopBar({
       </div>
       </header>
 
-      {menuOpen && (
-        <div className="fixed inset-0 z-[100] md:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-[82vw] max-w-[320px] p-3">
-            <div className="flex justify-end mb-2">
-              <button
-                onClick={() => setMenuOpen(false)}
-                aria-label="Tutup menu"
-                className="h-9 w-9 rounded-lg bg-white text-gray-700 grid place-items-center shadow"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <Sidebar role={sidebarRole} />
-          </div>
+      <div
+        className={`md:hidden overflow-hidden transition-[max-height,opacity,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${menuOpen ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-1 pointer-events-none"}`}
+        style={{ maxHeight: menuOpen ? dropdownHeight : 0 }}
+      >
+        <div ref={menuContentRef} className="px-6 pb-6 pt-2 will-change-[transform]">
+
+          <ul className="mt-4 flex flex-col gap-5" role="list">
+            {(navigationByRole[sidebarRole ?? "groundcrew"])?.map((item) => (
+              <li key={item.href} role="listitem">
+                <Link
+                  href={item.href}
+                  onClick={() => setMenuOpen(false)}
+                  className="flex items-center gap-4 px-1.5 py-1 text-gray-900"
+                >
+                  <item.icon className="w-6 h-6 text-gray-700" />
+                  <span className="text-xl font-semibold">{item.label}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
+      </div>
     </GlassCard>
   );
 }

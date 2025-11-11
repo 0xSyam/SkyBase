@@ -368,14 +368,14 @@ const WarehouseInventarisPage = () => {
           activeDialog === "add" &&
           createPortal(
             <div
-              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto"
               onClick={handleDialogClose}
             >
               <div
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="add-stock-title"
-                className="relative w-[420px] rounded-[32px] bg-white p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)]"
+                className="relative w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] max-h-[85vh] overflow-y-auto"
                 onClick={(event) => event.stopPropagation()}
               >
                 <form onSubmit={handleAddSubmit} className="space-y-6">

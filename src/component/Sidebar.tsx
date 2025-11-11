@@ -24,7 +24,7 @@ interface SidebarItem {
   label: string;
 }
 
-const navigationByRole: Record<SidebarRole, SidebarItem[]> = {
+export const navigationByRole: Record<SidebarRole, SidebarItem[]> = {
   groundcrew: [
     { href: "/groundcrew/dashboard", icon: Home, label: "Dashboard" },
     { href: "/groundcrew/validasi-barang", icon: ClipboardCheck, label: "Validasi Barang" },
@@ -69,7 +69,6 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
         aria-label="Main navigation"
         className="flex flex-col justify-between items-start h-full"
       >
-        {/* Header */}
         <div className="flex flex-col gap-12 w-full">
           <header className="mb-2" role="banner">
             <div className="flex items-center gap-2">
@@ -78,7 +77,6 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
             </div>
           </header>
 
-          {/* Nav items */}
           <ul className="flex flex-col gap-3 w-full" role="list">
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -104,7 +102,6 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
           </ul>
         </div>
 
-        {/* Logout */}
         <button
           onClick={handleLogout}
           className="

@@ -149,12 +149,12 @@ export default function RequestPage() {
 
       {mounted && isRejectDialogOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto px-4">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="reject-dialog-title"
-              className="w-[420px] rounded-[32px] bg-white px-8 py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)]"
+              className="w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[85vh] overflow-y-auto"
             >
               <h2
                 id="reject-dialog-title"

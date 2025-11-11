@@ -20,8 +20,8 @@ interface DocumentRow {
 }
 
 interface DetailPageProps {
-  params: { registration: string };
-  searchParams: Record<string, string | string[] | undefined>;
+  params: Promise<{ registration?: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 const baseDocuments: DocumentRow[] = [
@@ -69,10 +69,13 @@ const baseDocuments: DocumentRow[] = [
 ];
 
 const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchParams }) => {
-  const registration = decodeURIComponent(params.registration || "PK-GFD").toUpperCase();
+  const resolvedParams = React.use(params);
+  const resolvedSearchParams = React.use(searchParams);
+
+  const registration = decodeURIComponent(resolvedParams?.registration || "PK-GFD").toUpperCase();
   const aircraft =
-    typeof searchParams.aircraft === "string"
-      ? decodeURIComponent(searchParams.aircraft)
+    typeof resolvedSearchParams?.aircraft === "string"
+      ? decodeURIComponent(resolvedSearchParams.aircraft)
       : "B738 NG";
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -211,12 +214,12 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
       {mounted && isDialogOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="confirmation-title"
-              className="relative w-[360px] rounded-[28px] bg-white p-8 text-center shadow-[0_24px_60px_rgba(15,23,42,0.15)]"
+              className="relative w-full mx-4 sm:mx-0 max-w-[360px] rounded-[28px] bg-white p-6 sm:p-8 text-center shadow-[0_24px_60px_rgba(15,23,42,0.15)] max-h-[85vh] overflow-y-auto"
             >
               <button
                 type="button"
