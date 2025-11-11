@@ -4,50 +4,13 @@ import React from "react";
 import Image from "next/image";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
 
 type ScheduleItem = { aircraft: string; reg: string; time: string };
 type StockRow = { document: string; jumlah: number };
 
-const scheduleData: ScheduleItem[] = [
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-];
-
-const stokBarangData: StockRow[] = [
-  { document: "SIC", jumlah: 10 },
-  { document: "QRH", jumlah: 10 },
-  { document: "OM-B2", jumlah: 10 },
-  { document: "AFM", jumlah: 10 },
-  { document: "BRAILLE", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-];
-
-const aseData: StockRow[] = [
-  { document: "SIC", jumlah: 10 },
-  { document: "QRH", jumlah: 10 },
-  { document: "OM-B2", jumlah: 10 },
-  { document: "AFM", jumlah: 10 },
-  { document: "BRAILLE", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-];
+// schedule data is fetched from /inspections/available-flights
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -133,6 +96,55 @@ const StockTable: React.FC<{ title: string; data: StockRow[]; onMore?: () => voi
 );
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const [welcome, setWelcome] = React.useState<string | null>(null);
+  const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
+  const [loadingFlights, setLoadingFlights] = React.useState(false);
+  const [docStocks, setDocStocks] = React.useState<StockRow[]>([]);
+  const [aseStocks, setAseStocks] = React.useState<StockRow[]>([]);
+  const [loadingStocks, setLoadingStocks] = React.useState(false);
+  React.useEffect(() => {
+    let ignore = false;
+    const run = async () => {
+      try {
+        const res = await skybase.dashboard.groundcrew();
+        if (!ignore) setWelcome((res as any)?.message ?? null);
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+      }
+    };
+    run();
+    return () => { ignore = true; };
+  }, [router]);
+
+  React.useEffect(() => {
+    let ignore = false;
+    const loadFlights = async () => {
+      setLoadingFlights(true);
+      try {
+        const res = await skybase.inspections.availableFlights();
+        const list: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        if (!ignore) {
+          const mapped: ScheduleItem[] = list.map((f) => {
+            const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
+            const time = arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB" : "--:-- WIB";
+            return {
+              aircraft: f?.aircraft?.type ?? "-",
+              reg: f?.aircraft?.registration_code ?? "-",
+              time,
+            };
+          });
+          setScheduleData(mapped);
+        }
+      } catch {
+        // keep empty
+      } finally {
+        if (!ignore) setLoadingFlights(false);
+      }
+    };
+    loadFlights();
+    return () => { ignore = true; };
+  }, []);
   const groups = chunk(scheduleData, 5);
   const handleSelengkapnya = () => console.log("Selengkapnya clicked");
   const todayLabel = React.useMemo(() => {
@@ -149,8 +161,62 @@ export default function DashboardPage() {
     }
   }, []);
 
+  React.useEffect(() => {
+    let ignore = false;
+    const loadStocks = async () => {
+      setLoadingStocks(true);
+      try {
+        const [invRes, docCatRes, aseCatRes] = await Promise.all([
+          skybase.inventory.groundcrewAll(),
+          skybase.inventory.itemsByCategory("DOC"),
+          skybase.inventory.itemsByCategory("ASE"),
+        ]);
+        const docs: any[] = (invRes as any)?.data?.doc_inventory ?? [];
+        const ases: any[] = (invRes as any)?.data?.ase_inventory ?? [];
+        const toArray = (input: any) => Array.isArray(input?.data) ? input.data : (Array.isArray(input?.data?.items) ? input.data.items : (Array.isArray(input) ? input : []));
+        const docCatalog: Record<number, any> = {};
+        for (const it of toArray(docCatRes)) if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
+        const aseCatalog: Record<number, any> = {};
+        for (const it of toArray(aseCatRes)) if (it?.item_id != null) aseCatalog[Number(it.item_id)] = it;
+
+        const docAgg = new Map<string, number>();
+        for (const d of docs) {
+          const name = docCatalog[Number(d?.item_id)]?.name ?? `DOC #${d?.item_id ?? "-"}`;
+          const qty = Number(d?.quantity ?? 0) || 0;
+          docAgg.set(name, (docAgg.get(name) ?? 0) + qty);
+        }
+        const aseAgg = new Map<string, number>();
+        for (const a of ases) {
+          const name = aseCatalog[Number(a?.item_id)]?.name ?? `ASE #${a?.item_id ?? "-"}`;
+          aseAgg.set(name, (aseAgg.get(name) ?? 0) + 1);
+        }
+
+        if (!ignore) {
+          const docRows: StockRow[] = Array.from(docAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a,b)=>b.jumlah-a.jumlah).slice(0, 10);
+          const aseRows: StockRow[] = Array.from(aseAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a,b)=>b.jumlah-a.jumlah).slice(0, 10);
+          setDocStocks(docRows);
+          setAseStocks(aseRows);
+        }
+      } catch {
+        if (!ignore) {
+          setDocStocks([]);
+          setAseStocks([]);
+        }
+      } finally {
+        if (!ignore) setLoadingStocks(false);
+      }
+    };
+    loadStocks();
+    return () => { ignore = true; };
+  }, []);
+
   return (
     <PageLayout>
+      {welcome && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+          {welcome}
+        </div>
+      )}
       <Image
         src="/OBJECTS.svg"
         alt="Airplane illustration"
@@ -191,34 +257,20 @@ export default function DashboardPage() {
                 items={items}
               />
             ))}
+            {loadingFlights && groups.length === 0 && (
+              <div className="text-sm text-gray-500">Memuat jadwal...</div>
+            )}
           </div>
         </section>
 
         <aside className="flex flex-col gap-6">
-          <StockTable title="Stok Barang" data={stokBarangData} onMore={handleSelengkapnya} />
+          <StockTable title="Stok Barang" data={docStocks} onMore={handleSelengkapnya} />
 
-          <GlassCard className="w-full p-4">
-            <div className="mb-4">
-              <h2 className="text-2xl font-semibold text-[#222222]">ASE</h2>
-            </div>
-            <WhiteCard className="overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-                <span>ASE</span>
-                <span className="text-right">Jumlah</span>
-              </div>
-              <div className="divide-y divide-[#E9EEF3]">
-                {aseData.map((row, i) => (
-                  <div
-                    key={`${row.document}-${i}`}
-                    className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
-                  >
-                    <span className="truncate font-medium">{row.document}</span>
-                    <span className="text-right">{row.jumlah}</span>
-                  </div>
-                ))}
-              </div>
-            </WhiteCard>
-          </GlassCard>
+          <StockTable title="ASE" data={aseStocks} onMore={handleSelengkapnya} />
+
+          {(loadingStocks && docStocks.length === 0 && aseStocks.length === 0) && (
+            <div className="text-sm text-gray-500">Memuat stok...</div>
+          )}
         </aside>
       </div>
     </PageLayout>

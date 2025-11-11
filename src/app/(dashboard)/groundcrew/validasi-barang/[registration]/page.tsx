@@ -6,6 +6,7 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { AlertCircle, ArrowRight, Check, X } from "lucide-react";
+import skybase from "@/lib/api/skybase";
 
 type DocumentStatus = "approved" | "warning";
 
@@ -24,49 +25,7 @@ interface DetailPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-const baseDocuments: DocumentRow[] = [
-  {
-    name: "SIC",
-    number: "1334",
-    revision: "001",
-    effective: "17 Oktober 2025",
-    effectiveStatus: "warning",
-    quantity: 10,
-    status: "approved"
-  },
-  {
-    name: "SIC",
-    number: "1334",
-    revision: "001",
-    effective: "17 Oktober 2025",
-    quantity: 10,
-    status: "approved"
-  },
-  {
-    name: "SIC",
-    number: "1334",
-    revision: "001",
-    effective: "17 Oktober 2025",
-    quantity: 10,
-    status: "approved"
-  },
-  {
-    name: "SIC",
-    number: "1334",
-    revision: "001",
-    effective: "17 Oktober 2025",
-    quantity: 10,
-    status: "approved"
-  },
-  {
-    name: "SIC",
-    number: "1334",
-    revision: "001",
-    effective: "17 Oktober 2025",
-    quantity: 10,
-    status: "approved"
-  }
-];
+// will be loaded from API
 
 const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchParams }) => {
   const resolvedParams = React.use(params);
@@ -80,6 +39,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [documentGroups, setDocumentGroups] = useState<DocumentRow[][]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -90,9 +52,43 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     setIsDialogOpen(false);
   };
 
-  const documentGroups = useMemo<DocumentRow[][]>(() => {
-    return [baseDocuments, baseDocuments];
-  }, []);
+  useEffect(() => {
+    const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
+    const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
+    if (!aircraftId || Number.isNaN(aircraftId)) {
+      setDocumentGroups([]);
+      return;
+    }
+    let ignore = false;
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await skybase.inspections.aircraftValidation(aircraftId);
+        const items: any[] = Array.isArray((res as any)?.data) ? (res as any).data : Array.isArray((res as any)?.data?.items) ? (res as any).data.items : [];
+        const rows: DocumentRow[] = items.map((it) => {
+          const effectiveISO = it?.effective_date ?? it?.expires_at ?? null;
+          const effective = effectiveISO ? new Date(effectiveISO).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : "-";
+          return {
+            name: it?.name || it?.item_name || it?.item?.name || "-",
+            number: it?.doc_number || it?.serial_number || "-",
+            revision: it?.revision_no || "-",
+            effective,
+            effectiveStatus: undefined,
+            quantity: Number(it?.quantity ?? 1) || 1,
+            status: "approved",
+          };
+        });
+        if (!ignore) setDocumentGroups([rows]);
+      } catch (e: any) {
+        if (!ignore) setError(e?.message || "Gagal memuat data validasi");
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, [resolvedSearchParams]);
 
   const columns = useMemo<ColumnDef<DocumentRow>[]>(() => [
     {
@@ -197,6 +193,12 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
                 emptyMessage="Tidak ada dokumen"
               />
             ))}
+            {loading && documentGroups.length === 0 && (
+              <div className="text-sm text-gray-500">Memuat data...</div>
+            )}
+            {error && (
+              <div className="text-sm text-red-600">{error}</div>
+            )}
           </div>
 
           <div className="mt-6 flex justify-end">

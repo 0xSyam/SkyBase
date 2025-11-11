@@ -3,9 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, Menu, X } from "lucide-react";
+import { Bell, Menu, X, LogOut } from "lucide-react";
 import GlassCard from "./Glasscard";
 import { type SidebarRole, navigationByRole } from "./Sidebar";
+import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
 
 interface TopBarProps {
   userName?: string;
@@ -18,11 +20,34 @@ export default function TopBar({
   userAvatar = null,
   sidebarRole,
 }: TopBarProps) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [dropdownHeight, setDropdownHeight] = React.useState(0);
   const menuContentRef = React.useRef<HTMLDivElement | null>(null);
   const handleNotificationClick = () => {
     console.log("Notification clicked");
+  };
+
+  const handleLogout = async () => {
+    // Clear local state ASAP for responsive UX
+    try {
+      await skybase.auth.logout();
+    } catch (e) {
+      // ignore network errors on logout
+    } finally {
+      try {
+        router.replace("/");
+      } finally {
+        // Hard redirect fallback to ensure navigation in all cases
+        if (typeof window !== "undefined") {
+          setTimeout(() => {
+            if (window.location.pathname !== "/") {
+              window.location.href = "/";
+            }
+          }, 50);
+        }
+      }
+    }
   };
 
   React.useEffect(() => {
@@ -116,6 +141,14 @@ export default function TopBar({
         >
           <Bell className="w-5 h-5 text-white" strokeWidth={2} />
         </button>
+        <button
+          onClick={handleLogout}
+          className="hidden md:grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
+          aria-label="Logout"
+          type="button"
+        >
+          <LogOut className="w-5 h-5 text-white" strokeWidth={2} />
+        </button>
       </div>
       </header>
 
@@ -138,6 +171,17 @@ export default function TopBar({
                 </Link>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); handleLogout(); }}
+                className="flex items-center gap-4 px-1.5 py-1 text-gray-900"
+                aria-label="Logout"
+              >
+                <LogOut className="w-6 h-6 text-gray-700" />
+                <span className="text-xl font-semibold">Logout</span>
+              </button>
+            </li>
           </ul>
         </div>
       </div>

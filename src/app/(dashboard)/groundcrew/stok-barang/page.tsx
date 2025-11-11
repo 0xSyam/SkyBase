@@ -6,6 +6,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
+import skybase from "@/lib/api/skybase";
 
 interface StockItem {
   namaDokumen: string;
@@ -43,64 +44,13 @@ interface StockAddFormData {
 
 type DialogMode = "edit" | "delete" | "request" | "add" | null;
 
-const baseItems: StockItem[] = [
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    hasAlert: true,
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-];
-
-const stockGroups: StockGroup[] = [
-  { id: "sic-doc", title: "SIC", items: baseItems },
-  {
-    id: "sop-doc",
-    title: "SOP",
-    items: baseItems.map((item) => ({ ...item, namaDokumen: "SOP" })),
-  },
-  {
-    id: "manual-doc",
-    title: "Manual",
-    items: baseItems.map((item) => ({ ...item, namaDokumen: "Manual" })),
-  },
-];
+const initialGroups: StockGroup[] = [];
 
 const StokBarangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedGroupId, setExpandedGroupId] = useState<string>(
-    stockGroups[0]?.id ?? "",
-  );
+  const [expandedGroupId, setExpandedGroupId] = useState<string>("");
+  const [groups, setGroups] = useState<StockGroup[]>(initialGroups);
+  const [loading, setLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Pick<StockGroup, "id" | "title"> | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
@@ -124,6 +74,71 @@ const StokBarangPage = () => {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [invRes, docCatalogRes] = await Promise.all([
+          skybase.inventory.groundcrewAll(),
+          skybase.inventory.itemsByCategory("DOC"),
+        ]);
+        const docs: any[] = (invRes as any)?.data?.doc_inventory ?? [];
+        const catalogItems: any[] = Array.isArray((docCatalogRes as any)?.data)
+          ? (docCatalogRes as any).data
+          : Array.isArray((docCatalogRes as any)?.data?.items)
+            ? (docCatalogRes as any).data.items
+            : [];
+        const docCatalog: Record<number, any> = {};
+        for (const it of catalogItems) {
+          if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
+        }
+
+        const bucket = new Map<string, StockItem[]>();
+        const titleFor = (name?: string): string => {
+          const n = (name || "").toLowerCase();
+          if (n.includes("sic")) return "SIC";
+          if (n.includes("sop")) return "SOP";
+          if (n.includes("manual")) return "Manual";
+          return name || "Dokumen Lainnya";
+        };
+
+        for (const d of docs) {
+          const cat = docCatalog[Number(d?.item_id)] || {};
+          const title = titleFor(cat?.name);
+          const item: StockItem = {
+            namaDokumen: cat?.name || title,
+            nomor: d?.doc_number ?? "-",
+            revisi: d?.revision_no ?? "-",
+            efektif: d?.effective_date
+              ? new Date(d.effective_date).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
+              : "-",
+            jumlah: Number(d?.quantity ?? 0) || 0,
+            hasAlert: false,
+          };
+          if (!bucket.has(title)) bucket.set(title, []);
+          bucket.get(title)!.push(item);
+        }
+
+        if (!ignore) {
+          const built: StockGroup[] = Array.from(bucket.entries())
+            .map(([title, items]) => ({ id: `${title.toLowerCase().replace(/\s+/g, "-")}-doc`, title, items }))
+            .sort((a, b) => a.title.localeCompare(b.title));
+          setGroups(built);
+          if (built[0]?.id) setExpandedGroupId(built[0].id);
+        }
+      } catch (e) {
+        if (!ignore) {
+          setGroups(initialGroups);
+        }
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
   }, []);
 
   useEffect(() => {
@@ -165,19 +180,19 @@ const StokBarangPage = () => {
 
   const filteredGroups = useMemo(() => {
     if (!searchTerm.trim()) {
-      return stockGroups;
+      return groups;
     }
 
     const query = searchTerm.toLowerCase();
-    return stockGroups.map((group) => ({
+    return groups.map((group) => ({
       ...group,
       items: group.items.filter((item) =>
         [item.namaDokumen, item.nomor, item.revisi, item.efektif]
           .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(query)),
+          .some((value) => String(value).toLowerCase().includes(query)),
       ),
     }));
-  }, [searchTerm]);
+  }, [searchTerm, groups]);
 
   const handleToggleGroup = (groupId: string) => {
     setExpandedGroupId((current) => (current === groupId ? "" : groupId));
@@ -520,6 +535,9 @@ const StokBarangPage = () => {
         </header>
 
         <div className="md:hidden space-y-4">
+          {loading && filteredGroups.length === 0 && (
+            <div className="text-center text-sm text-gray-500">Memuat stok...</div>
+          )}
           <GlassCard className="p-4">
             <h2 className="text-2xl font-semibold text-[#111827] mb-3">Dokumen</h2>
             <div className="space-y-4">
@@ -604,6 +622,9 @@ const StokBarangPage = () => {
           </GlassCard>
         </div>
 
+        {loading && filteredGroups.length === 0 && (
+          <div className="hidden md:block text-center text-sm text-gray-500">Memuat stok...</div>
+        )}
         <GlassCard className="hidden md:block overflow-hidden rounded-2xl">
           <div className="flex items-center justify-between bg-[#F4F8FB] px-6 py-5">
             <div>

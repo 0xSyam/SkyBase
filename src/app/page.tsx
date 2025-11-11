@@ -3,13 +3,44 @@
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
+import { getUser } from "@/lib/auth/storage";
 
 export default function Login() {
   const router = useRouter();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const handleLogin = () => {
-    router.push("/groundcrew/dashboard");
+  const handleLogin = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await skybase.auth.login(email, password);
+      const role = res?.data?.user?.role?.toLowerCase?.() ?? "groundcrew";
+      const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
+      router.push(target);
+    } catch (e: any) {
+      setError(e?.message || "Login gagal");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  React.useEffect(() => {
+    // If already logged in, redirect to role dashboard
+    try {
+      const user = getUser();
+      if (user && user.role) {
+        const role = String(user.role).toLowerCase();
+        const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
+        router.replace(target);
+      }
+    } catch {
+      // ignore
+    }
+  }, [router]);
 
   return (
     <div className="min-h-svh bg-[#fffeff] flex flex-col lg:flex-row overflow-hidden">
@@ -39,18 +70,16 @@ export default function Login() {
               className="space-y-6"
             >
               <div className="space-y-2">
-                <label
-                  htmlFor="username"
-                  className="text-[#222] text-sm font-medium"
-                >
-                  Username
-                </label>
+                <label htmlFor="email" className="text-[#222] text-sm font-medium">Email</label>
                 <div className="rounded-lg border border-neutral-300 shadow-[0_1px_2px_rgba(0,0,0,0.04)] px-3.5 py-2">
                   <input
-                    id="username"
-                    type="text"
-                    placeholder="Type your username"
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
                     className="w-full bg-transparent outline-none text-[#222] placeholder:text-[#d3d9e0]"
+                    required
                   />
                 </div>
               </div>
@@ -66,17 +95,25 @@ export default function Login() {
                   <input
                     id="password"
                     type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Type your password"
                     className="w-full bg-transparent outline-none text-[#222] placeholder:text-[#d3d9e0]"
+                    required
                   />
                 </div>
               </div>
 
+              {error && (
+                <div className="text-sm text-red-600">{error}</div>
+              )}
+
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#0a53c1] hover:bg-[#094db4] active:scale-[0.99] transition py-3 text-white font-semibold"
+                disabled={loading}
+                className="w-full rounded-lg bg-[#0a53c1] hover:bg-[#094db4] active:scale-[0.99] transition py-3 text-white font-semibold disabled:opacity-60"
               >
-                Login
+                {loading ? "Signing in..." : "Login"}
               </button>
             </form>
           </div>

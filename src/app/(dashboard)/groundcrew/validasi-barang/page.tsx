@@ -7,6 +7,7 @@ import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import GlassCard from "@/component/Glasscard";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
 
 interface FlightSchedule {
   aircraft: string;
@@ -14,48 +15,49 @@ interface FlightSchedule {
   destination: string;
   arrival: string;
   takeOff: string;
+  aircraftId?: number;
 }
 
-const flightSchedules: FlightSchedule[] = [
-  {
-    aircraft: "B738 NG",
-    registration: "PK-GFD",
-    destination: "Jakarta",
-    arrival: "22:00 WIB",
-    takeOff: "23:00 WIB"
-  },
-  {
-    aircraft: "B738 NG",
-    registration: "PK-GFD",
-    destination: "Jakarta",
-    arrival: "23:00 WIB",
-    takeOff: "01:00 WIB"
-  },
-  {
-    aircraft: "B738 NG",
-    registration: "PK-GFD",
-    destination: "Jakarta",
-    arrival: "23:00 WIB",
-    takeOff: "01:00 WIB"
-  },
-  {
-    aircraft: "B738 NG",
-    registration: "PK-GFD",
-    destination: "Jakarta",
-    arrival: "23:00 WIB",
-    takeOff: "01:00 WIB"
-  },
-  {
-    aircraft: "B738 NG",
-    registration: "PK-GFD",
-    destination: "Jakarta",
-    arrival: "23:00 WIB",
-    takeOff: "01:00 WIB"
-  }
+const fallbackFlights: FlightSchedule[] = [
+  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "22:00 WIB", takeOff: "23:00 WIB" },
+  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
+  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
+  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
+  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
 ];
 
 const ValidasiBarangPage = () => {
   const router = useRouter();
+  const [flights, setFlights] = React.useState<FlightSchedule[]>(fallbackFlights);
+  const [loading, setLoading] = React.useState(false);
+
+  React.useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await skybase.inspections.availableFlights();
+        const items: any[] = Array.isArray((res as any)?.data) ? ((res as any).data as any[]) : Array.isArray((res as any)?.data?.items) ? ((res as any).data.items as any[]) : [];
+        if (!ignore && items.length > 0) {
+          const mapped: FlightSchedule[] = items.map((it) => ({
+            aircraft: it?.aircraft_type || it?.aircraft?.type || "-",
+            registration: it?.registration_code || it?.registration || it?.aircraft?.registration_code || "-",
+            destination: it?.route_to || it?.destination || "-",
+            arrival: it?.sched_arr ? new Date(it.sched_arr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
+            takeOff: it?.sched_dep ? new Date(it.sched_dep).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
+            aircraftId: it?.aircraft?.aircraft_id ?? it?.aircraft_id,
+          }));
+          setFlights(mapped);
+        }
+      } catch {
+        // keep fallback
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, []);
 
   const columns: ColumnDef<FlightSchedule>[] = [
     {
@@ -89,7 +91,7 @@ const ValidasiBarangPage = () => {
             router.push(
               `/groundcrew/validasi-barang/${encodeURIComponent(
                 row.registration
-              )}?aircraft=${encodeURIComponent(row.aircraft)}`
+              )}?aircraft=${encodeURIComponent(row.aircraft)}${row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""}`
             )
           }
           className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
@@ -102,43 +104,7 @@ const ValidasiBarangPage = () => {
     }
   ];
 
-  const secondGroup: FlightSchedule[] = [
-    {
-      aircraft: "B738 NG",
-      registration: "PK-GFD",
-      destination: "Jakarta",
-      arrival: "22:00 WIB",
-      takeOff: "23:00 WIB"
-    },
-    {
-      aircraft: "B738 NG",
-      registration: "PK-GFD",
-      destination: "Jakarta",
-      arrival: "23:00 WIB",
-      takeOff: "01:00 WIB"
-    },
-    {
-      aircraft: "B738 NG",
-      registration: "PK-GFD",
-      destination: "Jakarta",
-      arrival: "23:00 WIB",
-      takeOff: "01:00 WIB"
-    },
-    {
-      aircraft: "B738 NG",
-      registration: "PK-GFD",
-      destination: "Jakarta",
-      arrival: "23:00 WIB",
-      takeOff: "01:00 WIB"
-    },
-    {
-      aircraft: "B738 NG",
-      registration: "PK-GFD",
-      destination: "Jakarta",
-      arrival: "23:00 WIB",
-      takeOff: "01:00 WIB"
-    }
-  ];
+  // removed mock secondGroup; using API data only
 
   return (
     <PageLayout>
@@ -151,7 +117,7 @@ const ValidasiBarangPage = () => {
         />
 
         <div className="md:hidden space-y-4">
-          {[flightSchedules, secondGroup].map((group, gi) => (
+          {[flights].map((group, gi) => (
             <GlassCard key={gi} className="p-0">
               <div className="flex h-[56px] px-4 items-center justify-between bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
                 <span>{group[0]?.aircraft ?? "Pesawat"}</span>
@@ -168,7 +134,7 @@ const ValidasiBarangPage = () => {
                     <button
                       onClick={() =>
                         router.push(
-                          `/groundcrew/validasi-barang/${encodeURIComponent(row.registration)}?aircraft=${encodeURIComponent(row.aircraft)}`
+                          `/groundcrew/validasi-barang/${encodeURIComponent(row.registration)}?aircraft=${encodeURIComponent(row.aircraft)}${row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""}`
                         )
                       }
                       className="h-10 w-10 rounded-xl bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
@@ -187,14 +153,10 @@ const ValidasiBarangPage = () => {
         <div className="hidden md:block space-y-4">
           <GlassDataTable
             columns={columns}
-            data={flightSchedules}
+            data={flights}
             emptyMessage="Tidak ada jadwal pesawat"
           />
-          <GlassDataTable
-            columns={columns}
-            data={secondGroup}
-            emptyMessage="Tidak ada jadwal pesawat"
-          />
+          {/* Removed mock second group */}
         </div>
       </section>
     </PageLayout>

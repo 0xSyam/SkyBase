@@ -4,6 +4,8 @@ import React from "react";
 import Image from "next/image";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
 
 type ScheduleItem = { aircraft: string; reg: string; time: string };
 type StockRow = { document: string; jumlah: number };
@@ -135,11 +137,31 @@ const StockTable: React.FC<{
 );
 
 export default function WarehouseDashboardPage() {
+  const router = useRouter();
+  const [welcome, setWelcome] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let ignore = false;
+    const run = async () => {
+      try {
+        const res = await skybase.dashboard.warehouse();
+        if (!ignore) setWelcome((res as any)?.message ?? null);
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+      }
+    };
+    run();
+    return () => { ignore = true; };
+  }, [router]);
   const groups = chunk(scheduleData, 5);
   const handleSelengkapnya = () => console.log("Selengkapnya clicked");
 
   return (
     <PageLayout sidebarRole="warehouse">
+      {welcome && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+          {welcome}
+        </div>
+      )}
       <Image
         src="/OBJECTS.svg"
         alt="Airplane illustration"

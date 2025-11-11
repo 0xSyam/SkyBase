@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useRouter, usePathname } from "next/navigation";
 import GlassCard from "./Glasscard";
+import skybase from "@/lib/api/skybase";
 
 export type SidebarRole = "groundcrew" | "warehouse" | "supervisor";
 
@@ -60,7 +61,25 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
     router.push(href);
   };
 
-  const handleLogout = () => console.log("Logout clicked");
+  const handleLogout = async () => {
+    try {
+      await skybase.auth.logout();
+    } catch (e) {
+      // ignore
+    } finally {
+      try {
+        router.replace("/");
+      } finally {
+        if (typeof window !== "undefined") {
+          setTimeout(() => {
+            if (window.location.pathname !== "/") {
+              window.location.href = "/";
+            }
+          }, 50);
+        }
+      }
+    }
+  };
 
   return (
     <GlassCard className="w-[280px] h-full p-6">

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
 import { ArrowRight, Calendar, Download } from "lucide-react";
+import skybase from "@/lib/api/skybase";
 
 interface ReportSchedule {
   id: string;
@@ -12,6 +13,9 @@ interface ReportSchedule {
   aircraft: string;
   registration: string;
   destination: string;
+  aircraftId?: number;
+  depISO?: string | null;
+  arrISO?: string | null;
 }
 
 interface ReportSection {
@@ -20,76 +24,7 @@ interface ReportSection {
   schedules: ReportSchedule[];
 }
 
-const reportSections: ReportSection[] = [
-  {
-    id: "2025-10-17",
-    title: "Jum'at, 17 Oktober 2025",
-    schedules: [
-      {
-        id: "17-1",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-2",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-3",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "17-4",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-    ],
-  },
-  {
-    id: "2025-10-18",
-    title: "Sabtu, 18 Oktober 2025",
-    schedules: [
-      {
-        id: "18-1",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-2",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-3",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-      {
-        id: "18-4",
-        timeRange: "18:00 WIB - 19:30 WIB",
-        aircraft: "B738 NG",
-        registration: "PK-GFD",
-        destination: "Jakarta",
-      },
-    ],
-  },
-];
+const fallbackSections: ReportSection[] = [];
 
 interface DateFieldProps {
   id: string;
@@ -125,6 +60,117 @@ const DateField: React.FC<DateFieldProps> = ({
 export default function GroundcrewLaporanPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [sections, setSections] = useState<ReportSection[]>(fallbackSections);
+  const [loading, setLoading] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await skybase.inspections.availableFlights();
+        const flights: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        if (!ignore) {
+          // group by local date from sched_dep
+          const byDate = new Map<string, ReportSchedule[]>();
+          for (const f of flights) {
+            const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
+            const arr = f?.sched_arr ? new Date(f.sched_arr) : null;
+            const dateKey = dep ? dep.toDateString() : arr ? arr.toDateString() : null;
+            if (!dateKey) continue;
+            const key = dateKey;
+            const timeRange = `${dep ? dep.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB - ${arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB`;
+            const item: ReportSchedule = {
+              id: String(f.flight_id ?? Math.random()),
+              timeRange,
+              aircraft: f?.aircraft?.type ?? "-",
+              registration: f?.aircraft?.registration_code ?? "-",
+              destination: f?.route_to ?? "-",
+              aircraftId: f?.aircraft?.aircraft_id,
+              depISO: f?.sched_dep ?? null,
+              arrISO: f?.sched_arr ?? null,
+            };
+            if (!byDate.has(key)) byDate.set(key, []);
+            byDate.get(key)!.push(item);
+          }
+          const formatted: ReportSection[] = Array.from(byDate.entries()).map(([k, schedules]) => {
+            const date = new Date(k);
+            const title = date.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+            return { id: date.toISOString().split("T")[0], title, schedules };
+          }).sort((a, b) => (a.id < b.id ? 1 : -1));
+          setSections(formatted);
+        }
+      } catch {
+        if (!ignore) setSections(fallbackSections);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
+    load();
+    return () => { ignore = true; };
+  }, []);
+
+  const toISODateTime = (d: Date, endOfDay = false) => {
+    if (endOfDay) {
+      const e = new Date(d);
+      e.setHours(23, 59, 59, 999);
+      return e.toISOString();
+    }
+    const s = new Date(d);
+    s.setHours(0, 0, 0, 0);
+    return s.toISOString();
+  };
+
+  const parseDDMMYYYY = (val: string): Date | null => {
+    const m = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(val);
+    if (!m) return null;
+    const dd = parseInt(m[1], 10);
+    const mm = parseInt(m[2], 10) - 1;
+    const yyyy = parseInt(m[3], 10);
+    const dt = new Date(yyyy, mm, dd);
+    return isNaN(dt.getTime()) ? null : dt;
+  };
+
+  const handleDownloadSection = async (section: ReportSection) => {
+    if (!section?.schedules?.length) return;
+    setDownloading(section.id);
+    try {
+      // Determine from/to dates
+      const from = parseDDMMYYYY(startDate) || new Date(section.id);
+      const to = parseDDMMYYYY(endDate) || new Date(section.id);
+      const fromISO = toISODateTime(from, false);
+      const toISO = toISODateTime(to, true);
+
+      const calls = section.schedules
+        .filter((s) => typeof s.aircraftId === "number")
+        .map((s) =>
+          skybase.reports.aircraftStatus({
+            aircraft_id: s.aircraftId as number,
+            from_date: fromISO,
+            to_date: toISO,
+            group_by: "daily",
+            type: "ALL",
+          }).then((res) => ({ registration: s.registration, data: res?.data }))
+        );
+      const results = await Promise.allSettled(calls);
+      const ok = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
+        .map((r) => r.value);
+      const exportBlob = new Blob([JSON.stringify({ section: section.title, from: fromISO, to: toISO, reports: ok }, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(exportBlob);
+      a.download = `laporan-${section.id}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      console.error("Failed to download report", e);
+      alert("Gagal mengunduh laporan. Coba lagi.");
+    } finally {
+      setDownloading(null);
+    }
+  };
 
   return (
     <PageLayout>
@@ -159,7 +205,10 @@ export default function GroundcrewLaporanPage() {
         />
 
         <div className="space-y-8">
-          {reportSections.map((section) => (
+          {(loading && sections.length === 0) && (
+            <div className="text-center text-sm text-gray-500">Memuat laporan...</div>
+          )}
+          {sections.map((section) => (
             <GlassCard
               key={section.id}
               className="overflow-hidden rounded-[32px] border border-white/40"
@@ -174,15 +223,19 @@ export default function GroundcrewLaporanPage() {
                       type="button"
                       className="sm:hidden grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
                       aria-label="Unduh Laporan"
+                      onClick={() => handleDownloadSection(section)}
+                      disabled={downloading === section.id}
                     >
                       <Download className="h-5 w-5" strokeWidth={2} />
                     </button>
                     <button
                       type="button"
-                      className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
+                      className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-60"
+                      onClick={() => handleDownloadSection(section)}
+                      disabled={downloading === section.id}
                     >
                       <Download className="h-4 w-4" strokeWidth={2} />
-                      Unduh Laporan
+                      {downloading === section.id ? "Mengunduh..." : "Unduh Laporan"}
                     </button>
                   </div>
                 </div>
@@ -221,6 +274,7 @@ export default function GroundcrewLaporanPage() {
                       type="button"
                       className="grid h-10 w-10 place-items-center rounded-full bg-[#0D63F3] text-white shadow-[0_12px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
                       aria-label={`Lihat laporan ${schedule.registration}`}
+                      onClick={() => handleDownloadSection({ id: schedule.id, title: schedule.registration, schedules: [schedule] })}
                     >
                       <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
                     </button>

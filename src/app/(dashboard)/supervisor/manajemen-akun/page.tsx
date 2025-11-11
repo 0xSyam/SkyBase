@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Plus, Filter } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import skybase from "@/lib/api/skybase";
 
 interface AccountRow {
   id: string;
@@ -28,9 +29,38 @@ export default function SupervisorManajemenAkunPage() {
   const [selectedAccount, setSelectedAccount] = useState<AccountRow | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [roles, setRoles] = useState<Array<{ role_id: number; name: string }>>([]);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createForm, setCreateForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    role: "groundcrew" as "groundcrew" | "warehouse" | "supervisor",
+    password: "",
+    password_confirmation: "",
+  });
 
   useEffect(() => {
     setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const loadRoles = async () => {
+      try {
+        const res = await skybase.auth.roles();
+        const list = (res as any)?.data?.roles ?? [];
+        setRoles(Array.isArray(list) ? list : []);
+      } catch {
+        setRoles([
+          { role_id: 1, name: "supervisor" },
+          { role_id: 2, name: "warehouse" },
+          { role_id: 3, name: "groundcrew" },
+        ]);
+      }
+    };
+    loadRoles();
   }, []);
 
   const closeDeleteModal = () => {
@@ -93,6 +123,7 @@ export default function SupervisorManajemenAkunPage() {
             type="button"
             className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
             aria-label="Tambah Akun"
+            onClick={() => setIsCreateOpen(true)}
           >
             <Plus className="w-5 h-5" />
           </button>
@@ -200,6 +231,139 @@ export default function SupervisorManajemenAkunPage() {
                   Cancel
                 </button>
               </div>
+            </div>
+          </div>,
+          document.body
+        )}
+      {isMounted && isCreateOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto px-4">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="create-account-title"
+              className="w-full max-w-[520px] rounded-[32px] bg-white p-6 sm:p-8 text-left shadow-xl max-h-[85vh] overflow-y-auto"
+            >
+              <h2 id="create-account-title" className="text-2xl font-semibold text-[#11264D]">Tambah Akun</h2>
+
+              <form
+                className="mt-6 space-y-4"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setCreateError(null);
+                  setCreateLoading(true);
+                  try {
+                    const payload = {
+                      name: createForm.name.trim(),
+                      email: createForm.email.trim(),
+                      phone: createForm.phone.trim() || null,
+                      role: createForm.role,
+                      password: createForm.password,
+                      password_confirmation: createForm.password_confirmation,
+                    } as const;
+                    const res = await skybase.auth.register(payload);
+                    const user = (res as any)?.data?.user;
+                    if (user) {
+                      setAccountList((prev) => [
+                        ...prev,
+                        { id: String(user.user_id ?? user.id ?? Math.random()), username: user.name, role: user.role, avatar: undefined },
+                      ]);
+                      setIsCreateOpen(false);
+                      setCreateForm({ name: "", email: "", phone: "", role: "groundcrew", password: "", password_confirmation: "" });
+                    }
+                  } catch (err: any) {
+                    const msg = err?.payload?.message || err?.message || "Gagal menambahkan akun";
+                    setCreateError(String(msg));
+                  } finally {
+                    setCreateLoading(false);
+                  }
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">Nama</label>
+                    <input
+                      value={createForm.name}
+                      onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">Email</label>
+                    <input
+                      type="email"
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">No. Telp</label>
+                    <input
+                      value={createForm.phone}
+                      onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">Role</label>
+                    <select
+                      value={createForm.role}
+                      onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as any })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 bg-white"
+                    >
+                      {(roles.length ? roles : [{ role_id: 1, name: "groundcrew" }, { role_id: 2, name: "warehouse" }]).map((r) => (
+                        <option key={r.role_id} value={r.name}>{r.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">Password</label>
+                    <input
+                      type="password"
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-semibold text-[#0E1D3D]">Konfirmasi Password</label>
+                    <input
+                      type="password"
+                      value={createForm.password_confirmation}
+                      onChange={(e) => setCreateForm({ ...createForm, password_confirmation: e.target.value })}
+                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      required
+                      minLength={6}
+                    />
+                  </div>
+                </div>
+
+                {createError && (
+                  <div className="text-sm text-red-600">{createError}</div>
+                )}
+
+                <div className="mt-6 flex gap-3 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => { setIsCreateOpen(false); setCreateError(null); }}
+                    className="rounded-full border border-[#C5D0DD] px-6 py-2.5 text-sm font-semibold text-[#0E1D3D] hover:bg-[#F8FAFF]"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={createLoading}
+                    className="rounded-full bg-[#0D63F3] px-6 py-2.5 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] hover:bg-[#0B53D0] disabled:opacity-60"
+                  >
+                    {createLoading ? "Menyimpan..." : "Simpan"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>,
           document.body

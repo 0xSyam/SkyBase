@@ -1,0 +1,6468 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Skybase",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "https://skybase.novarentech.web.id/api/"
+    }
+  ],
+  "paths": {
+    "/supervisor/dashboard": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Welcome to supervisor dashboard"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "supervisor"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/warehouse/dashboard": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Welcome to warehouse dashboard"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "warehouse"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/groundcrew/dashboard": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Welcome to ground crew dashboard"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "groundcrew"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "role"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/test": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "API is working"
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "timestamp"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "auth.login",
+        "summary": "User login",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                },
+                "required": [
+                  "email",
+                  "password"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Login successful"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": "string"
+                            },
+                            "phone": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "is_active": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "user_id",
+                            "name",
+                            "email",
+                            "phone",
+                            "role",
+                            "is_active"
+                          ]
+                        },
+                        "token": {
+                          "type": "string"
+                        },
+                        "token_type": {
+                          "type": "string",
+                          "enum": [
+                            "Bearer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "user",
+                        "token",
+                        "token_type"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Invalid credentials"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Validation failed"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Login failed"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "auth.register",
+        "summary": "User registration",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
+                  },
+                  "password": {
+                    "type": "string",
+                    "minLength": 6
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "supervisor",
+                      "warehouse",
+                      "groundcrew"
+                    ]
+                  },
+                  "password_confirmation": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                },
+                "required": [
+                  "name",
+                  "email",
+                  "password",
+                  "role",
+                  "password_confirmation"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "User registered successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "integer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "phone": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "is_active": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "user_id",
+                            "name",
+                            "email",
+                            "phone",
+                            "role",
+                            "is_active"
+                          ]
+                        },
+                        "token": {
+                          "type": "string"
+                        },
+                        "token_type": {
+                          "type": "string",
+                          "enum": [
+                            "Bearer"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "user",
+                        "token",
+                        "token_type"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Invalid role specified"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Validation failed"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Registration failed"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/roles": {
+      "get": {
+        "operationId": "auth.getRoles",
+        "summary": "Get all available roles",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "roles": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "role_id": {
+                                "type": "integer"
+                              },
+                              "name": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "role_id",
+                              "name"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "roles"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to get roles"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "auth.logout",
+        "summary": "User logout",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Logout successful"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Logout failed"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/profile": {
+      "get": {
+        "operationId": "auth.profile",
+        "summary": "Get current authenticated user profile",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "integer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "phone": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "is_active": {
+                              "type": "boolean"
+                            },
+                            "created_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "date-time"
+                            }
+                          },
+                          "required": [
+                            "user_id",
+                            "name",
+                            "email",
+                            "phone",
+                            "role",
+                            "is_active",
+                            "created_at",
+                            "updated_at"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "user"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to get profile"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "operationId": "auth.updateProfile",
+        "summary": "Update user profile",
+        "tags": [
+          "Auth"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 20
+                  },
+                  "current_password": {
+                    "type": "string"
+                  },
+                  "new_password": {
+                    "type": "string",
+                    "minLength": 6
+                  },
+                  "new_password_confirmation": {
+                    "type": "string",
+                    "minLength": 6
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Profile updated successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user": {
+                          "type": "object",
+                          "properties": {
+                            "user_id": {
+                              "type": "integer"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "email": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "phone": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "role": {
+                              "type": "string"
+                            },
+                            "is_active": {
+                              "type": "boolean"
+                            }
+                          },
+                          "required": [
+                            "user_id",
+                            "name",
+                            "email",
+                            "phone",
+                            "role",
+                            "is_active"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "user"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Current password is incorrect"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Validation failed"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to update profile"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/auth/permissions": {
+      "get": {
+        "operationId": "auth.checkPermissions",
+        "summary": "Check user permissions for specific role",
+        "tags": [
+          "Auth"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "user_id": {
+                          "type": "integer"
+                        },
+                        "role": {
+                          "type": "string"
+                        },
+                        "permissions": {
+                          "type": "object",
+                          "properties": {
+                            "is_supervisor": {
+                              "type": "string"
+                            },
+                            "is_warehouse": {
+                              "type": "string"
+                            },
+                            "is_groundcrew": {
+                              "type": "string"
+                            },
+                            "can_manage_users": {
+                              "type": "string"
+                            },
+                            "can_manage_inventory": {
+                              "type": "string",
+                              "description": "MVP: Ground Crew turut mengelola inventory (CRUD item & stok)"
+                            },
+                            "can_manage_flights": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "is_supervisor",
+                            "is_warehouse",
+                            "is_groundcrew",
+                            "can_manage_users",
+                            "can_manage_inventory",
+                            "can_manage_flights"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "user_id",
+                        "role",
+                        "permissions"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to check permissions"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/flights": {
+      "get": {
+        "operationId": "flight.index",
+        "summary": "GET /api/flights - list scheduled flights\nRoles: supervisor | groundcrew",
+        "tags": [
+          "Flight"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "flights": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "flight_id": {
+                                "type": "integer"
+                              },
+                              "aircraft": {
+                                "type": "object",
+                                "properties": {
+                                  "aircraft_id": {
+                                    "type": "integer"
+                                  },
+                                  "registration_code": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  },
+                                  "type": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "aircraft_id",
+                                  "registration_code",
+                                  "type"
+                                ]
+                              },
+                              "route_to": {
+                                "type": "string"
+                              },
+                              "sched_dep": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "sched_arr": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "status": {
+                                "type": "string"
+                              },
+                              "rescheduled_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "supervisor": {
+                                "type": "object",
+                                "properties": {
+                                  "user_id": {
+                                    "type": "integer"
+                                  },
+                                  "name": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "user_id",
+                                  "name"
+                                ]
+                              },
+                              "created_at": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              }
+                            },
+                            "required": [
+                              "flight_id",
+                              "aircraft",
+                              "route_to",
+                              "sched_dep",
+                              "sched_arr",
+                              "status",
+                              "rescheduled_at",
+                              "supervisor",
+                              "created_at"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "flights"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "flight.store",
+        "summary": "POST /api/flights - create schedule\nRole: supervisor",
+        "tags": [
+          "Flight"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "aircraft_id": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "registration_code": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "route_to": {
+                    "type": "string"
+                  },
+                  "sched_dep": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "sched_arr": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "READY",
+                      "DELAY",
+                      "SCHEDULED"
+                    ]
+                  }
+                },
+                "required": [
+                  "route_to",
+                  "sched_dep"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Flight created"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "flight_id": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "flight_id"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Aircraft not found by registration_code"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "error"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "enum": [
+                            "aircraft_id or registration_code is required"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "message"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "error"
+                          ]
+                        },
+                        "errors": {
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "errors"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/flights/{flight}/reschedule": {
+      "put": {
+        "operationId": "flight.reschedule",
+        "summary": "PUT /api/flights/{flight}/reschedule - reschedule departure/arrival\nRole: supervisor",
+        "tags": [
+          "Flight"
+        ],
+        "parameters": [
+          {
+            "name": "flight",
+            "in": "path",
+            "required": true,
+            "description": "The flight flight id",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sched_dep": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "sched_arr": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "status": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "READY",
+                      "DELAY",
+                      "SCHEDULED"
+                    ]
+                  }
+                },
+                "required": [
+                  "sched_dep"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Flight rescheduled"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "flight_id": {
+                          "type": "integer"
+                        },
+                        "sched_dep": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "sched_arr": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "status": {
+                          "type": "string"
+                        },
+                        "rescheduled_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "flight_id",
+                        "sched_dep",
+                        "sched_arr",
+                        "status",
+                        "rescheduled_at"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/aircraft": {
+      "post": {
+        "operationId": "flight.storeAircraft",
+        "summary": "POST /api/aircraft - input aircraft data (and type if needed)\nRole: supervisor",
+        "tags": [
+          "Flight"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type_code": {
+                    "type": "string"
+                  },
+                  "registration_code": {
+                    "type": "string"
+                  },
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "type_code",
+                  "registration_code"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Aircraft created"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "aircraft_id": {
+                          "type": "integer"
+                        },
+                        "type_code": {
+                          "type": "string"
+                        },
+                        "registration_code": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "aircraft_id",
+                        "type_code",
+                        "registration_code"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/available-flights": {
+      "get": {
+        "operationId": "inspection.getAvailableFlights",
+        "summary": "Get flight schedules available for inspection\nOnly shows flights that are SCHEDULED or READY",
+        "tags": [
+          "Inspection"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "flight_id": {
+                            "type": "integer"
+                          },
+                          "aircraft": {
+                            "type": "object",
+                            "properties": {
+                              "aircraft_id": {
+                                "type": "integer"
+                              },
+                              "registration_code": {
+                                "type": "string"
+                              },
+                              "type": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "aircraft_id",
+                              "registration_code",
+                              "type"
+                            ]
+                          },
+                          "route_to": {
+                            "type": "string"
+                          },
+                          "sched_dep": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "sched_arr": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "has_inspection": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "flight_id",
+                          "aircraft",
+                          "route_to",
+                          "sched_dep",
+                          "sched_arr",
+                          "status",
+                          "has_inspection"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/my-inspections": {
+      "get": {
+        "operationId": "inspection.getMyInspections",
+        "summary": "Get my inspection history",
+        "tags": [
+          "Inspection"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "inspection_id": {
+                            "type": "integer"
+                          },
+                          "flight": {
+                            "type": "object",
+                            "properties": {
+                              "flight_id": {
+                                "type": "integer"
+                              },
+                              "route_to": {
+                                "type": "string"
+                              },
+                              "sched_dep": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "date-time"
+                              },
+                              "aircraft": {
+                                "type": "object",
+                                "properties": {
+                                  "registration_code": {
+                                    "type": "string"
+                                  },
+                                  "type": {
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "registration_code",
+                                  "type"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "flight_id",
+                              "route_to",
+                              "sched_dep",
+                              "aircraft"
+                            ]
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "started_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "completed_at": {
+                            "type": [
+                              "string",
+                              "null"
+                            ],
+                            "format": "date-time"
+                          },
+                          "overall_status": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "duration_minutes": {
+                            "type": "string"
+                          },
+                          "items_count": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "items_passed": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "items_failed": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "inspection_id",
+                          "flight",
+                          "status",
+                          "started_at",
+                          "completed_at",
+                          "overall_status",
+                          "duration_minutes",
+                          "items_count",
+                          "items_passed",
+                          "items_failed"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/summary": {
+      "get": {
+        "operationId": "inspection.getInspectionSummary",
+        "summary": "Get inspection summary statistics",
+        "tags": [
+          "Inspection"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total_inspections": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "completed_inspections": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "in_progress_inspections": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "passed_inspections": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "failed_inspections": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "avg_inspection_time": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "integer"
+                            },
+                            {
+                              "type": "null"
+                            },
+                            {
+                              "type": "integer",
+                              "enum": [
+                                0
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "total_inspections",
+                        "completed_inspections",
+                        "in_progress_inspections",
+                        "passed_inspections",
+                        "failed_inspections",
+                        "avg_inspection_time"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/groundcrew": {
+      "get": {
+        "operationId": "inventory.getMyInventory",
+        "summary": "Get groundcrew inventory (DOC & ASE)",
+        "tags": [
+          "Inventory"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "doc_inventory": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/GcDocInventory"
+                          }
+                        },
+                        "ase_inventory": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/GcAseInventory"
+                          }
+                        }
+                      },
+                      "required": [
+                        "doc_inventory",
+                        "ase_inventory"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/groundcrew/doc": {
+      "post": {
+        "operationId": "inventory.addDocItem",
+        "summary": "Add DOC item to groundcrew inventory",
+        "tags": [
+          "Inventory"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "integer"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "doc_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "revision_no": {
+                    "type": "string",
+                    "maxLength": 50
+                  },
+                  "effective_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "condition": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "quantity",
+                  "revision_no"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "DOC item added to inventory"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GcDocInventory"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item must be DOC category"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/inventory/groundcrew/ase": {
+      "post": {
+        "operationId": "inventory.addAseItem",
+        "summary": "Add ASE item to groundcrew inventory",
+        "tags": [
+          "Inventory"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "item_id": {
+                    "type": "integer"
+                  },
+                  "serial_number": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "seal_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "expires_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "condition": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "item_id",
+                  "serial_number"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "ASE item added to inventory"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/GcAseInventory"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item must be ASE category"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/inventory/groundcrew/transfer-to-aircraft": {
+      "post": {
+        "operationId": "inventory.transferToAircraft",
+        "summary": "Transfer item from GC inventory to aircraft",
+        "tags": [
+          "Inventory"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "doc",
+                      "ase"
+                    ]
+                  },
+                  "inventory_id": {
+                    "type": "integer"
+                  },
+                  "aircraft_id": {
+                    "type": "integer"
+                  },
+                  "quantity": {
+                    "type": "integer",
+                    "minimum": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "inventory_id",
+                  "aircraft_id"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "ASE item transferred to aircraft"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/AircraftAseInventory"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to transfer item"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/aircraft/{aircraftId}": {
+      "get": {
+        "operationId": "inventory.getAircraftInventory",
+        "summary": "Get aircraft inventory",
+        "tags": [
+          "Inventory"
+        ],
+        "parameters": [
+          {
+            "name": "aircraftId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "aircraft": {
+                          "type": "string"
+                        },
+                        "doc_inventory": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AircraftDocInventory"
+                          }
+                        },
+                        "ase_inventory": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/AircraftAseInventory"
+                          }
+                        }
+                      },
+                      "required": [
+                        "aircraft",
+                        "doc_inventory",
+                        "ase_inventory"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/inventory/items/{category}": {
+      "get": {
+        "operationId": "inventory.getAvailableItems",
+        "summary": "Get available items for inventory",
+        "tags": [
+          "Inventory"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "description": "**Optional**",
+            "schema": {
+              "type": "string",
+              "default": null
+            },
+            "x-optional": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemCatalog"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/items": {
+      "get": {
+        "operationId": "item.index",
+        "summary": "Get all items from catalog",
+        "tags": [
+          "Item"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemCatalog"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      },
+      "post": {
+        "operationId": "item.store",
+        "summary": "Create new item (supervisor only)",
+        "tags": [
+          "Item"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "DOC",
+                      "ASE"
+                    ]
+                  },
+                  "unit": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 50
+                  },
+                  "requires_doc_number": {
+                    "type": "boolean"
+                  },
+                  "requires_revision": {
+                    "type": "boolean"
+                  },
+                  "requires_effective": {
+                    "type": "boolean"
+                  },
+                  "requires_serial": {
+                    "type": "boolean"
+                  },
+                  "requires_seal": {
+                    "type": "boolean"
+                  },
+                  "requires_expiry": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "name",
+                  "category"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item created successfully"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ItemCatalog"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    },
+    "/items/{id}": {
+      "get": {
+        "operationId": "item.show",
+        "summary": "Get single item detail",
+        "tags": [
+          "Item"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      },
+      "put": {
+        "operationId": "item.update",
+        "summary": "Update item (supervisor can edit all, groundcrew can edit specific fields)",
+        "tags": [
+          "Item"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "maxLength": 255
+                  },
+                  "category": {
+                    "type": "string",
+                    "enum": [
+                      "DOC",
+                      "ASE"
+                    ]
+                  },
+                  "unit": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 50
+                  },
+                  "requires_doc_number": {
+                    "type": "boolean"
+                  },
+                  "requires_revision": {
+                    "type": "boolean"
+                  },
+                  "requires_effective": {
+                    "type": "boolean"
+                  },
+                  "requires_serial": {
+                    "type": "boolean"
+                  },
+                  "requires_seal": {
+                    "type": "boolean"
+                  },
+                  "requires_expiry": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "In real app, this would update inventory tables, not catalog\nFor now, just return success without actual update",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "success"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "enum": [
+                            "Item updated successfully"
+                          ]
+                        },
+                        "data": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "message",
+                        "data"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "success"
+                          ]
+                        },
+                        "message": {
+                          "type": "string",
+                          "enum": [
+                            "Item updated successfully (demo)"
+                          ]
+                        },
+                        "data": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "message",
+                        "data"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "No valid fields to update for your role"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "item.destroy",
+        "summary": "Delete item (supervisor only)",
+        "tags": [
+          "Item"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item deleted successfully"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Cannot delete item that is referenced in warehouse requests"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/items/{id}/requirements": {
+      "get": {
+        "operationId": "item.getRequirements",
+        "summary": "Get item requirements for specific aircraft type",
+        "tags": [
+          "Item"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "item": {
+                          "type": "string"
+                        },
+                        "requirements": {
+                          "type": "string"
+                        },
+                        "editable_fields": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "item",
+                        "requirements",
+                        "editable_fields"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/items/category/{category}": {
+      "get": {
+        "operationId": "item.getByCategory",
+        "summary": "Get items by category",
+        "tags": [
+          "Item"
+        ],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ItemCatalog"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Invalid category. Must be DOC or ASE"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications": {
+      "get": {
+        "operationId": "notification.index",
+        "summary": "Get all notifications for the authenticated user",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "notification_id": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "related_type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "related_id": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "is_broadcast": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "time_ago": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "notification_id",
+                          "type",
+                          "message",
+                          "related_type",
+                          "related_id",
+                          "is_broadcast",
+                          "created_at",
+                          "time_ago"
+                        ]
+                      }
+                    },
+                    "count": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications/type/{type}": {
+      "get": {
+        "operationId": "notification.getByType",
+        "summary": "Get notifications by type for the authenticated user",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "notification_id": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "related_type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "related_id": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "is_broadcast": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "time_ago": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "notification_id",
+                          "type",
+                          "message",
+                          "related_type",
+                          "related_id",
+                          "is_broadcast",
+                          "created_at",
+                          "time_ago"
+                        ]
+                      }
+                    },
+                    "type": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "type",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications/recent": {
+      "get": {
+        "operationId": "notification.recent",
+        "summary": "Get recent notifications (last 7 days)",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": 7
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "notification_id": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "related_type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "related_id": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "is_broadcast": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "time_ago": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "notification_id",
+                          "type",
+                          "message",
+                          "related_type",
+                          "related_id",
+                          "is_broadcast",
+                          "created_at",
+                          "time_ago"
+                        ]
+                      }
+                    },
+                    "days": {},
+                    "count": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "days",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications/today": {
+      "get": {
+        "operationId": "notification.today",
+        "summary": "Get today's notifications",
+        "tags": [
+          "Notification"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "notification_id": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "related_type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "related_id": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "is_broadcast": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "time_ago": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "notification_id",
+                          "type",
+                          "message",
+                          "related_type",
+                          "related_id",
+                          "is_broadcast",
+                          "created_at",
+                          "time_ago"
+                        ]
+                      }
+                    },
+                    "count": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "count"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications/stats": {
+      "get": {
+        "operationId": "notification.stats",
+        "summary": "Get notification statistics",
+        "tags": [
+          "Notification"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "today": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "this_week": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "by_type": {
+                          "type": "object",
+                          "properties": {
+                            "flight": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "expiry": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "inspection": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "request": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "flight",
+                            "expiry",
+                            "inspection",
+                            "request"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "today",
+                        "this_week",
+                        "by_type"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/notifications/item/{relatedType}/{relatedId}": {
+      "get": {
+        "operationId": "notification.getForItem",
+        "summary": "Get notifications for a specific item (for alert buttons)\nUse case: Show alert icon next to item name in inventory list",
+        "tags": [
+          "Notification"
+        ],
+        "parameters": [
+          {
+            "name": "relatedType",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "relatedId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "notification_id": {
+                            "type": "integer"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "message": {
+                            "type": "string"
+                          },
+                          "related_type": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "related_id": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          },
+                          "is_broadcast": {
+                            "type": "boolean"
+                          },
+                          "created_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "time_ago": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "notification_id",
+                          "type",
+                          "message",
+                          "related_type",
+                          "related_id",
+                          "is_broadcast",
+                          "created_at",
+                          "time_ago"
+                        ]
+                      }
+                    },
+                    "related_type": {
+                      "type": "string"
+                    },
+                    "related_id": {
+                      "type": "integer"
+                    },
+                    "count": {
+                      "type": "string"
+                    },
+                    "has_alerts": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data",
+                    "related_type",
+                    "related_id",
+                    "count",
+                    "has_alerts"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          }
+        }
+      }
+    },
+    "/reports/aircraft-status": {
+      "get": {
+        "operationId": "report.getAircraftStatusReport",
+        "summary": "Get aircraft inventory status report",
+        "tags": [
+          "Report"
+        ],
+        "parameters": [
+          {
+            "name": "aircraft_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "daily",
+                "weekly",
+                "monthly"
+              ]
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "ASE",
+                "DOC",
+                "ALL"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "aircraft": {
+                          "type": "object",
+                          "properties": {
+                            "aircraft_id": {
+                              "type": "string"
+                            },
+                            "registration_code": {
+                              "type": "string"
+                            },
+                            "type": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Unknown"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "aircraft_id",
+                            "registration_code",
+                            "type"
+                          ]
+                        },
+                        "period": {
+                          "type": "object",
+                          "properties": {
+                            "from": {
+                              "type": "string"
+                            },
+                            "to": {
+                              "type": "string"
+                            },
+                            "interval": {}
+                          },
+                          "required": [
+                            "from",
+                            "to",
+                            "interval"
+                          ]
+                        },
+                        "current_inventory": {
+                          "type": "object",
+                          "properties": {
+                            "total_items": {
+                              "type": "integer",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            "valid_items": {
+                              "type": "integer",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            "expired_items": {
+                              "type": "integer",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            "expiring_soon": {
+                              "type": "integer",
+                              "enum": [
+                                0
+                              ]
+                            },
+                            "by_category": {
+                              "type": "object",
+                              "description": "Within 7 days",
+                              "properties": {
+                                "ASE": {
+                                  "type": "object",
+                                  "properties": {
+                                    "total": {
+                                      "type": "string"
+                                    },
+                                    "valid": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    },
+                                    "expired": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    },
+                                    "expiring_soon": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "total",
+                                    "valid",
+                                    "expired",
+                                    "expiring_soon"
+                                  ]
+                                },
+                                "DOC": {
+                                  "type": "object",
+                                  "properties": {
+                                    "total": {
+                                      "type": "string"
+                                    },
+                                    "valid": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    },
+                                    "expired": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    },
+                                    "expiring_soon": {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "total",
+                                    "valid",
+                                    "expired",
+                                    "expiring_soon"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "ASE",
+                                "DOC"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "total_items",
+                            "valid_items",
+                            "expired_items",
+                            "expiring_soon",
+                            "by_category"
+                          ]
+                        },
+                        "summary": {
+                          "type": "object",
+                          "properties": {
+                            "inventory_health": {
+                              "type": "object",
+                              "properties": {
+                                "total_items": {
+                                  "type": "integer",
+                                  "enum": [
+                                    0
+                                  ]
+                                },
+                                "valid_items": {
+                                  "type": "integer",
+                                  "enum": [
+                                    0
+                                  ]
+                                },
+                                "expired_items": {
+                                  "type": "integer",
+                                  "enum": [
+                                    0
+                                  ]
+                                },
+                                "expiring_soon": {
+                                  "type": "integer",
+                                  "enum": [
+                                    0
+                                  ]
+                                },
+                                "health_percentage": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "total_items",
+                                "valid_items",
+                                "expired_items",
+                                "expiring_soon",
+                                "health_percentage"
+                              ]
+                            },
+                            "inspection_performance": {
+                              "type": "object",
+                              "properties": {
+                                "total_inspections": {
+                                  "type": "integer"
+                                },
+                                "passed_inspections": {
+                                  "type": "integer"
+                                },
+                                "failed_inspections": {
+                                  "type": "integer"
+                                },
+                                "pass_rate": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "integer",
+                                      "enum": [
+                                        0
+                                      ]
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "total_inspections",
+                                "passed_inspections",
+                                "failed_inspections",
+                                "pass_rate"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "inventory_health",
+                            "inspection_performance"
+                          ]
+                        },
+                        "timeline": {
+                          "type": "array",
+                          "items": {}
+                        }
+                      },
+                      "required": [
+                        "aircraft",
+                        "period",
+                        "current_inventory",
+                        "summary",
+                        "timeline"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Validation failed"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to generate report"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/fleet-summary": {
+      "get": {
+        "operationId": "report.getFleetInspectionSummary",
+        "summary": "Get inspection summary for multiple aircraft",
+        "tags": [
+          "Report"
+        ],
+        "parameters": [
+          {
+            "name": "from_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to_date",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "This would aggregate data across all aircraft\nImplementation can be added later if needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Fleet inspection summary endpoint - Coming soon"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Validation failed"
+                      ]
+                    },
+                    "errors": {
+                      "type": "object"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "errors"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to generate fleet summary"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/aircraft/{aircraftId}/validation": {
+      "get": {
+        "operationId": "simpleInspection.getAircraftValidation",
+        "summary": "Get aircraft validation page for inspection\nShows all items for specific aircraft",
+        "tags": [
+          "SimpleInspection"
+        ],
+        "parameters": [
+          {
+            "name": "aircraftId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "inspection_id": {
+                          "type": "integer"
+                        },
+                        "aircraft": {
+                          "type": "object",
+                          "properties": {
+                            "aircraft_id": {
+                              "type": "string"
+                            },
+                            "jenis_pesawat": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Unknown"
+                                  ]
+                                }
+                              ]
+                            },
+                            "kode_pesawat": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "aircraft_id",
+                            "jenis_pesawat",
+                            "kode_pesawat"
+                          ]
+                        },
+                        "flight": {
+                          "type": "object",
+                          "properties": {
+                            "flight_id": {
+                              "type": "integer"
+                            },
+                            "route_to": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "string",
+                                  "enum": [
+                                    "Unknown"
+                                  ]
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "flight_id",
+                            "route_to"
+                          ]
+                        },
+                        "progress": {
+                          "type": "object",
+                          "properties": {
+                            "total_items": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "checked_items": {
+                              "type": "string"
+                            },
+                            "completion_percentage": {
+                              "type": "number"
+                            },
+                            "items_need_replacement": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "total_items",
+                            "checked_items",
+                            "completion_percentage",
+                            "items_need_replacement"
+                          ]
+                        },
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "inspection_id",
+                        "aircraft",
+                        "flight",
+                        "progress",
+                        "items"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/inspections/items/{inspectionItemId}/toggle": {
+      "put": {
+        "operationId": "simpleInspection.toggleItemCheck",
+        "summary": "Toggle check status of inspection item",
+        "tags": [
+          "SimpleInspection"
+        ],
+        "parameters": [
+          {
+            "name": "inspectionItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item status updated successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "inspection_item_id": {
+                          "type": "string"
+                        },
+                        "is_checked": {
+                          "type": "string"
+                        },
+                        "needs_replacement": {
+                          "type": "string"
+                        },
+                        "checked_at": {
+                          "type": "string"
+                        },
+                        "inspection_completed": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "inspection_item_id",
+                        "is_checked",
+                        "needs_replacement",
+                        "checked_at",
+                        "inspection_completed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Cannot modify completed inspection"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to update item status"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/items/{inspectionItemId}/replace": {
+      "put": {
+        "operationId": "simpleInspection.replaceItem",
+        "summary": "Replace item in aircraft inventory",
+        "tags": [
+          "SimpleInspection"
+        ],
+        "parameters": [
+          {
+            "name": "inspectionItemId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "replacement_serial": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 50
+                  },
+                  "replacement_doc_number": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 50
+                  },
+                  "replacement_revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 10
+                  },
+                  "replacement_effective_date": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "replacement_expires_at": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Item replaced successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "inspection_item_id": {
+                          "type": "string"
+                        },
+                        "is_checked": {
+                          "type": "boolean"
+                        },
+                        "needs_replacement": {
+                          "type": "boolean"
+                        },
+                        "checked_at": {
+                          "type": "string"
+                        },
+                        "inspection_completed": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "inspection_item_id",
+                        "is_checked",
+                        "needs_replacement",
+                        "checked_at",
+                        "inspection_completed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to replace item"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inspections/{inspectionId}/submit": {
+      "put": {
+        "operationId": "simpleInspection.submitInspection",
+        "summary": "Submit/Complete inspection",
+        "tags": [
+          "SimpleInspection"
+        ],
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "notes": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Inspection completed successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "inspection_id": {
+                          "type": "integer"
+                        },
+                        "overall_status": {
+                          "type": "string",
+                          "enum": [
+                            "FAIL",
+                            "PASS"
+                          ]
+                        },
+                        "aircraft_status": {
+                          "type": "string"
+                        },
+                        "completed_at": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "completion_percentage": {
+                          "type": "number"
+                        },
+                        "items_checked": {
+                          "type": "string"
+                        },
+                        "items_need_replacement": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "inspection_id",
+                        "overall_status",
+                        "aircraft_status",
+                        "completed_at",
+                        "completion_percentage",
+                        "items_checked",
+                        "items_need_replacement"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Inspection already completed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to complete inspection"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/warehouse-requests": {
+      "get": {
+        "operationId": "warehouseRequest.index",
+        "summary": "Get all warehouse requests (for warehouse role to approve/reject)",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WarehouseRequest"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "warehouseRequest.store",
+        "summary": "Create new warehouse request (groundcrew only)",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "flight_id": {
+                    "type": "integer"
+                  },
+                  "items": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "item_id": {
+                          "type": "integer"
+                        },
+                        "qty": {
+                          "type": "integer",
+                          "minimum": 1
+                        },
+                        "reason": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 255
+                        }
+                      },
+                      "required": [
+                        "item_id",
+                        "qty"
+                      ]
+                    },
+                    "minItems": 1
+                  }
+                },
+                "required": [
+                  "flight_id",
+                  "items"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Warehouse request created successfully"
+                      ]
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/WarehouseRequest"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to create warehouse request"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/warehouse-requests/my-requests": {
+      "get": {
+        "operationId": "warehouseRequest.myRequests",
+        "summary": "Get requests created by current groundcrew user",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/WarehouseRequest"
+                      }
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/warehouse-requests/{id}": {
+      "get": {
+        "operationId": "warehouseRequest.show",
+        "summary": "Get single warehouse request details",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          }
+        }
+      }
+    },
+    "/warehouse-requests/{id}/approve": {
+      "put": {
+        "operationId": "warehouseRequest.approve",
+        "summary": "Approve warehouse request (warehouse role only)",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Request approved successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Request cannot be processed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ModelNotFoundException"
+          },
+          "500": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Failed to approve request"
+                      ]
+                    },
+                    "error": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/warehouse-requests/{id}/reject": {
+      "put": {
+        "operationId": "warehouseRequest.reject",
+        "summary": "Reject warehouse request (warehouse role only)",
+        "tags": [
+          "WarehouseRequest"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rejection_reason": {
+                    "type": "string",
+                    "maxLength": 500
+                  }
+                },
+                "required": [
+                  "rejection_reason"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "success"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Request rejected successfully"
+                      ]
+                    },
+                    "data": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message",
+                    "data"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "error"
+                      ]
+                    },
+                    "message": {
+                      "type": "string",
+                      "enum": [
+                        "Request cannot be processed"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "message"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationException"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string",
+                      "enum": [
+                        "Unauthorized"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "$ref": "#/components/responses/ValidationException"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AircraftAseInventory": {
+        "type": "object",
+        "properties": {
+          "ase_inv_id": {
+            "type": "integer"
+          },
+          "aircraft_id": {
+            "type": "integer"
+          },
+          "item_id": {
+            "type": "integer"
+          },
+          "serial_number": {
+            "type": "string"
+          },
+          "seal_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "ase_inv_id",
+          "aircraft_id",
+          "item_id",
+          "serial_number",
+          "seal_number",
+          "expires_at",
+          "condition",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AircraftAseInventory"
+      },
+      "AircraftDocInventory": {
+        "type": "object",
+        "properties": {
+          "doc_inv_id": {
+            "type": "integer"
+          },
+          "aircraft_id": {
+            "type": "integer"
+          },
+          "item_id": {
+            "type": "integer"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "doc_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision_no": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "doc_inv_id",
+          "aircraft_id",
+          "item_id",
+          "quantity",
+          "doc_number",
+          "revision_no",
+          "effective_date",
+          "condition",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AircraftDocInventory"
+      },
+      "GcAseInventory": {
+        "type": "object",
+        "properties": {
+          "gc_ase_id": {
+            "type": "integer"
+          },
+          "gc_id": {
+            "type": "integer"
+          },
+          "item_id": {
+            "type": "integer"
+          },
+          "serial_number": {
+            "type": "string"
+          },
+          "seal_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "expires_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "gc_ase_id",
+          "gc_id",
+          "item_id",
+          "serial_number",
+          "seal_number",
+          "expires_at",
+          "condition",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "GcAseInventory"
+      },
+      "GcDocInventory": {
+        "type": "object",
+        "properties": {
+          "gc_doc_id": {
+            "type": "integer"
+          },
+          "gc_id": {
+            "type": "integer"
+          },
+          "item_id": {
+            "type": "integer"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "doc_number": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "revision_no": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "effective_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "gc_doc_id",
+          "gc_id",
+          "item_id",
+          "quantity",
+          "doc_number",
+          "revision_no",
+          "effective_date",
+          "condition",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "GcDocInventory"
+      },
+      "ItemCatalog": {
+        "type": "object",
+        "properties": {
+          "item_id": {
+            "type": "integer"
+          },
+          "name": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requires_doc_number": {
+            "type": "boolean"
+          },
+          "requires_revision": {
+            "type": "boolean"
+          },
+          "requires_effective": {
+            "type": "boolean"
+          },
+          "requires_serial": {
+            "type": "boolean"
+          },
+          "requires_seal": {
+            "type": "boolean"
+          },
+          "requires_expiry": {
+            "type": "boolean"
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "item_id",
+          "name",
+          "category",
+          "unit",
+          "requires_doc_number",
+          "requires_revision",
+          "requires_effective",
+          "requires_serial",
+          "requires_seal",
+          "requires_expiry",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ItemCatalog"
+      },
+      "WarehouseRequest": {
+        "type": "object",
+        "properties": {
+          "wh_req_id": {
+            "type": "integer"
+          },
+          "flight_id": {
+            "type": "integer"
+          },
+          "requested_by_gc_id": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string"
+          },
+          "rejection_reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "wh_req_id",
+          "flight_id",
+          "requested_by_gc_id",
+          "status",
+          "rejection_reason",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "WarehouseRequest"
+      }
+    },
+    "responses": {
+      "AuthenticationException": {
+        "description": "Unauthenticated",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      },
+      "ValidationException": {
+        "description": "Validation error",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Errors overview."
+                },
+                "errors": {
+                  "type": "object",
+                  "description": "A detailed description of each field that failed validation.",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "message",
+                "errors"
+              ]
+            }
+          }
+        }
+      },
+      "ModelNotFoundException": {
+        "description": "Not found",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "message": {
+                  "type": "string",
+                  "description": "Error overview."
+                }
+              },
+              "required": [
+                "message"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

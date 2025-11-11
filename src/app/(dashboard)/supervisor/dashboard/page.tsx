@@ -5,6 +5,8 @@ import Image from "next/image";
 import { ChevronRight, Pencil, Trash2 } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import { useRouter } from "next/navigation";
+import skybase from "@/lib/api/skybase";
 
 
 type ScheduleItem = {
@@ -40,6 +42,21 @@ const scheduleData: ScheduleItem[] = [
 ];
 
 export default function SupervisorDashboardPage() {
+  const router = useRouter();
+  const [welcome, setWelcome] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    let ignore = false;
+    const run = async () => {
+      try {
+        const res = await skybase.dashboard.supervisor();
+        if (!ignore) setWelcome((res as any)?.message ?? null);
+      } catch (e: any) {
+        if (e?.status === 401) router.replace("/");
+      }
+    };
+    run();
+    return () => { ignore = true; };
+  }, [router]);
   const today = React.useMemo(() => {
     try {
       return new Date().toLocaleDateString("id-ID", {
@@ -54,6 +71,11 @@ export default function SupervisorDashboardPage() {
   }, []);
   return (
     <PageLayout sidebarRole="supervisor">
+      {welcome && (
+        <div className="mb-4 rounded-xl border border-green-200 bg-green-50 px-4 py-2 text-sm text-green-800">
+          {welcome}
+        </div>
+      )}
       <section className="w-full max-w-[1076px] space-y-6">
         <GlassCard className="rounded-3xl overflow-hidden border-0 shadow-none">
           <div className="relative w-full min-h-[180px] bg-[#0D63F3]">
