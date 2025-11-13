@@ -158,7 +158,7 @@ export const dashboardApi = {
 // Flights
 export const flightApi = {
   list() {
-    return request<ApiListResponse<{ flights: Flight[] }>>("/flights");
+    return request<ApiResponse<{ flights: Flight[] }>>("/flights");
   },
   create(data: FlightCreateData) {
     return request<ApiResponse<{ flight_id: number }>>("/flights", { method: "POST", body: data });
