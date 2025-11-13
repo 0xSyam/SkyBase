@@ -40,7 +40,7 @@ export default function SupervisorPenerbanganPage() {
       try {
         const res = await skybase.flights.list();
         const data = res?.data;
-        let list = [];
+        let list: any[] = [];
         if (Array.isArray(data)) {
           list = data;
         } else if (data && 'flights' in data && Array.isArray(data.flights)) {
