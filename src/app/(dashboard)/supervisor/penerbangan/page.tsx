@@ -7,6 +7,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
+import type { Flight } from "@/types/api";
 
 interface FlightRow {
   jenisPesawat: string;
@@ -40,10 +41,10 @@ export default function SupervisorPenerbanganPage() {
       try {
         const res = await skybase.flights.list();
         const data = res?.data;
-        let list: any[] = [];
+        let list: Flight[] = [];
         if (Array.isArray(data)) {
           list = data;
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+        } else if (data && typeof data === 'object' && 'flights' in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
         if (!ignore) {
@@ -58,7 +59,7 @@ export default function SupervisorPenerbanganPage() {
           };
           const mapped: FlightRow[] = list.map((f) => ({
             jenisPesawat: f?.aircraft?.type ?? "-",
-            idPesawat: f?.aircraft?.registration_code ?? f?.registration_code ?? "-",
+            idPesawat: f?.aircraft?.registration_code ?? "-",
             destinasi: f?.route_to ?? "-",
             arrival: fmtTime(f?.sched_dep ?? null),
             takeOff: fmtTime(f?.sched_arr ?? null),
