@@ -7,26 +7,19 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { skybase } from "@/lib/api/skybase";
+import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
-type WarehouseRequest = {
-  id: number;
-  flight_id: number;
-  status: string;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
+// Extended type with nested item details for UI display
+type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
   items?: Array<{
     item_id: number;
     qty: number;
+    reason?: string | null;
     item?: {
       name: string;
       category: string;
     };
   }>;
-  flight?: {
-    route_to?: string;
-    sched_dep?: string;
-  };
 };
 
 type RequestRow = {
@@ -99,7 +92,7 @@ export default function RequestPage() {
         const jumlah = req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
 
         return {
-          id: req.id,
+          id: req.wh_req_id,
           jenis,
           tanggal,
           jam,
