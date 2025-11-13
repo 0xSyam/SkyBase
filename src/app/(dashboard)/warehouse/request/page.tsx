@@ -6,49 +6,145 @@ import { Check, X } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
+import { skybase } from "@/lib/api/skybase";
+
+type WarehouseRequest = {
+  id: number;
+  flight_id: number;
+  status: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  items?: Array<{
+    item_id: number;
+    qty: number;
+    item?: {
+      name: string;
+      category: string;
+    };
+  }>;
+  flight?: {
+    route_to?: string;
+    sched_dep?: string;
+  };
+};
 
 type RequestRow = {
+  id: number;
   jenis: string;
   tanggal: string;
   jam: string;
   jumlah: number;
+  status: string;
+  rawData: WarehouseRequest;
 };
-
-const documentRequests: RequestRow[] = [
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:00 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:30 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "16:00 WIB", jumlah: 3 },
-];
-
-const itemRequests: RequestRow[] = [
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:00 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:30 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "16:00 WIB", jumlah: 3 },
-];
-
-type RequestType = "document" | "item";
 
 export default function RequestPage() {
   const [mounted, setMounted] = useState(false);
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  const [selectedRequest, setSelectedRequest] = useState<{
-    type: RequestType;
-    data: RequestRow;
-  } | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<RequestRow | null>(null);
+  const [requests, setRequests] = useState<WarehouseRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleRejectClick = useCallback((type: RequestType, row: RequestRow) => {
-    setSelectedRequest({ type, data: row });
+  useEffect(() => {
+    async function fetchRequests() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await skybase.warehouseRequests.list();
+        
+        let requestsData: WarehouseRequest[] = [];
+        if (Array.isArray(response.data)) {
+          requestsData = response.data;
+        } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+          requestsData = (response.data as any).items || [];
+        }
+        
+        setRequests(requestsData);
+      } catch (err) {
+        console.error("Error fetching warehouse requests:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch requests");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchRequests();
+  }, []);
+
+  const transformedRequests = useMemo(() => {
+    return requests
+      .filter(req => req.status === 'pending')
+      .map((req): RequestRow => {
+        const date = new Date(req.created_at);
+        const tanggal = date.toLocaleDateString('id-ID', { 
+          day: '2-digit', 
+          month: 'long', 
+          year: 'numeric' 
+        });
+        const jam = date.toLocaleTimeString('id-ID', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          timeZoneName: 'short'
+        });
+
+        const firstItem = req.items?.[0];
+        const jenis = firstItem?.item?.name || req.flight?.route_to || 'Unknown';
+        const jumlah = req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
+
+        return {
+          id: req.id,
+          jenis,
+          tanggal,
+          jam,
+          jumlah,
+          status: req.status,
+          rawData: req,
+        };
+      });
+  }, [requests]);
+
+  const documentRequests = useMemo(() => {
+    return transformedRequests.filter(req => 
+      req.rawData.items?.some(item => item.item?.category === 'DOC')
+    );
+  }, [transformedRequests]);
+
+  const itemRequests = useMemo(() => {
+    return transformedRequests.filter(req => 
+      req.rawData.items?.some(item => item.item?.category === 'ASE')
+    );
+  }, [transformedRequests]);
+
+  const handleRejectClick = useCallback((row: RequestRow) => {
+    setSelectedRequest(row);
     setRejectReason("");
     setRejectDialogOpen(true);
   }, []);
 
-  const handleApproveClick = useCallback((type: RequestType, row: RequestRow) => {
-    console.log("Setujui request", type, row);
+  const handleApproveClick = useCallback(async (row: RequestRow) => {
+    try {
+      await skybase.warehouseRequests.approve(row.id);
+      console.log("Request approved:", row.id);
+      
+      const response = await skybase.warehouseRequests.list();
+      let requestsData: WarehouseRequest[] = [];
+      if (Array.isArray(response.data)) {
+        requestsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+        requestsData = (response.data as any).items || [];
+      }
+      setRequests(requestsData);
+    } catch (err) {
+      console.error("Error approving request:", err);
+      alert("Gagal menyetujui request: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   }, []);
 
   const handleRejectCancel = useCallback(() => {
@@ -57,24 +153,39 @@ export default function RequestPage() {
     setSelectedRequest(null);
   }, []);
 
-  const handleRejectSubmit = useCallback(() => {
+  const handleRejectSubmit = useCallback(async () => {
     if (!selectedRequest) return;
 
-    console.log("Tolak request", selectedRequest.type, selectedRequest.data, {
-      reason: rejectReason,
-    });
-    setRejectDialogOpen(false);
-    setRejectReason("");
-    setSelectedRequest(null);
+    try {
+      await skybase.warehouseRequests.reject(selectedRequest.id, { 
+        reason: rejectReason 
+      });
+      console.log("Request rejected:", selectedRequest.id);
+      
+      const response = await skybase.warehouseRequests.list();
+      let requestsData: WarehouseRequest[] = [];
+      if (Array.isArray(response.data)) {
+        requestsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+        requestsData = (response.data as any).items || [];
+      }
+      setRequests(requestsData);
+      
+      setRejectDialogOpen(false);
+      setRejectReason("");
+      setSelectedRequest(null);
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+      alert("Gagal menolak request: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
   }, [rejectReason, selectedRequest]);
 
-  const renderActions = useCallback(
-    (type: RequestType) => {
-      const ActionButtons = (_: unknown, row: RequestRow) => (
+  const renderActions = useCallback(() => {
+    const ActionButtons = (_: unknown, row: RequestRow) => (
       <div className="flex justify-end gap-2">
         <button
           type="button"
-          onClick={() => handleRejectClick(type, row)}
+          onClick={() => handleRejectClick(row)}
           className="inline-flex items-center justify-center rounded-xl bg-[#F04438] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#D6352A] active:scale-95"
         >
           <span className="hidden sm:inline">Tolak</span>
@@ -82,19 +193,17 @@ export default function RequestPage() {
         </button>
         <button
           type="button"
-          onClick={() => handleApproveClick(type, row)}
+          onClick={() => handleApproveClick(row)}
           className="inline-flex items-center justify-center rounded-xl bg-[#0D63F3] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#0B53D0] active:scale-95"
         >
           <span className="hidden sm:inline">Setujui</span>
           <Check className="h-4 w-4 sm:ml-2" />
         </button>
       </div>
-      );
-      ActionButtons.displayName = `ActionButtons_${type}`;
-      return ActionButtons;
-    },
-    [handleApproveClick, handleRejectClick],
-  );
+    );
+    ActionButtons.displayName = "ActionButtons";
+    return ActionButtons;
+  }, [handleApproveClick, handleRejectClick]);
 
   const documentColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
     { key: "jenis", header: "Dokumen", align: "left" },
@@ -106,7 +215,7 @@ export default function RequestPage() {
       header: "Action",
       align: "right",
       className: "w-44 flex-shrink-0",
-      render: renderActions("document"),
+      render: renderActions(),
     },
   ], [renderActions]);
 
@@ -120,7 +229,7 @@ export default function RequestPage() {
       header: "Action",
       align: "right",
       className: "w-44 flex-shrink-0",
-      render: renderActions("item"),
+      render: renderActions(),
     },
   ], [renderActions]);
 
@@ -132,19 +241,33 @@ export default function RequestPage() {
           description="Terima laporan dan validasi request item dari ground crew"
         />
 
-        <div className="space-y-6">
-          <GlassDataTable
-            columns={documentColumns}
-            data={documentRequests}
-            emptyMessage="Tidak ada request dokumen"
-          />
+        {loading && (
+          <div className="text-center py-12 text-[#64748B]">
+            Loading requests...
+          </div>
+        )}
 
-          <GlassDataTable
-            columns={itemColumns}
-            data={itemRequests}
-            emptyMessage="Tidak ada request barang"
-          />
-        </div>
+        {error && (
+          <div className="text-center py-12 text-[#F04438]">
+            Error: {error}
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="space-y-6">
+            <GlassDataTable
+              columns={documentColumns}
+              data={documentRequests}
+              emptyMessage="Tidak ada request dokumen"
+            />
+
+            <GlassDataTable
+              columns={itemColumns}
+              data={itemRequests}
+              emptyMessage="Tidak ada request barang"
+            />
+          </div>
+        )}
       </section>
 
       {mounted && isRejectDialogOpen &&

@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { ChevronRight, Pencil, Trash2 } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
@@ -128,9 +128,10 @@ export default function SupervisorDashboardPage() {
           </div>
 
           <GlassCard className="overflow-hidden">
-            <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl">
-              <div className="flex-1">Jadwal</div>
-              <div className="w-28 sm:w-44 text-right">Action</div>
+            <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl text-center">
+              <div className="w-1/3">Jenis</div>
+              <div className="w-1/3">ID Pesawat</div>
+              <div className="w-1/3">Arrival</div>
             </div>
 
             <div className="divide-y divide-[#E9EEF3]">
@@ -144,34 +145,15 @@ export default function SupervisorDashboardPage() {
                 </div>
               ) : (
                 scheduleData.map((item, idx) => (
-                  <div key={idx} className="px-4 py-4 sm:py-5 flex items-start">
-                    <div className="flex-1 pr-4">
-                      <div className="text-[13px] sm:text-sm text-[#4B5563]">
-                        {item.start} - {item.end}
-                      </div>
-                      <div className="mt-1 text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
-                        {item.jenis} <span className="font-semibold">{item.idPesawat}</span>
-                      </div>
-                      <div className="mt-1 text-sm text-[#111827]">
-                        Destination : <span className="font-semibold">{item.destination}</span>
-                      </div>
+                  <div key={idx} className="px-4 py-4 sm:py-5 flex items-center text-center">
+                    <div className="w-1/3 text-sm text-[#111827]">
+                      {item.jenis}
                     </div>
-
-                    <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">
-                      <button
-                        type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#FACC15] text-white shadow-sm active:scale-95 transition hover:brightness-95"
-                        aria-label="Edit"
-                      >
-                        <Pencil className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EF4444] text-white shadow-sm active:scale-95 transition hover:bg-red-600"
-                        aria-label="Hapus"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                    <div className="w-1/3 text-sm text-[#111827]">
+                      {item.idPesawat}
+                    </div>
+                    <div className="w-1/3 text-sm text-[#111827]">
+                      {item.end}
                     </div>
                   </div>
                 ))

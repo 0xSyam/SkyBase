@@ -21,7 +21,6 @@ interface ReportSection {
   schedules: ReportSchedule[];
 }
 
-// Data will be fetched and grouped by date from /flights
 
 interface DateFieldProps {
   id: string;
@@ -77,7 +76,6 @@ export default function SupervisorLaporanPage() {
                 : [];
 
         if (!ignore) {
-          // group flights by local date (based on sched_dep or created_at)
           const byDate = new Map<string, ReportSection>();
           const fmtDate = (d: Date) => {
             try {
@@ -99,7 +97,7 @@ export default function SupervisorLaporanPage() {
             const basis = f?.sched_dep || f?.created_at || f?.sched_arr || null;
             if (!basis) continue;
             const dt = new Date(basis);
-            const id = dt.toISOString().slice(0, 10); // YYYY-MM-DD
+            const id = dt.toISOString().slice(0, 10); 
             const title = fmtDate(dt);
             const sec = byDate.get(id) ?? { id, title, schedules: [] };
             const schedule: ReportSchedule = {
@@ -112,7 +110,6 @@ export default function SupervisorLaporanPage() {
             sec.schedules.push(schedule);
             byDate.set(id, sec);
           }
-          // sort by date desc
           const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
           setSections(sorted);
         }
@@ -130,7 +127,6 @@ export default function SupervisorLaporanPage() {
   const parseInputDate = (s: string): Date | null => {
     const t = s.trim();
     if (!t) return null;
-    // dd/mm/yyyy or dd-mm-yyyy
     const m = t.match(/^([0-3]?\d)[\/-]([0-1]?\d)[\/-](\d{4})$/);
     if (m) {
       const dd = Number(m[1]);
@@ -149,12 +145,10 @@ export default function SupervisorLaporanPage() {
     if (!from && !to) return sections;
     return sections
       .filter((sec) => {
-        // sec.id is YYYY-MM-DD in UTC; compare by date boundaries
         const secDate = new Date(sec.id + "T00:00:00Z");
         if (from && secDate < from) return false;
         if (to) {
           const toEnd = new Date(to);
-          // include the end day fully
           toEnd.setUTCHours(23, 59, 59, 999);
           if (secDate > toEnd) return false;
         }
@@ -216,7 +210,6 @@ export default function SupervisorLaporanPage() {
                 <div className="overflow-hidden rounded-2xl bg-white/90 ring-1 ring-[#E4E9F2]">
                   <div className="flex items-center justify-between bg-[#F4F8FB] px-5 py-4 text-sm font-semibold text-[#111827]">
                     <span>Jadwal</span>
-                    <span>Action</span>
                   </div>
 
                   {section.schedules.map((schedule, index) => (
@@ -235,13 +228,6 @@ export default function SupervisorLaporanPage() {
                           Destination : <span className="font-semibold">{schedule.destination}</span>
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_24px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
-                        aria-label={`Lihat laporan ${schedule.registration}`}
-                      >
-                        <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                      </button>
                     </div>
                   ))}
                 </div>

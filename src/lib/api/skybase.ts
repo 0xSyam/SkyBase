@@ -114,11 +114,21 @@ export const authApi = {
       body: params,
     });
   },
+  async createUser(params: { name: string; email: string; password: string; role: "warehouse" | "groundcrew"; phone?: string | null; }) {
+    type UserData = { user_id: number; name: string; email: string; role: string };
+    return request<ApiResponse<UserData>>("/users", {
+      method: "POST",
+      body: params,
+    });
+  },
   async roles() {
     return request<ApiResponse<{ roles: Array<{ role_id: number; name: string }> }>>("/auth/roles");
   },
   async permissions() {
     return request<ApiResponse<{ permissions: string[] }>>("/auth/permissions");
+  },
+  async getAllUsers() {
+    return request<ApiResponse<{ id: string; name: string; role: string }[]>>("/users");
   },
 };
 
@@ -274,10 +284,10 @@ export const warehouseRequestApi = {
     return request<ApiResponse<any>>("/warehouse-requests", { method: "POST", body: data });
   },
   approve(id: number | string) {
-    return request<ApiResponse<any>>(`/warehouse-requests/${id}/approve`, { method: "POST" });
+    return request<ApiResponse<any>>(`/warehouse-requests/${id}/approve`, { method: "PUT" });
   },
   reject(id: number | string, data?: { reason?: string }) {
-    return request<ApiResponse<any>>(`/warehouse-requests/${id}/reject`, { method: "POST", body: data ?? {} });
+    return request<ApiResponse<any>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data ?? {} });
   },
 };
 

@@ -18,17 +18,9 @@ interface FlightSchedule {
   aircraftId?: number;
 }
 
-const fallbackFlights: FlightSchedule[] = [
-  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "22:00 WIB", takeOff: "23:00 WIB" },
-  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
-  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
-  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
-  { aircraft: "B738 NG", registration: "PK-GFD", destination: "Jakarta", arrival: "23:00 WIB", takeOff: "01:00 WIB" },
-];
-
 const ValidasiBarangPage = () => {
   const router = useRouter();
-  const [flights, setFlights] = React.useState<FlightSchedule[]>(fallbackFlights);
+  const [flights, setFlights] = React.useState<FlightSchedule[]>([]);
   const [loading, setLoading] = React.useState(false);
 
   React.useEffect(() => {
@@ -50,7 +42,6 @@ const ValidasiBarangPage = () => {
           setFlights(mapped);
         }
       } catch {
-        // keep fallback
       } finally {
         if (!ignore) setLoading(false);
       }
@@ -104,7 +95,6 @@ const ValidasiBarangPage = () => {
     }
   ];
 
-  // removed mock secondGroup; using API data only
 
   return (
     <PageLayout>
@@ -156,7 +146,6 @@ const ValidasiBarangPage = () => {
             data={flights}
             emptyMessage="Tidak ada jadwal pesawat"
           />
-          {/* Removed mock second group */}
         </div>
       </section>
     </PageLayout>

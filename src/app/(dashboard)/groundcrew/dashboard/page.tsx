@@ -10,7 +10,6 @@ import skybase from "@/lib/api/skybase";
 type ScheduleItem = { aircraft: string; reg: string; time: string };
 type StockRow = { document: string; jumlah: number };
 
-// schedule data is fetched from /inspections/available-flights
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -122,8 +121,13 @@ export default function DashboardPage() {
     const loadFlights = async () => {
       setLoadingFlights(true);
       try {
-        const res = await skybase.inspections.availableFlights();
-        const list: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const res = await skybase.flights.list();
+        const data = (res as any)?.data;
+        const list: any[] = Array.isArray(data?.flights)
+          ? data.flights
+          : Array.isArray(data)
+            ? data
+            : [];
         if (!ignore) {
           const mapped: ScheduleItem[] = list.map((f) => {
             const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
@@ -137,7 +141,6 @@ export default function DashboardPage() {
           setScheduleData(mapped);
         }
       } catch {
-        // keep empty
       } finally {
         if (!ignore) setLoadingFlights(false);
       }

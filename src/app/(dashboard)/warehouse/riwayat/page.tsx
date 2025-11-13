@@ -1,31 +1,177 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
+import skybase from "@/lib/api/skybase";
+
+interface WarehouseRequest {
+  wh_req_id: number;
+  flight_id: number;
+  requested_by_gc_id: number;
+  status: "pending" | "approved" | "rejected";
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string | null;
+  flight?: {
+    flight_id: number;
+    registration_code: string;
+    route_to: string;
+  };
+  requestedBy?: {
+    user_id: number;
+    name: string;
+  };
+  items?: Array<{
+    item_id: number;
+    item_name: string;
+    category: "DOC" | "ASE";
+    qty: number;
+  }>;
+}
 
 interface HistoryRow {
+  id: number;
   jenis: string;
   tanggal: string;
   jam: string;
   jumlah: number;
+  status: string;
+  requester?: string;
+  category: "DOC" | "ASE";
 }
-
-const historyData: HistoryRow[] = [
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:00 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "15:30 WIB", jumlah: 3 },
-  { jenis: "SIC", tanggal: "01 Oktober 2025", jam: "16:00 WIB", jumlah: 3 },
-];
 
 export default function RiwayatPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [requests, setRequests] = useState<WarehouseRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchRequests();
+  }, []);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await skybase.warehouseRequests.list();
+      
+      if (response.status === "success") {
+        const data = Array.isArray(response.data) 
+          ? response.data 
+          : (response.data as any)?.items || [];
+        setRequests(data);
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch warehouse requests:", err);
+      setError(err.message || "Gagal memuat data riwayat");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const transformedData = useMemo(() => {
+    return requests.map((req): HistoryRow[] => {
+      const date = new Date(req.created_at);
+      const tanggal = date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      });
+      const jam = date.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
+      });
+
+      const docItems = req.items?.filter(item => item.category === "DOC") || [];
+      const aseItems = req.items?.filter(item => item.category === "ASE") || [];
+
+      const result: HistoryRow[] = [];
+
+      if (docItems.length > 0) {
+        result.push({
+          id: req.wh_req_id,
+          jenis: docItems.map(item => item.item_name).join(", "),
+          tanggal,
+          jam,
+          jumlah: docItems.reduce((sum, item) => sum + item.qty, 0),
+          status: req.status,
+          requester: req.requestedBy?.name,
+          category: "DOC",
+        });
+      }
+
+      if (aseItems.length > 0) {
+        result.push({
+          id: req.wh_req_id,
+          jenis: aseItems.map(item => item.item_name).join(", "),
+          tanggal,
+          jam,
+          jumlah: aseItems.reduce((sum, item) => sum + item.qty, 0),
+          status: req.status,
+          requester: req.requestedBy?.name,
+          category: "ASE",
+        });
+      }
+
+      return result;
+    }).flat();
+  }, [requests]);
+
+  const historyDataDoc = useMemo(() => {
+    return transformedData.filter(item => item.category === "DOC");
+  }, [transformedData]);
+
+  const historyDataAse = useMemo(() => {
+    return transformedData.filter(item => item.category === "ASE");
+  }, [transformedData]);
+
+  const filteredDocData = useMemo(() => {
+    if (!searchTerm) return historyDataDoc;
+    const search = searchTerm.toLowerCase();
+    return historyDataDoc.filter(
+      item =>
+        item.jenis.toLowerCase().includes(search) ||
+        item.tanggal.toLowerCase().includes(search) ||
+        item.requester?.toLowerCase().includes(search)
+    );
+  }, [historyDataDoc, searchTerm]);
+
+  const filteredAseData = useMemo(() => {
+    if (!searchTerm) return historyDataAse;
+    const search = searchTerm.toLowerCase();
+    return historyDataAse.filter(
+      item =>
+        item.jenis.toLowerCase().includes(search) ||
+        item.tanggal.toLowerCase().includes(search) ||
+        item.requester?.toLowerCase().includes(search)
+    );
+  }, [historyDataAse, searchTerm]);
 
   const columnsDocument = useMemo<ColumnDef<HistoryRow>[]>(() => [
     { key: "jenis", header: "Dokumen", align: "left" },
     { key: "tanggal", header: "Tanggal", align: "left" },
     { key: "jam", header: "Jam", align: "left" },
     { key: "jumlah", header: "Jumlah Request", align: "left" },
+    { 
+      key: "status", 
+      header: "Status", 
+      align: "left",
+      render: (_value, row) => (
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+          row.status === "approved" 
+            ? "bg-green-100 text-green-800" 
+            : row.status === "rejected"
+            ? "bg-red-100 text-red-800"
+            : "bg-yellow-100 text-yellow-800"
+        }`}>
+          {row.status === "approved" ? "Disetujui" : row.status === "rejected" ? "Ditolak" : "Pending"}
+        </span>
+      ),
+    },
   ], []);
 
   const columnsItem = useMemo<ColumnDef<HistoryRow>[]>(() => [
@@ -33,6 +179,22 @@ export default function RiwayatPage() {
     { key: "tanggal", header: "Tanggal", align: "left" },
     { key: "jam", header: "Jam", align: "left" },
     { key: "jumlah", header: "Jumlah Request", align: "left" },
+    { 
+      key: "status", 
+      header: "Status", 
+      align: "left",
+      render: (_value, row) => (
+        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+          row.status === "approved" 
+            ? "bg-green-100 text-green-800" 
+            : row.status === "rejected"
+            ? "bg-red-100 text-red-800"
+            : "bg-yellow-100 text-yellow-800"
+        }`}>
+          {row.status === "approved" ? "Disetujui" : row.status === "rejected" ? "Ditolak" : "Pending"}
+        </span>
+      ),
+    },
   ], []);
 
   const headerAction = (
@@ -92,17 +254,25 @@ export default function RiwayatPage() {
         />
 
         <div className="space-y-6">
-          <GlassDataTable
-            columns={columnsDocument}
-            data={historyData}
-            emptyMessage="Tidak ada riwayat request dokumen"
-          />
+          {loading ? (
+            <div className="text-center py-8 text-[#0D63F3]">Memuat data...</div>
+          ) : error ? (
+            <div className="text-center py-8 text-red-600">{error}</div>
+          ) : (
+            <>
+              <GlassDataTable
+                columns={columnsDocument}
+                data={filteredDocData}
+                emptyMessage="Tidak ada riwayat request dokumen"
+              />
 
-          <GlassDataTable
-            columns={columnsItem}
-            data={historyData}
-            emptyMessage="Tidak ada riwayat request barang"
-          />
+              <GlassDataTable
+                columns={columnsItem}
+                data={filteredAseData}
+                emptyMessage="Tidak ada riwayat request barang"
+              />
+            </>
+          )}
         </div>
       </section>
     </PageLayout>

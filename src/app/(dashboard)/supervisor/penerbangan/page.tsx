@@ -213,7 +213,11 @@ export default function SupervisorPenerbanganPage() {
 
         <GlassCard className="overflow-hidden">
           <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl">
-            <div className="flex-1">Jadwal</div>
+            <div className="flex-1">Jenis Pesawat</div>
+            <div className="flex-1">ID Pesawat</div>
+            <div className="flex-1">Destinasi</div>
+            <div className="flex-1">Arrival</div>
+            <div className="flex-1">Take Off</div>
             <div className="w-28 sm:w-44 text-right">Action</div>
           </div>
           <div className="divide-y divide-[#E9EEF3]">
@@ -225,14 +229,28 @@ export default function SupervisorPenerbanganPage() {
               filteredFlights.map((item, index) => (
                 <div key={index} className="px-4 py-4 sm:py-5 flex items-start">
                   <div className="flex-1 pr-4">
+                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
+                      {item.jenisPesawat}
+                    </div>
+                  </div>
+                  <div className="flex-1 pr-4">
+                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
+                      {item.idPesawat}
+                    </div>
+                  </div>
+                  <div className="flex-1 pr-4">
+                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
+                      {item.destinasi}
+                    </div>
+                  </div>
+                  <div className="flex-1 pr-4">
                     <div className="text-[13px] sm:text-sm text-[#4B5563]">
-                      {item.arrival} - {item.takeOff}
+                      {item.arrival}
                     </div>
-                    <div className="mt-1 text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
-                      {item.jenisPesawat} <span className="font-semibold">{item.idPesawat}</span>
-                    </div>
-                    <div className="mt-1 text-sm text-[#111827]">
-                      Destination : <span className="font-semibold">{item.destinasi}</span>
+                  </div>
+                  <div className="flex-1 pr-4">
+                    <div className="text-[13px] sm:text-sm text-[#4B5563]">
+                      {item.takeOff}
                     </div>
                   </div>
                   <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">

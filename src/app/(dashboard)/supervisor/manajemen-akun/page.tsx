@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Plus, Filter } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import skybase from "@/lib/api/skybase";
+import skybase, { authApi } from "@/lib/api/skybase";
 
 interface AccountRow {
   id: string;
@@ -15,17 +15,9 @@ interface AccountRow {
   avatar?: string;
 }
 
-const initialAccounts: AccountRow[] = [
-  { id: "groundcrew-1", username: "Hisyam Ardiansyah", role: "Groundcrew" },
-  { id: "groundcrew-2", username: "Hisyam Ardiansyah", role: "Groundcrew" },
-  { id: "groundcrew-3", username: "Hisyam Ardiansyah", role: "Groundcrew" },
-  { id: "groundcrew-4", username: "Hisyam Ardiansyah", role: "Groundcrew" },
-  { id: "groundcrew-5", username: "Hisyam Ardiansyah", role: "Groundcrew" },
-];
-
 export default function SupervisorManajemenAkunPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [accountList, setAccountList] = useState<AccountRow[]>(initialAccounts);
+  const [accountList, setAccountList] = useState<AccountRow[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<AccountRow | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -61,6 +53,26 @@ export default function SupervisorManajemenAkunPage() {
       }
     };
     loadRoles();
+  }, []);
+
+  useEffect(() => {
+    const fetchAccounts = async () => {
+      try {
+        const res = await authApi.getAllUsers();
+        const accounts = res.data ?? [];
+        setAccountList(
+          accounts.map((account) => ({
+            id: account.id,
+            username: account.name,
+            role: account.role,
+          }))
+        );
+      } catch (error) {
+        console.error("Failed to fetch accounts", error);
+      }
+    };
+
+    fetchAccounts();
   }, []);
 
   const closeDeleteModal = () => {
@@ -257,12 +269,11 @@ export default function SupervisorManajemenAkunPage() {
                       name: createForm.name.trim(),
                       email: createForm.email.trim(),
                       phone: createForm.phone.trim() || null,
-                      role: createForm.role,
+                      role: createForm.role as "warehouse" | "groundcrew",
                       password: createForm.password,
-                      password_confirmation: createForm.password_confirmation,
-                    } as const;
-                    const res = await skybase.auth.register(payload);
-                    const user = (res as any)?.data?.user;
+                    };
+                    const res = await skybase.auth.createUser(payload);
+                    const user = (res as any)?.data;
                     if (user) {
                       setAccountList((prev) => [
                         ...prev,
@@ -325,17 +336,6 @@ export default function SupervisorManajemenAkunPage() {
                       type="password"
                       value={createForm.password}
                       onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                      className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-semibold text-[#0E1D3D]">Konfirmasi Password</label>
-                    <input
-                      type="password"
-                      value={createForm.password_confirmation}
-                      onChange={(e) => setCreateForm({ ...createForm, password_confirmation: e.target.value })}
                       className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                       required
                       minLength={6}

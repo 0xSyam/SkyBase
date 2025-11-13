@@ -7,49 +7,29 @@ import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
 
-type ScheduleItem = { aircraft: string; reg: string; time: string };
-type StockRow = { document: string; jumlah: number };
+type ScheduleItem = { 
+  flight_id: number;
+  aircraft: string; 
+  reg: string; 
+  time: string;
+  route_to: string;
+  status: string;
+};
 
-const scheduleData: ScheduleItem[] = [
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-  { aircraft: "B738 NG", reg: "PK-GFD", time: "22:00 WIB" },
-];
+type RequestItem = { 
+  wh_req_id: number;
+  flight_id: number;
+  requested_by_gc_id: number;
+  status: string;
+  created_at: string;
+  items?: Array<{ item_name: string; qty: number }>;
+};
 
-const stokBarangData: StockRow[] = [
-  { document: "SIC", jumlah: 10 },
-  { document: "QRH", jumlah: 10 },
-  { document: "OM-B2", jumlah: 10 },
-  { document: "AFM", jumlah: 10 },
-  { document: "BRAILLE", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-];
-
-const aseData: StockRow[] = [
-  { document: "SIC", jumlah: 10 },
-  { document: "QRH", jumlah: 10 },
-  { document: "OM-B2", jumlah: 10 },
-  { document: "AFM", jumlah: 10 },
-  { document: "BRAILLE", jumlah: 10 },
-  { document: "SIC", jumlah: 10 },
-];
+type StockRow = { 
+  id: number | string;
+  document: string; 
+  jumlah: number;
+};
 
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
@@ -139,19 +119,95 @@ const StockTable: React.FC<{
 export default function WarehouseDashboardPage() {
   const router = useRouter();
   const [welcome, setWelcome] = React.useState<string | null>(null);
+  const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
+  const [requestsData, setRequestsData] = React.useState<RequestItem[]>([]);
+  const [historyData, setHistoryData] = React.useState<RequestItem[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
   React.useEffect(() => {
     let ignore = false;
     const run = async () => {
       try {
-        const res = await skybase.dashboard.warehouse();
-        if (!ignore) setWelcome((res as any)?.message ?? null);
+        const dashboardRes = await skybase.dashboard.warehouse();
+        if (!ignore) setWelcome((dashboardRes as any)?.message ?? null);
+
+        const flightsRes = await skybase.flights.list();
+        const flightsData = (flightsRes as any)?.data;
+        const flights: any[] = Array.isArray(flightsData?.flights)
+          ? flightsData.flights
+          : Array.isArray(flightsData)
+            ? flightsData
+            : [];
+        
+        if (!ignore) {
+          
+          const mapped: ScheduleItem[] = flights.map((f: any) => {
+            const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
+            const time = arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB" : "--:-- WIB";
+            return {
+              flight_id: f?.flight_id ?? 0,
+              aircraft: f?.aircraft?.type ?? "-",
+              reg: f?.aircraft?.registration_code ?? "-",
+              time,
+              route_to: f?.route_to ?? "",
+              status: f?.status ?? "SCHEDULED",
+            };
+          });
+          setScheduleData(mapped);
+        }
+
+        const requestsRes = await skybase.warehouseRequests.list();
+        if (!ignore && requestsRes.data) {
+          const requests = Array.isArray(requestsRes.data) 
+            ? requestsRes.data 
+            : [];
+          setRequestsData(requests.filter((r: any) => r.status === 'PENDING'));
+        }
+
+        const historyRes = await skybase.warehouseRequests.myRequests();
+        if (!ignore && historyRes.data) {
+          const history = Array.isArray(historyRes.data) 
+            ? historyRes.data 
+            : [];
+          setHistoryData(history.filter((r: any) => r.status !== 'PENDING'));
+        }
+
+        if (!ignore) setLoading(false);
       } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+        if (!ignore) {
+          setLoading(false);
+          if (e?.status === 401) router.replace("/");
+        }
       }
     };
     run();
     return () => { ignore = true; };
   }, [router]);
+
+  const docRequestsData: StockRow[] = requestsData
+    .slice(0, 10)
+    .map((req, idx) => ({
+      id: req.wh_req_id,
+      document: `Request #${req.wh_req_id}`,
+      jumlah: req.items?.length || 0,
+    }));
+
+  const aseRequestsData: StockRow[] = requestsData
+    .slice(0, 6)
+    .map((req, idx) => ({
+      id: req.wh_req_id,
+      document: `Request #${req.wh_req_id}`,
+      jumlah: req.items?.length || 0,
+    }));
+
+  const historyTableData: StockRow[] = historyData
+    .slice(0, 10)
+    .map((req) => ({
+      id: req.wh_req_id,
+      document: `Request #${req.wh_req_id} (${req.status})`,
+      jumlah: req.items?.length || 0,
+    }));
+
   const groups = chunk(scheduleData, 5);
   const handleSelengkapnya = () => console.log("Selengkapnya clicked");
 
@@ -162,6 +218,13 @@ export default function WarehouseDashboardPage() {
           {welcome}
         </div>
       )}
+      
+      {loading && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800">
+          Loading data...
+        </div>
+      )}
+
       <Image
         src="/OBJECTS.svg"
         alt="Airplane illustration"
@@ -183,7 +246,9 @@ export default function WarehouseDashboardPage() {
         <section className="md:col-span-2 p-0">
           <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-0">
             <div>
-              <div className="text-sm mb-3 sm:mb-8 text-[#222222]">Senin, 12 Agustus 2025</div>
+              <div className="text-sm mb-3 sm:mb-8 text-[#222222]">
+                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+              </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
             </div>
             <div className="sm:text-right">
@@ -193,6 +258,12 @@ export default function WarehouseDashboardPage() {
               </div>
             </div>
           </div>
+
+          {groups.length === 0 && !loading && (
+            <GlassCard className="p-6 text-center text-gray-500">
+              Tidak ada jadwal penerbangan hari ini
+            </GlassCard>
+          )}
 
           <div className="space-y-3 sm:space-y-4">
             {groups.map((items, idx) => (
@@ -207,19 +278,19 @@ export default function WarehouseDashboardPage() {
 
         <aside className="flex flex-col gap-6">
           <StockTable
-            title="Request Item"
-            data={stokBarangData}
+            title="Request Item DOC"
+            data={docRequestsData}
             onMore={handleSelengkapnya}
-            leftHeader="Jenis Dokumen"
-            rightHeader="Jumlah Request"
+            leftHeader="Request"
+            rightHeader="Jumlah Item"
           />
 
           <StockTable
-            title="Request Item"
-            data={aseData}
+            title="Request Item ASE"
+            data={aseRequestsData}
             onMore={handleSelengkapnya}
-            leftHeader="Jenis Dokumen"
-            rightHeader="Jumlah Request"
+            leftHeader="Request"
+            rightHeader="Jumlah Item"
           />
 
           <GlassCard className="w-full p-4">
@@ -232,17 +303,24 @@ export default function WarehouseDashboardPage() {
                 Selengkapnya <span>&gt;</span>
               </button>
             </div>
-            <div className="text-sm mb-4 text-[#222222]">Senin, 29 September 2025</div>
+            <div className="text-sm mb-4 text-[#222222]">
+              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+            </div>
 
             <WhiteCard className="overflow-hidden">
               <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-                <span>Document</span>
+                <span>Request</span>
                 <span className="text-right">Jumlah</span>
               </div>
+              {historyTableData.length === 0 && !loading && (
+                <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  Belum ada riwayat
+                </div>
+              )}
               <div className="divide-y divide-[#E9EEF3]">
-                {stokBarangData.map((row, i) => (
+                {historyTableData.map((row) => (
                   <div
-                    key={`his-${row.document}-${i}`}
+                    key={`his-${row.id}`}
                     className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
                   >
                     <span className="truncate font-medium">{row.document}</span>

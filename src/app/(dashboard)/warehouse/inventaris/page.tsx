@@ -6,14 +6,23 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
+import { skybase } from "@/lib/api/skybase";
 
 interface StockItem {
+  item_id: number;
   namaDokumen: string;
   nomor: string;
   revisi: string;
   efektif: string;
   hasAlert?: boolean;
   jumlah: number;
+  name?: string;
+  category?: string;
+  type?: string;
+  serial_number?: string;
+  part_number?: string;
+  qty_in_stock?: number;
+  unit?: string;
 }
 
 interface StockGroup {
@@ -30,59 +39,6 @@ interface StockAddFormData {
 }
 
 type DialogMode = "add" | null;
-
-const baseItems: StockItem[] = [
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    hasAlert: true,
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-  {
-    namaDokumen: "SIC",
-    nomor: "1334",
-    revisi: "001",
-    efektif: "17 Oktober 2025",
-    jumlah: 10,
-  },
-];
-
-const stockGroups: StockGroup[] = [
-  { id: "sic-doc", title: "SIC", items: baseItems },
-  {
-    id: "sop-doc",
-    title: "SOP",
-    items: baseItems.map((item) => ({ ...item, namaDokumen: "SOP" })),
-  },
-  {
-    id: "manual-doc",
-    title: "Manual",
-    items: baseItems.map((item) => ({ ...item, namaDokumen: "Manual" })),
-  },
-];
 
 const columns: ColumnDef<StockItem>[] = [
   {
@@ -124,14 +80,14 @@ const columns: ColumnDef<StockItem>[] = [
 
 const WarehouseInventarisPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedGroupId, setExpandedGroupId] = useState<string>(
-    stockGroups[0]?.id ?? "",
-  );
+  const [stockGroups, setStockGroups] = useState<StockGroup[]>([]);
+  const [expandedGroupId, setExpandedGroupId] = useState<string>("");
   const [selectedGroup, setSelectedGroup] = useState<
     Pick<StockGroup, "id" | "title"> | null
   >(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
   const [mounted, setMounted] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [addData, setAddData] = useState<StockAddFormData>({
     nomor: "",
     nomorSeal: "",
@@ -141,7 +97,70 @@ const WarehouseInventarisPage = () => {
 
   useEffect(() => {
     setMounted(true);
+    fetchInventoryData();
   }, []);
+
+  const fetchInventoryData = async () => {
+    try {
+      setLoading(true);
+      const response = await skybase.items.list();
+      
+      const items: StockItem[] = Array.isArray(response.data)
+        ? response.data
+        : (response.data as any)?.items || [];
+
+      const categorizedItems: Record<string, StockItem[]> = {};
+      
+      items.forEach((item: any) => {
+        const category = item.category || "DOC";
+        const transformedItem: StockItem = {
+          item_id: item.item_id || item.id,
+          namaDokumen: category,
+          nomor: item.part_number || item.serial_number || "-",
+          revisi: item.revision || "001",
+          efektif: item.effective_date 
+            ? new Date(item.effective_date).toLocaleDateString("id-ID", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              })
+            : "-",
+          jumlah: item.qty_in_stock || item.quantity || 0,
+          hasAlert: item.qty_in_stock < 5, 
+          name: item.name,
+          category: item.category,
+          type: item.type,
+          serial_number: item.serial_number,
+          part_number: item.part_number,
+          qty_in_stock: item.qty_in_stock,
+          unit: item.unit,
+        };
+
+        if (!categorizedItems[category]) {
+          categorizedItems[category] = [];
+        }
+        categorizedItems[category].push(transformedItem);
+      });
+
+      const groups: StockGroup[] = Object.entries(categorizedItems).map(
+        ([category, items]) => ({
+          id: category.toLowerCase().replace(/\s+/g, "-"),
+          title: category,
+          items,
+        })
+      );
+
+      setStockGroups(groups);
+      if (groups.length > 0) {
+        setExpandedGroupId(groups[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to fetch inventory data:", error);
+      setStockGroups([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (activeDialog !== "add") {
@@ -165,12 +184,12 @@ const WarehouseInventarisPage = () => {
     return stockGroups.map((group) => ({
       ...group,
       items: group.items.filter((item) =>
-        [item.namaDokumen, item.nomor, item.revisi, item.efektif]
+        [item.namaDokumen, item.nomor, item.revisi, item.efektif, item.name]
           .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(query)),
+          .some((value) => value?.toLowerCase().includes(query)),
       ),
     }));
-  }, [searchTerm]);
+  }, [searchTerm, stockGroups]);
 
   const handleToggleGroup = (groupId: string) => {
     setExpandedGroupId((current) => (current === groupId ? "" : groupId));
@@ -214,6 +233,7 @@ const WarehouseInventarisPage = () => {
       jumlah: Number(addData.jumlah) || 0,
     });
 
+
     setActiveDialog(null);
     setSelectedGroup(null);
     setAddData({
@@ -222,7 +242,24 @@ const WarehouseInventarisPage = () => {
       efektif: "",
       jumlah: "",
     });
+    
+    fetchInventoryData();
   };
+
+  if (loading) {
+    return (
+      <PageLayout sidebarRole="warehouse">
+        <section className="w-full max-w-[1076px]">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#0D63F3] border-r-transparent"></div>
+              <p className="mt-4 text-gray-600">Memuat data inventaris...</p>
+            </div>
+          </div>
+        </section>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout sidebarRole="warehouse">
@@ -341,7 +378,6 @@ const WarehouseInventarisPage = () => {
 
                   {isOpen && (
                     <div className="px-3 md:px-6 pb-6">
-                      {/* Header dalam kartu ketika terbuka (sesuai mock) */}
                       <div className="rounded-2xl overflow-hidden border border-[#E9EEF3] bg-white">
                         <div className="flex items-center justify-between bg-[#F4F8FB] px-4 py-3">
                           <div className="text-base font-semibold text-[#0E1D3D]">{group.title}</div>

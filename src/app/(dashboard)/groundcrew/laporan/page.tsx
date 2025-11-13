@@ -69,10 +69,14 @@ export default function GroundcrewLaporanPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await skybase.inspections.availableFlights();
-        const flights: any[] = Array.isArray((res as any)?.data) ? (res as any).data : [];
+        const res = await skybase.flights.list();
+        const data = (res as any)?.data;
+        const flights: any[] = Array.isArray(data?.flights)
+          ? data.flights
+          : Array.isArray(data)
+            ? data
+            : [];
         if (!ignore) {
-          // group by local date from sched_dep
           const byDate = new Map<string, ReportSchedule[]>();
           for (const f of flights) {
             const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
@@ -136,7 +140,6 @@ export default function GroundcrewLaporanPage() {
     if (!section?.schedules?.length) return;
     setDownloading(section.id);
     try {
-      // Determine from/to dates
       const from = parseDDMMYYYY(startDate) || new Date(section.id);
       const to = parseDDMMYYYY(endDate) || new Date(section.id);
       const fromISO = toISODateTime(from, false);

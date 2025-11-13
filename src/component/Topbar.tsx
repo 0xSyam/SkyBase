@@ -8,6 +8,7 @@ import GlassCard from "./Glasscard";
 import { type SidebarRole, navigationByRole } from "./Sidebar";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
+import { getUser } from "@/lib/auth/storage";
 
 interface TopBarProps {
   userName?: string;
@@ -16,29 +17,34 @@ interface TopBarProps {
 }
 
 export default function TopBar({
-  userName = "Ghani Zulhusni Bahri",
+  userName: userNameProp,
   userAvatar = null,
   sidebarRole,
 }: TopBarProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = React.useState(false);
   const [dropdownHeight, setDropdownHeight] = React.useState(0);
+  const [userName, setUserName] = React.useState(userNameProp || "User");
   const menuContentRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const user = getUser();
+    if (user?.name) {
+      setUserName(user.name);
+    }
+  }, []);
   const handleNotificationClick = () => {
     console.log("Notification clicked");
   };
 
   const handleLogout = async () => {
-    // Clear local state ASAP for responsive UX
     try {
       await skybase.auth.logout();
     } catch (e) {
-      // ignore network errors on logout
     } finally {
       try {
         router.replace("/");
       } finally {
-        // Hard redirect fallback to ensure navigation in all cases
         if (typeof window !== "undefined") {
           setTimeout(() => {
             if (window.location.pathname !== "/") {
