@@ -64,7 +64,7 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
   const handleLogout = async () => {
     try {
       await skybase.auth.logout();
-    } catch (e) {
+    } catch {
       // ignore
     } finally {
       try {

@@ -6,6 +6,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
+import type { Flight, WarehouseRequest } from "@/types/api";
 
 type ScheduleItem = { 
   flight_id: number;
@@ -16,14 +17,6 @@ type ScheduleItem = {
   status: string;
 };
 
-type RequestItem = { 
-  wh_req_id: number;
-  flight_id: number;
-  requested_by_gc_id: number;
-  status: string;
-  created_at: string;
-  items?: Array<{ item_name: string; qty: number }>;
-};
 
 type StockRow = { 
   id: number | string;
@@ -120,8 +113,8 @@ export default function WarehouseDashboardPage() {
   const router = useRouter();
   const [welcome, setWelcome] = React.useState<string | null>(null);
   const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
-  const [requestsData, setRequestsData] = React.useState<RequestItem[]>([]);
-  const [historyData, setHistoryData] = React.useState<RequestItem[]>([]);
+  const [requestsData, setRequestsData] = React.useState<WarehouseRequest[]>([]);
+  const [historyData, setHistoryData] = React.useState<WarehouseRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
@@ -129,19 +122,22 @@ export default function WarehouseDashboardPage() {
     const run = async () => {
       try {
         const dashboardRes = await skybase.dashboard.warehouse();
-        if (!ignore) setWelcome((dashboardRes as any)?.message ?? null);
+        if (!ignore) setWelcome((dashboardRes as { message?: string })?.message ?? null);
 
         const flightsRes = await skybase.flights.list();
-        const flightsData = (flightsRes as any)?.data;
-        const flights: any[] = Array.isArray(flightsData?.flights)
-          ? flightsData.flights
-          : Array.isArray(flightsData)
-            ? flightsData
-            : [];
+        const flightsData = flightsRes?.data;
+        let flights: Flight[] = [];
+        if (Array.isArray(flightsData)) {
+          if (flightsData.length > 0 && 'flight_id' in flightsData[0]) {
+            flights = flightsData as unknown as Flight[];
+          }
+        } else if (flightsData && 'flights' in flightsData && Array.isArray(flightsData.flights)) {
+          flights = flightsData.flights;
+        }
         
         if (!ignore) {
           
-          const mapped: ScheduleItem[] = flights.map((f: any) => {
+          const mapped: ScheduleItem[] = flights.map((f) => {
             const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
             const time = arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB" : "--:-- WIB";
             return {
@@ -158,25 +154,21 @@ export default function WarehouseDashboardPage() {
 
         const requestsRes = await skybase.warehouseRequests.list();
         if (!ignore && requestsRes.data) {
-          const requests = Array.isArray(requestsRes.data) 
-            ? requestsRes.data 
-            : [];
-          setRequestsData(requests.filter((r: any) => r.status === 'PENDING'));
+          const requests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
+          setRequestsData(requests.filter((r) => r.status === 'PENDING'));
         }
 
         const historyRes = await skybase.warehouseRequests.myRequests();
         if (!ignore && historyRes.data) {
-          const history = Array.isArray(historyRes.data) 
-            ? historyRes.data 
-            : [];
-          setHistoryData(history.filter((r: any) => r.status !== 'PENDING'));
+          const history = Array.isArray(historyRes.data) ? historyRes.data : [];
+          setHistoryData(history.filter((r) => r.status !== 'PENDING'));
         }
 
         if (!ignore) setLoading(false);
-      } catch (e: any) {
+      } catch (e) {
         if (!ignore) {
           setLoading(false);
-          if (e?.status === 401) router.replace("/");
+          if ((e as { status?: number })?.status === 401) router.replace("/");
         }
       }
     };
@@ -186,7 +178,7 @@ export default function WarehouseDashboardPage() {
 
   const docRequestsData: StockRow[] = requestsData
     .slice(0, 10)
-    .map((req, idx) => ({
+    .map((req) => ({
       id: req.wh_req_id,
       document: `Request #${req.wh_req_id}`,
       jumlah: req.items?.length || 0,
@@ -194,7 +186,7 @@ export default function WarehouseDashboardPage() {
 
   const aseRequestsData: StockRow[] = requestsData
     .slice(0, 6)
-    .map((req, idx) => ({
+    .map((req) => ({
       id: req.wh_req_id,
       document: `Request #${req.wh_req_id}`,
       jumlah: req.items?.length || 0,

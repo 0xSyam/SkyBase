@@ -7,6 +7,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
+import type { Flight } from "@/types/api";
 
 
 type ScheduleItem = {
@@ -27,9 +28,9 @@ export default function SupervisorDashboardPage() {
     const run = async () => {
       try {
         const res = await skybase.dashboard.supervisor();
-        if (!ignore) setWelcome((res as any)?.message ?? null);
-      } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+        if (!ignore) setWelcome((res as { message?: string })?.message ?? null);
+      } catch (e) {
+        if ((e as { status?: number })?.status === 401) router.replace("/");
       }
     };
     run();
@@ -41,16 +42,15 @@ export default function SupervisorDashboardPage() {
       setLoadingFlights(true);
       try {
         const res = await skybase.flights.list();
-        const data = (res as any)?.data;
-        const list: any[] = Array.isArray(data?.flights)
-          ? data.flights
-          : Array.isArray(data?.items)
-            ? data.items
-            : Array.isArray(data)
-              ? data
-              : Array.isArray(res as any)
-                ? (res as any)
-                : [];
+        const data = res?.data;
+        let list: Flight[] = [];
+        if (Array.isArray(data)) {
+          if (data.length > 0 && 'flight_id' in data[0]) {
+            list = data as unknown as Flight[];
+          }
+        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+          list = data.flights;
+        }
         if (!ignore) {
           const fmtTime = (d?: string | null) => {
             if (!d) return "--:-- WIB";
@@ -70,8 +70,8 @@ export default function SupervisorDashboardPage() {
           }));
           setScheduleData(mapped);
         }
-      } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+      } catch (e) {
+        if ((e as { status?: number })?.status === 401) router.replace("/");
         if (!ignore) setScheduleData([]);
       } finally {
         if (!ignore) setLoadingFlights(false);

@@ -63,7 +63,7 @@ export default function RequestPage() {
         if (Array.isArray(response.data)) {
           requestsData = response.data;
         } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-          requestsData = (response.data as any).items || [];
+          requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
         }
         
         setRequests(requestsData);
@@ -138,7 +138,7 @@ export default function RequestPage() {
       if (Array.isArray(response.data)) {
         requestsData = response.data;
       } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-        requestsData = (response.data as any).items || [];
+        requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
       }
       setRequests(requestsData);
     } catch (err) {
@@ -167,7 +167,7 @@ export default function RequestPage() {
       if (Array.isArray(response.data)) {
         requestsData = response.data;
       } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-        requestsData = (response.data as any).items || [];
+        requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
       }
       setRequests(requestsData);
       

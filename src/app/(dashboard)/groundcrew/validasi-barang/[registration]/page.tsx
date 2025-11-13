@@ -65,7 +65,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       setError(null);
       try {
         const res = await skybase.inspections.aircraftValidation(aircraftId);
-        const items: any[] = Array.isArray((res as any)?.data) ? (res as any).data : Array.isArray((res as any)?.data?.items) ? (res as any).data.items : [];
+        const resData = res?.data;
+        const items = Array.isArray(resData) ? resData : (resData && 'items' in resData && Array.isArray(resData.items)) ? resData.items : [];
         const rows: DocumentRow[] = items.map((it) => {
           const effectiveISO = it?.effective_date ?? it?.expires_at ?? null;
           const effective = effectiveISO ? new Date(effectiveISO).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : "-";
@@ -80,8 +81,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
           };
         });
         if (!ignore) setDocumentGroups([rows]);
-      } catch (e: any) {
-        if (!ignore) setError(e?.message || "Gagal memuat data validasi");
+      } catch (e) {
+        if (!ignore) setError((e as Error)?.message || "Gagal memuat data validasi");
       } finally {
         if (!ignore) setLoading(false);
       }

@@ -6,6 +6,7 @@ import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
 import { ArrowRight, Calendar, Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
+import type { Flight } from "@/types/api";
 
 interface ReportSchedule {
   id: string;
@@ -66,12 +67,15 @@ export default function WarehouseLaporanPage() {
       setLoading(true);
       try {
         const res = await skybase.flights.list();
-        const data = (res as any)?.data;
-        const flights: any[] = Array.isArray(data?.flights)
-          ? data.flights
-          : Array.isArray(data)
-            ? data
-            : [];
+        const data = res?.data;
+        let flights: Flight[] = [];
+        if (Array.isArray(data)) {
+          if (data.length > 0 && 'flight_id' in data[0]) {
+            flights = data as unknown as Flight[];
+          }
+        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+          flights = data.flights;
+        }
         
         if (!ignore) {
           const byDate = new Map<string, ReportSchedule[]>();
@@ -165,8 +169,8 @@ export default function WarehouseLaporanPage() {
       
       const results = await Promise.allSettled(calls);
       const ok = results
-        .filter((r): r is PromiseFulfilledResult<any> => r.status === "fulfilled")
-        .map((r) => r.value);
+        .filter((r) => r.status === "fulfilled")
+        .map((r) => (r as PromiseFulfilledResult<{ registration: string; data: unknown }>).value);
       
       const exportBlob = new Blob(
         [JSON.stringify({ section: section.title, from: fromISO, to: toISO, reports: ok }, null, 2)], 

@@ -1,19 +1,26 @@
 import { getToken, setToken, setUser, clearAuth, type StoredUser } from "@/lib/auth/storage";
+import type {
+  ApiResponse,
+  ApiListResponse,
+  Flight,
+  FlightCreateData,
+  FlightRescheduleData,
+  ItemCatalog,
+  GroundcrewInventoryResponse,
+  AircraftInventoryResponse,
+  Inspection,
+  InspectionSummary,
+  AircraftValidation,
+  Notification,
+  NotificationStats,
+  WarehouseRequest,
+  WarehouseRequestCreateData,
+  AircraftStatusReport,
+} from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://skybase.novarentech.web.id/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
-export type ApiResponse<T> = {
-  status: string;
-  message?: string;
-  data: T;
-};
-
-export type ApiListResponse<T> = {
-  status: string;
-  data: T[] | { items: T[]; total?: number } | unknown;
-};
 
 type RequestOptions = {
   method?: HttpMethod;
@@ -61,7 +68,7 @@ async function request<T = unknown>(path: string, opts: RequestOptions = {}): Pr
   const res = await fetch(buildUrl(path, query), {
     method,
     headers: finalHeaders,
-    body: body !== undefined && body !== null ? (finalHeaders["Content-Type"]?.includes("application/json") ? JSON.stringify(body) : (body as any)) : undefined,
+    body: body !== undefined && body !== null ? (finalHeaders["Content-Type"]?.includes("application/json") ? JSON.stringify(body) : (body as BodyInit)) : undefined,
     credentials: "omit",
     signal,
   });
@@ -72,9 +79,12 @@ async function request<T = unknown>(path: string, opts: RequestOptions = {}): Pr
 
   if (!res.ok) {
     const errorMessage = isJson && payload?.message ? payload.message : res.statusText;
-    const error = new Error(errorMessage || `Request failed: ${res.status}`);
-    (error as any).status = res.status;
-    (error as any).payload = payload;
+    const error = new Error(errorMessage || `Request failed: ${res.status}`) as Error & {
+      status: number;
+      payload: unknown;
+    };
+    error.status = res.status;
+    error.payload = payload;
     throw error;
   }
 
@@ -148,146 +158,139 @@ export const dashboardApi = {
 // Flights
 export const flightApi = {
   list() {
-    return request<ApiListResponse<any>>("/flights");
+    return request<ApiListResponse<{ flights: Flight[] }>>("/flights");
   },
-  create(data: {
-    aircraft_id?: number | null;
-    registration_code?: string | null;
-    route_to: string;
-    sched_dep: string; // ISO
-    sched_arr?: string | null; // ISO
-    status?: "READY" | "DELAY" | "SCHEDULED" | null;
-  }) {
-    return request<ApiResponse<any>>("/flights", { method: "POST", body: data });
+  create(data: FlightCreateData) {
+    return request<ApiResponse<{ flight_id: number }>>("/flights", { method: "POST", body: data });
   },
-  reschedule(flightId: number, data: { sched_dep: string; sched_arr?: string | null; status?: "READY" | "DELAY" | "SCHEDULED" | null }) {
-    return request<ApiResponse<any>>(`/flights/${flightId}/reschedule`, { method: "PUT", body: data });
+  reschedule(flightId: number, data: FlightRescheduleData) {
+    return request<ApiResponse<Flight>>(`/flights/${flightId}/reschedule`, { method: "PUT", body: data });
   },
 };
 
 // Items
 export const itemApi = {
   list(params?: { page?: number; per_page?: number; search?: string }) {
-    return request<ApiListResponse<any>>("/items", { query: params });
+    return request<ApiListResponse<ItemCatalog>>("/items", { query: params });
   },
   get(id: number | string) {
-    return request<ApiResponse<any>>(`/items/${id}`);
+    return request<ApiResponse<ItemCatalog>>(`/items/${id}`);
   },
-  create(data: any) {
-    return request<ApiResponse<any>>("/items", { method: "POST", body: data });
+  create(data: Partial<ItemCatalog>) {
+    return request<ApiResponse<ItemCatalog>>("/items", { method: "POST", body: data });
   },
-  update(id: number | string, data: any) {
-    return request<ApiResponse<any>>(`/items/${id}`, { method: "PUT", body: data });
+  update(id: number | string, data: Partial<ItemCatalog>) {
+    return request<ApiResponse<ItemCatalog>>(`/items/${id}`, { method: "PUT", body: data });
   },
   remove(id: number | string) {
-    return request<ApiResponse<any>>(`/items/${id}`, { method: "DELETE" });
+    return request<ApiResponse<{ message: string }>>(`/items/${id}`, { method: "DELETE" });
   },
   requirements(id: number | string) {
-    return request<ApiListResponse<any>>(`/items/${id}/requirements`);
+    return request<ApiListResponse<unknown>>(`/items/${id}/requirements`);
   },
   byCategory(category: string) {
-    return request<ApiListResponse<any>>(`/items/category/${encodeURIComponent(category)}`);
+    return request<ApiListResponse<ItemCatalog>>(`/items/category/${encodeURIComponent(category)}`);
   },
 };
 
 // Inventory
 export const inventoryApi = {
   groundcrewAll() {
-    return request<ApiResponse<{ doc_inventory: any[]; ase_inventory: any[] }>>("/inventory/groundcrew");
+    return request<ApiResponse<GroundcrewInventoryResponse>>("/inventory/groundcrew");
   },
   groundcrewDoc() {
-    return request<ApiListResponse<any>>("/inventory/groundcrew/doc");
+    return request<ApiListResponse<unknown>>("/inventory/groundcrew/doc");
   },
   groundcrewAse() {
-    return request<ApiListResponse<any>>("/inventory/groundcrew/ase");
+    return request<ApiListResponse<unknown>>("/inventory/groundcrew/ase");
   },
   transferToAircraft(data: { aircraft_id: number; items: Array<{ item_id: number; qty: number }>; notes?: string }) {
-    return request<ApiResponse<any>>("/inventory/groundcrew/transfer-to-aircraft", { method: "POST", body: data });
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/transfer-to-aircraft", { method: "POST", body: data });
   },
   aircraftInventory(aircraftId: number | string) {
-    return request<ApiResponse<any>>(`/inventory/aircraft/${aircraftId}`);
+    return request<ApiResponse<AircraftInventoryResponse>>(`/inventory/aircraft/${aircraftId}`);
   },
   itemsByCategory(category: string) {
-    return request<ApiListResponse<any>>(`/inventory/items/${encodeURIComponent(category)}`);
+    return request<ApiListResponse<ItemCatalog>>(`/inventory/items/${encodeURIComponent(category)}`);
   },
 };
 
 // Inspections (validation flow)
 export const inspectionApi = {
   availableFlights() {
-    return request<ApiListResponse<any>>("/inspections/available-flights");
+    return request<ApiListResponse<Flight>>("/inspections/available-flights");
   },
   myInspections() {
-    return request<ApiListResponse<any>>("/inspections/my-inspections");
+    return request<ApiListResponse<Inspection>>("/inspections/my-inspections");
   },
   aircraftValidation(aircraftId: number | string) {
-    return request<ApiListResponse<any>>(`/inspections/aircraft/${aircraftId}/validation`);
+    return request<ApiResponse<AircraftValidation>>(`/inspections/aircraft/${aircraftId}/validation`);
   },
   toggleItem(inspectionItemId: number | string) {
-    return request<ApiResponse<any>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "POST" });
+    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "POST" });
   },
   replaceItem(inspectionItemId: number | string, data: { replacement_item_id: number; notes?: string }) {
-    return request<ApiResponse<any>>(`/inspections/items/${inspectionItemId}/replace`, { method: "POST", body: data });
+    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/replace`, { method: "POST", body: data });
   },
   submit(inspectionId: number | string, data: { notes?: string }) {
-    return request<ApiResponse<any>>(`/inspections/${inspectionId}/submit`, { method: "POST", body: data });
+    return request<ApiResponse<unknown>>(`/inspections/${inspectionId}/submit`, { method: "POST", body: data });
   },
   summary() {
-    return request<ApiResponse<any>>("/inspections/summary");
+    return request<ApiResponse<InspectionSummary>>("/inspections/summary");
   },
 };
 
 // Notifications
 export const notificationApi = {
   list() {
-    return request<ApiListResponse<any>>("/notifications");
+    return request<ApiListResponse<Notification>>("/notifications");
   },
   recent() {
-    return request<ApiListResponse<any>>("/notifications/recent");
+    return request<ApiListResponse<Notification>>("/notifications/recent");
   },
   today() {
-    return request<ApiListResponse<any>>("/notifications/today");
+    return request<ApiListResponse<Notification>>("/notifications/today");
   },
   stats() {
-    return request<ApiResponse<any>>("/notifications/stats");
+    return request<ApiResponse<NotificationStats>>("/notifications/stats");
   },
   byType(type: string) {
-    return request<ApiListResponse<any>>(`/notifications/type/${encodeURIComponent(type)}`);
+    return request<ApiListResponse<Notification>>(`/notifications/type/${encodeURIComponent(type)}`);
   },
   forItem(relatedType: string, relatedId: number | string) {
-    return request<ApiListResponse<any>>(`/notifications/item/${encodeURIComponent(relatedType)}/${relatedId}`);
+    return request<ApiListResponse<Notification>>(`/notifications/item/${encodeURIComponent(relatedType)}/${relatedId}`);
   },
 };
 
 // Reports
 export const reportApi = {
   aircraftStatus(params: { aircraft_id: number; from_date: string; to_date: string; group_by?: "daily" | "weekly" | "monthly" | null; type?: "ASE" | "DOC" | "ALL" | null }) {
-    return request<ApiResponse<any>>("/reports/aircraft-status", { query: params as any });
+    return request<ApiResponse<AircraftStatusReport>>("/reports/aircraft-status", { query: params as Record<string, string | number | boolean | undefined | null> });
   },
   fleetSummary(params: { from_date: string; to_date: string }) {
-    return request<ApiResponse<any>>("/reports/fleet-summary", { query: params });
+    return request<ApiResponse<{ message: string }>>("/reports/fleet-summary", { query: params });
   },
 };
 
 // Warehouse requests
 export const warehouseRequestApi = {
   list() {
-    return request<ApiListResponse<any>>("/warehouse-requests");
+    return request<ApiListResponse<WarehouseRequest>>("/warehouse-requests");
   },
   myRequests() {
-    return request<ApiListResponse<any>>("/warehouse-requests/my-requests");
+    return request<ApiListResponse<WarehouseRequest>>("/warehouse-requests/my-requests");
   },
   get(id: number | string) {
-    return request<ApiResponse<any>>(`/warehouse-requests/${id}`);
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}`);
   },
-  create(data: { flight_id: number; items: Array<{ item_id: number; qty: number }>; notes?: string }) {
-    return request<ApiResponse<any>>("/warehouse-requests", { method: "POST", body: data });
+  create(data: WarehouseRequestCreateData) {
+    return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", { method: "POST", body: data });
   },
   approve(id: number | string) {
-    return request<ApiResponse<any>>(`/warehouse-requests/${id}/approve`, { method: "PUT" });
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT" });
   },
   reject(id: number | string, data?: { reason?: string }) {
-    return request<ApiResponse<any>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data ?? {} });
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data ?? {} });
   },
 };
 

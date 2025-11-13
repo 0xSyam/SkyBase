@@ -85,13 +85,14 @@ const StokBarangPage = () => {
           skybase.inventory.groundcrewAll(),
           skybase.inventory.itemsByCategory("DOC"),
         ]);
-        const docs: any[] = (invRes as any)?.data?.doc_inventory ?? [];
-        const catalogItems: any[] = Array.isArray((docCatalogRes as any)?.data)
-          ? (docCatalogRes as any).data
-          : Array.isArray((docCatalogRes as any)?.data?.items)
-            ? (docCatalogRes as any).data.items
+        const docs = invRes?.data?.doc_inventory ?? [];
+        const catalogData = docCatalogRes?.data;
+        const catalogItems = Array.isArray(catalogData)
+          ? catalogData
+          : (catalogData && 'items' in catalogData && Array.isArray(catalogData.items))
+            ? catalogData.items
             : [];
-        const docCatalog: Record<number, any> = {};
+        const docCatalog: Record<number, { item_id?: number; name?: string }> = {};
         for (const it of catalogItems) {
           if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
         }
@@ -129,7 +130,7 @@ const StokBarangPage = () => {
           setGroups(built);
           if (built[0]?.id) setExpandedGroupId(built[0].id);
         }
-      } catch (e) {
+      } catch {
         if (!ignore) {
           setGroups(initialGroups);
         }

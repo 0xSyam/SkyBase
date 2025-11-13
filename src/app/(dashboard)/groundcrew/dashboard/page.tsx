@@ -6,6 +6,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
+import type { Flight } from "@/types/api";
 
 type ScheduleItem = { aircraft: string; reg: string; time: string };
 type StockRow = { document: string; jumlah: number };
@@ -107,9 +108,9 @@ export default function DashboardPage() {
     const run = async () => {
       try {
         const res = await skybase.dashboard.groundcrew();
-        if (!ignore) setWelcome((res as any)?.message ?? null);
-      } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+        if (!ignore) setWelcome((res as { message?: string })?.message ?? null);
+      } catch (e) {
+        if ((e as { status?: number })?.status === 401) router.replace("/");
       }
     };
     run();
@@ -122,12 +123,15 @@ export default function DashboardPage() {
       setLoadingFlights(true);
       try {
         const res = await skybase.flights.list();
-        const data = (res as any)?.data;
-        const list: any[] = Array.isArray(data?.flights)
-          ? data.flights
-          : Array.isArray(data)
-            ? data
-            : [];
+        const data = res?.data;
+        let list: Flight[] = [];
+        if (Array.isArray(data)) {
+          if (data.length > 0 && 'flight_id' in data[0]) {
+            list = data as unknown as Flight[];
+          }
+        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+          list = data.flights;
+        }
         if (!ignore) {
           const mapped: ScheduleItem[] = list.map((f) => {
             const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
@@ -174,12 +178,15 @@ export default function DashboardPage() {
           skybase.inventory.itemsByCategory("DOC"),
           skybase.inventory.itemsByCategory("ASE"),
         ]);
-        const docs: any[] = (invRes as any)?.data?.doc_inventory ?? [];
-        const ases: any[] = (invRes as any)?.data?.ase_inventory ?? [];
-        const toArray = (input: any) => Array.isArray(input?.data) ? input.data : (Array.isArray(input?.data?.items) ? input.data.items : (Array.isArray(input) ? input : []));
-        const docCatalog: Record<number, any> = {};
+        const docs = invRes?.data?.doc_inventory ?? [];
+        const ases = invRes?.data?.ase_inventory ?? [];
+        const toArray = (input: { data?: unknown }) => {
+          const d = input?.data;
+          return Array.isArray(d) ? d : (d && typeof d === 'object' && 'items' in d && Array.isArray(d.items)) ? d.items : [];
+        };
+        const docCatalog: Record<number, { item_id?: number; name?: string }> = {};
         for (const it of toArray(docCatRes)) if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
-        const aseCatalog: Record<number, any> = {};
+        const aseCatalog: Record<number, { item_id?: number; name?: string }> = {};
         for (const it of toArray(aseCatRes)) if (it?.item_id != null) aseCatalog[Number(it.item_id)] = it;
 
         const docAgg = new Map<string, number>();

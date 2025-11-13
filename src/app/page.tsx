@@ -21,8 +21,8 @@ export default function Login() {
       const role = res?.data?.user?.role?.toLowerCase?.() ?? "groundcrew";
       const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
       router.push(target);
-    } catch (e: any) {
-      setError(e?.message || "Login gagal");
+    } catch (e) {
+      setError((e as Error)?.message || "Login gagal");
     } finally {
       setLoading(false);
     }

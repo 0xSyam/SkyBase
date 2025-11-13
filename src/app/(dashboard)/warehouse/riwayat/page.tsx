@@ -5,31 +5,7 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import skybase from "@/lib/api/skybase";
-
-interface WarehouseRequest {
-  wh_req_id: number;
-  flight_id: number;
-  requested_by_gc_id: number;
-  status: "pending" | "approved" | "rejected";
-  rejection_reason?: string | null;
-  created_at: string;
-  updated_at: string | null;
-  flight?: {
-    flight_id: number;
-    registration_code: string;
-    route_to: string;
-  };
-  requestedBy?: {
-    user_id: number;
-    name: string;
-  };
-  items?: Array<{
-    item_id: number;
-    item_name: string;
-    category: "DOC" | "ASE";
-    qty: number;
-  }>;
-}
+import type { WarehouseRequest } from "@/types/api";
 
 interface HistoryRow {
   id: number;
@@ -39,7 +15,14 @@ interface HistoryRow {
   jumlah: number;
   status: string;
   requester?: string;
-  category: "DOC" | "ASE";
+  category: string;
+}
+
+interface WarehouseRequestItem {
+  item_id: number;
+  item_name: string;
+  category: string;
+  qty: number;
 }
 
 export default function RiwayatPage() {
@@ -59,14 +42,14 @@ export default function RiwayatPage() {
       const response = await skybase.warehouseRequests.list();
       
       if (response.status === "success") {
-        const data = Array.isArray(response.data) 
-          ? response.data 
-          : (response.data as any)?.items || [];
+        const data = Array.isArray(response.data)
+          ? response.data
+          : (response.data as { items?: WarehouseRequest[] })?.items || [];
         setRequests(data);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Failed to fetch warehouse requests:", err);
-      setError(err.message || "Gagal memuat data riwayat");
+      setError((err as Error).message || "Gagal memuat data riwayat");
     } finally {
       setLoading(false);
     }
@@ -86,20 +69,21 @@ export default function RiwayatPage() {
         timeZoneName: "short",
       });
 
-      const docItems = req.items?.filter(item => item.category === "DOC") || [];
-      const aseItems = req.items?.filter(item => item.category === "ASE") || [];
+      const items = (req.items || []) as unknown as WarehouseRequestItem[];
+      const docItems = items.filter(item => item.category === "DOC");
+      const aseItems = items.filter(item => item.category === "ASE");
 
       const result: HistoryRow[] = [];
 
       if (docItems.length > 0) {
         result.push({
           id: req.wh_req_id,
-          jenis: docItems.map(item => item.item_name).join(", "),
+          jenis: docItems.map(item => (item as WarehouseRequestItem).item_name || "Unknown").join(", "),
           tanggal,
           jam,
           jumlah: docItems.reduce((sum, item) => sum + item.qty, 0),
           status: req.status,
-          requester: req.requestedBy?.name,
+          requester: req.requested_by?.name,
           category: "DOC",
         });
       }
@@ -107,12 +91,12 @@ export default function RiwayatPage() {
       if (aseItems.length > 0) {
         result.push({
           id: req.wh_req_id,
-          jenis: aseItems.map(item => item.item_name).join(", "),
+          jenis: aseItems.map(item => (item as WarehouseRequestItem).item_name || "Unknown").join(", "),
           tanggal,
           jam,
           jumlah: aseItems.reduce((sum, item) => sum + item.qty, 0),
           status: req.status,
-          requester: req.requestedBy?.name,
+          requester: req.requested_by?.name,
           category: "ASE",
         });
       }

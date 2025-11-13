@@ -39,16 +39,13 @@ export default function SupervisorPenerbanganPage() {
       setLoading(true);
       try {
         const res = await skybase.flights.list();
-        const data = (res as any)?.data;
-        const list: any[] = Array.isArray(data?.flights)
-          ? data.flights
-          : Array.isArray(data?.items)
-            ? data.items
-            : Array.isArray(data)
-              ? data
-              : Array.isArray(res as any)
-                ? (res as any)
-                : [];
+        const data = res?.data;
+        let list = [];
+        if (Array.isArray(data)) {
+          list = data;
+        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+          list = data.flights;
+        }
         if (!ignore) {
           const fmtTime = (d?: string | null) => {
             if (!d) return "--:-- WIB";
@@ -68,8 +65,8 @@ export default function SupervisorPenerbanganPage() {
           }));
           setRows(mapped);
         }
-      } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+      } catch (e) {
+        if ((e as { status?: number })?.status === 401) router.replace("/");
         if (!ignore) setRows([]);
       } finally {
         if (!ignore) setLoading(false);

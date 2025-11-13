@@ -21,7 +21,7 @@ interface FlightSchedule {
 const ValidasiBarangPage = () => {
   const router = useRouter();
   const [flights, setFlights] = React.useState<FlightSchedule[]>([]);
-  const [loading, setLoading] = React.useState(false);
+  const [, setLoading] = React.useState(false);
 
   React.useEffect(() => {
     let ignore = false;
@@ -29,15 +29,16 @@ const ValidasiBarangPage = () => {
       setLoading(true);
       try {
         const res = await skybase.inspections.availableFlights();
-        const items: any[] = Array.isArray((res as any)?.data) ? ((res as any).data as any[]) : Array.isArray((res as any)?.data?.items) ? ((res as any).data.items as any[]) : [];
+        const resData = res?.data;
+        const items = Array.isArray(resData) ? resData : (resData && 'items' in resData && Array.isArray(resData.items)) ? resData.items : [];
         if (!ignore && items.length > 0) {
           const mapped: FlightSchedule[] = items.map((it) => ({
-            aircraft: it?.aircraft_type || it?.aircraft?.type || "-",
-            registration: it?.registration_code || it?.registration || it?.aircraft?.registration_code || "-",
-            destination: it?.route_to || it?.destination || "-",
+            aircraft: it?.aircraft?.type || "-",
+            registration: it?.aircraft?.registration_code || "-",
+            destination: it?.route_to || "-",
             arrival: it?.sched_arr ? new Date(it.sched_arr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
             takeOff: it?.sched_dep ? new Date(it.sched_dep).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
-            aircraftId: it?.aircraft?.aircraft_id ?? it?.aircraft_id,
+            aircraftId: it?.aircraft?.aircraft_id,
           }));
           setFlights(mapped);
         }

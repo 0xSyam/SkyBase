@@ -42,7 +42,7 @@ export default function SupervisorManajemenAkunPage() {
     const loadRoles = async () => {
       try {
         const res = await skybase.auth.roles();
-        const list = (res as any)?.data?.roles ?? [];
+        const list = (res as { data?: { roles?: Array<{ role_id: number; name: string }> } })?.data?.roles ?? [];
         setRoles(Array.isArray(list) ? list : []);
       } catch {
         setRoles([
@@ -273,17 +273,17 @@ export default function SupervisorManajemenAkunPage() {
                       password: createForm.password,
                     };
                     const res = await skybase.auth.createUser(payload);
-                    const user = (res as any)?.data;
+                    const user = res?.data;
                     if (user) {
                       setAccountList((prev) => [
                         ...prev,
-                        { id: String(user.user_id ?? user.id ?? Math.random()), username: user.name, role: user.role, avatar: undefined },
+                        { id: String(user.user_id ?? Math.random()), username: user.name, role: user.role, avatar: undefined },
                       ]);
                       setIsCreateOpen(false);
                       setCreateForm({ name: "", email: "", phone: "", role: "groundcrew", password: "", password_confirmation: "" });
                     }
-                  } catch (err: any) {
-                    const msg = err?.payload?.message || err?.message || "Gagal menambahkan akun";
+                  } catch (err) {
+                    const msg = (err as { payload?: { message?: string }; message?: string })?.payload?.message || (err as Error)?.message || "Gagal menambahkan akun";
                     setCreateError(String(msg));
                   } finally {
                     setCreateLoading(false);
@@ -322,7 +322,7 @@ export default function SupervisorManajemenAkunPage() {
                     <label className="text-sm font-semibold text-[#0E1D3D]">Role</label>
                     <select
                       value={createForm.role}
-                      onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as any })}
+                      onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as "groundcrew" | "warehouse" | "supervisor" })}
                       className="w-full rounded-3xl border border-[#C5D0DD] px-4 py-2.5 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 bg-white"
                     >
                       {(roles.length ? roles : [{ role_id: 1, name: "groundcrew" }, { role_id: 2, name: "warehouse" }]).map((r) => (

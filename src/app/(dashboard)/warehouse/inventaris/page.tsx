@@ -7,6 +7,7 @@ import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
 import { skybase } from "@/lib/api/skybase";
+import type { ItemCatalog } from "@/types/api";
 
 interface StockItem {
   item_id: number;
@@ -105,35 +106,25 @@ const WarehouseInventarisPage = () => {
       setLoading(true);
       const response = await skybase.items.list();
       
-      const items: StockItem[] = Array.isArray(response.data)
-        ? response.data
-        : (response.data as any)?.items || [];
+      const rawItems: ItemCatalog[] = Array.isArray(response.data)
+        ? response.data as ItemCatalog[]
+        : (response.data as { items?: ItemCatalog[] })?.items || [];
 
       const categorizedItems: Record<string, StockItem[]> = {};
       
-      items.forEach((item: any) => {
+      rawItems.forEach((item) => {
         const category = item.category || "DOC";
         const transformedItem: StockItem = {
-          item_id: item.item_id || item.id,
+          item_id: item.item_id,
           namaDokumen: category,
-          nomor: item.part_number || item.serial_number || "-",
-          revisi: item.revision || "001",
-          efektif: item.effective_date 
-            ? new Date(item.effective_date).toLocaleDateString("id-ID", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })
-            : "-",
-          jumlah: item.qty_in_stock || item.quantity || 0,
-          hasAlert: item.qty_in_stock < 5, 
+          nomor: "-",
+          revisi: "001",
+          efektif: "-",
+          jumlah: 0,
+          hasAlert: false,
           name: item.name,
           category: item.category,
-          type: item.type,
-          serial_number: item.serial_number,
-          part_number: item.part_number,
-          qty_in_stock: item.qty_in_stock,
-          unit: item.unit,
+          unit: item.unit || undefined,
         };
 
         if (!categorizedItems[category]) {

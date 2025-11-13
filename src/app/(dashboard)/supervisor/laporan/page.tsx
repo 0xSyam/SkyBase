@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import { ArrowRight, Calendar, Download } from "lucide-react";
+import { Calendar, Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
+import type { Flight } from "@/types/api";
 
 interface ReportSchedule {
   id: string;
@@ -64,16 +65,15 @@ export default function SupervisorLaporanPage() {
       setLoading(true);
       try {
         const res = await skybase.flights.list();
-        const data = (res as any)?.data;
-        const list: any[] = Array.isArray(data?.flights)
-          ? data.flights
-          : Array.isArray(data?.items)
-            ? data.items
-            : Array.isArray(data)
-              ? data
-              : Array.isArray(res as any)
-                ? (res as any)
-                : [];
+        const data = res?.data;
+        let list: Flight[] = [];
+        if (Array.isArray(data)) {
+          if (data.length > 0 && 'flight_id' in data[0]) {
+            list = data as unknown as Flight[];
+          }
+        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+          list = data.flights;
+        }
 
         if (!ignore) {
           const byDate = new Map<string, ReportSection>();
@@ -104,7 +104,7 @@ export default function SupervisorLaporanPage() {
               id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
               timeRange: `${toTime(f?.sched_dep ?? null)} - ${toTime(f?.sched_arr ?? null)}`,
               aircraft: f?.aircraft?.type ?? "-",
-              registration: f?.aircraft?.registration_code ?? f?.registration_code ?? "-",
+              registration: f?.aircraft?.registration_code ?? "-",
               destination: f?.route_to ?? "-",
             };
             sec.schedules.push(schedule);
@@ -113,8 +113,8 @@ export default function SupervisorLaporanPage() {
           const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
           setSections(sorted);
         }
-      } catch (e: any) {
-        if (e?.status === 401) router.replace("/");
+      } catch (e) {
+        if ((e as { status?: number })?.status === 401) router.replace("/");
         if (!ignore) setSections([]);
       } finally {
         if (!ignore) setLoading(false);
@@ -139,7 +139,7 @@ export default function SupervisorLaporanPage() {
     return isNaN(d2.getTime()) ? null : d2;
   };
 
-  const filteredSections = useMemo(() => {
+  const filteredSections = React.useMemo(() => {
     const from = parseInputDate(startDate);
     const to = parseInputDate(endDate);
     if (!from && !to) return sections;
