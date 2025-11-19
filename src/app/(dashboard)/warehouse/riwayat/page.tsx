@@ -4,26 +4,31 @@ import React, { useMemo, useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
-import skybase from "@/lib/api/skybase";
-import type { WarehouseRequest } from "@/types/api";
+import { skybase } from "@/lib/api/skybase";
+import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
-interface HistoryRow {
+// Extended type with nested item details for UI display
+type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
+  items?: Array<{
+    item_id: number;
+    qty: number;
+    reason?: string | null;
+    item?: {
+      name: string;
+      category: string;
+    };
+  }>;
+};
+
+type HistoryRow = {
   id: number;
   jenis: string;
   tanggal: string;
   jam: string;
   jumlah: number;
   status: string;
-  requester?: string;
-  category: string;
-}
-
-interface WarehouseRequestItem {
-  item_id: number;
-  item_name: string;
-  category: string;
-  qty: number;
-}
+  rawData: WarehouseRequest;
+};
 
 export default function RiwayatPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -32,108 +37,93 @@ export default function RiwayatPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    async function fetchRequests() {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await skybase.warehouseRequests.list();
+
+        let requestsData: WarehouseRequest[] = [];
+        if (Array.isArray(response.data)) {
+          requestsData = response.data;
+        } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+          requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
+        }
+
+        setRequests(requestsData);
+      } catch (err) {
+        console.error("Error fetching warehouse requests:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch requests");
+      } finally {
+        setLoading(false);
+      }
+    }
+
     fetchRequests();
   }, []);
 
-  const fetchRequests = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await skybase.warehouseRequests.list();
-      
-      if (response.status === "success") {
-        const data = Array.isArray(response.data)
-          ? response.data
-          : (response.data as { items?: WarehouseRequest[] })?.items || [];
-        setRequests(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch warehouse requests:", err);
-      setError((err as Error).message || "Gagal memuat data riwayat");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const transformedRequests = useMemo(() => {
+    return requests
+      .map((req): HistoryRow => {
+        const date = new Date(req.created_at);
+        const tanggal = date.toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        });
+        const jam = date.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZoneName: 'short'
+        });
 
-  const transformedData = useMemo(() => {
-    return requests.map((req): HistoryRow[] => {
-      const date = new Date(req.created_at);
-      const tanggal = date.toLocaleDateString("id-ID", {
-        day: "2-digit",
-        month: "long",
-        year: "numeric",
-      });
-      const jam = date.toLocaleTimeString("id-ID", {
-        hour: "2-digit",
-        minute: "2-digit",
-        timeZoneName: "short",
-      });
+        const firstItem = req.items?.[0];
+        const jenis = firstItem?.item?.name || req.flight?.route_to || 'Unknown';
+        const jumlah = req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
 
-      const items = (req.items || []) as unknown as WarehouseRequestItem[];
-      const docItems = items.filter(item => item.category === "DOC");
-      const aseItems = items.filter(item => item.category === "ASE");
-
-      const result: HistoryRow[] = [];
-
-      if (docItems.length > 0) {
-        result.push({
+        return {
           id: req.wh_req_id,
-          jenis: docItems.map(item => (item as WarehouseRequestItem).item_name || "Unknown").join(", "),
+          jenis,
           tanggal,
           jam,
-          jumlah: docItems.reduce((sum, item) => sum + item.qty, 0),
+          jumlah,
           status: req.status,
-          requester: req.requested_by?.name,
-          category: "DOC",
-        });
-      }
-
-      if (aseItems.length > 0) {
-        result.push({
-          id: req.wh_req_id,
-          jenis: aseItems.map(item => (item as WarehouseRequestItem).item_name || "Unknown").join(", "),
-          tanggal,
-          jam,
-          jumlah: aseItems.reduce((sum, item) => sum + item.qty, 0),
-          status: req.status,
-          requester: req.requested_by?.name,
-          category: "ASE",
-        });
-      }
-
-      return result;
-    }).flat();
+          rawData: req,
+        };
+      });
   }, [requests]);
 
-  const historyDataDoc = useMemo(() => {
-    return transformedData.filter(item => item.category === "DOC");
-  }, [transformedData]);
+  const documentRequests = useMemo(() => {
+    return transformedRequests.filter(req =>
+      req.rawData.items?.some(item => item.item?.category === 'DOC')
+    );
+  }, [transformedRequests]);
 
-  const historyDataAse = useMemo(() => {
-    return transformedData.filter(item => item.category === "ASE");
-  }, [transformedData]);
+  const itemRequests = useMemo(() => {
+    return transformedRequests.filter(req =>
+      req.rawData.items?.some(item => item.item?.category === 'ASE')
+    );
+  }, [transformedRequests]);
 
   const filteredDocData = useMemo(() => {
-    if (!searchTerm) return historyDataDoc;
+    if (!searchTerm) return documentRequests;
     const search = searchTerm.toLowerCase();
-    return historyDataDoc.filter(
+    return documentRequests.filter(
       item =>
         item.jenis.toLowerCase().includes(search) ||
-        item.tanggal.toLowerCase().includes(search) ||
-        item.requester?.toLowerCase().includes(search)
+        item.tanggal.toLowerCase().includes(search)
     );
-  }, [historyDataDoc, searchTerm]);
+  }, [documentRequests, searchTerm]);
 
   const filteredAseData = useMemo(() => {
-    if (!searchTerm) return historyDataAse;
+    if (!searchTerm) return itemRequests;
     const search = searchTerm.toLowerCase();
-    return historyDataAse.filter(
+    return itemRequests.filter(
       item =>
         item.jenis.toLowerCase().includes(search) ||
-        item.tanggal.toLowerCase().includes(search) ||
-        item.requester?.toLowerCase().includes(search)
+        item.tanggal.toLowerCase().includes(search)
     );
-  }, [historyDataAse, searchTerm]);
+  }, [itemRequests, searchTerm]);
 
   const columnsDocument = useMemo<ColumnDef<HistoryRow>[]>(() => [
     { key: "jenis", header: "Dokumen", align: "left" },

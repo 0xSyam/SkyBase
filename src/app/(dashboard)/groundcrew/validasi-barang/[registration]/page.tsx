@@ -11,6 +11,9 @@ import skybase from "@/lib/api/skybase";
 type DocumentStatus = "approved" | "warning";
 
 interface DocumentRow {
+  id?: string | number;
+  inspection_item_id?: string | number;
+  is_checked: boolean | null;
   name: string;
   number: string;
   revision: string;
@@ -38,6 +41,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [documentGroups, setDocumentGroups] = useState<DocumentRow[][]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,9 +49,34 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     setMounted(true);
   }, []);
 
-  const handleDialogSelection = (status: "delay" | "ready") => {
-    console.log(`Konfirmasi status penerbangan: ${status}`);
-    setIsDialogOpen(false);
+  const handleDialogSelection = async (status: "delay" | "ready") => {
+    if (status === "delay") {
+      console.log(`Konfirmasi status penerbangan: ${status}`);
+      setIsDialogOpen(false);
+      return;
+    }
+
+    // Submit inspection untuk "ready"
+    try {
+      setSubmitting(true);
+      const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
+      const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
+      
+      if (!aircraftId || Number.isNaN(aircraftId)) {
+        throw new Error("Aircraft ID tidak ditemukan");
+      }
+
+      await skybase.inspections.submit(aircraftId, {});
+      
+      alert("Inspection berhasil disubmit!");
+      setIsDialogOpen(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Submit failed:', error);
+      alert("Gagal submit inspection: " + (error as Error).message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   useEffect(() => {
@@ -56,6 +85,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     if (!aircraftId || Number.isNaN(aircraftId)) {
       // Fallback for demo/mock if no ID
       const mockRows: DocumentRow[] = Array(5).fill(null).map(() => ({
+        id: `mock-${Math.random()}`,
+        inspection_item_id: `mock-${Math.random()}`,
+        is_checked: false,
         name: "SIC",
         number: "1334",
         revision: "001",
@@ -74,23 +106,32 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       try {
         const res = await skybase.inspections.aircraftValidation(aircraftId);
         const resData = res?.data;
-        const items = Array.isArray(resData) ? resData : (resData && 'items' in resData && Array.isArray(resData.items)) ? resData.items : [];
-        const rows: DocumentRow[] = items.map((it) => {
-          const effectiveISO = it?.effective_date ?? it?.expires_at ?? null;
-          const effectiveDate = effectiveISO ? new Date(effectiveISO) : null;
-          const effective = effectiveDate ? effectiveDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-";
-
-          // Check if expired
-          const isExpired = effectiveDate ? effectiveDate < new Date() : false;
+        // Fix parsing untuk response structure baru
+        let items: any[] = [];
+        if (resData && typeof resData === 'object' && 'items' in resData && Array.isArray(resData.items)) {
+          items = resData.items;
+        } else if (Array.isArray(resData)) {
+          items = resData;
+        } else if (resData && typeof resData === 'object') {
+          // Direct object dengan items array
+          items = (resData as any).items || [];
+        }
+        
+        const rows: DocumentRow[] = items.map((it: any) => {
+          // Gunakan field 'efektif' langsung dari backend
+          const effective = it?.efektif || "-";
 
           return {
-            name: it?.name || it?.item_name || it?.item?.name || "-",
-            number: it?.doc_number || it?.serial_number || "-",
-            revision: it?.revision_no || "-",
+            id: it?.id || it?.inspection_item_id,
+            inspection_item_id: it?.inspection_item_id || it?.id,
+            is_checked: it?.is_checked ?? false,
+            name: it?.nama_dokumen || it?.name || it?.item_name || it?.item?.name || "-",
+            number: it?.nomor || it?.doc_number || it?.serial_number || "-",
+            revision: it?.revisi || it?.revision_no || "-",
             effective,
-            effectiveStatus: isExpired ? "warning" : undefined,
-            quantity: Number(it?.quantity ?? 1) || 1,
-            status: "approved",
+            effectiveStatus: undefined,
+            quantity: Number(it?.jumlah ?? 1) || 1,
+            status: "approved" as DocumentStatus,
           };
         });
         if (!ignore) setDocumentGroups([rows]);
@@ -103,6 +144,15 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     load();
     return () => { ignore = true; };
   }, [resolvedSearchParams]);
+
+  const [inspectionItems, setInspectionItems] = useState<DocumentRow[]>([]);
+
+  // Update rows after loading data
+  useEffect(() => {
+    if (documentGroups[0]) {
+      setInspectionItems(documentGroups[0]);
+    }
+  }, [documentGroups]);
 
   const columns = useMemo<ColumnDef<DocumentRow>[]>(() => [
     {
@@ -163,10 +213,49 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       header: "Status",
       align: "center",
       className: "w-24 flex-shrink-0",
-      render: () => (
+      render: (value, row) => (
         <div className="grid place-items-center">
-          <div className="grid h-6 w-6 place-items-center rounded-full bg-[#2ECC71] text-white shadow-[0_4px_12px_rgba(46,204,113,0.35)]">
-            <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+          <div className="relative flex items-center">
+            <input
+              type="checkbox"
+              checked={row.is_checked === true}
+              onChange={async (e) => {
+                const newChecked = e.target.checked;
+                const itemId = row.inspection_item_id || row.id;
+                
+                if (!itemId) {
+                  console.error('Item ID not found');
+                  return;
+                }
+
+                try {
+                  await skybase.inspections.toggleItem(itemId);
+                  
+                  // Optimistically update local state
+                  setInspectionItems(prev =>
+                    prev.map(i =>
+                      (i.inspection_item_id === itemId || i.id === itemId)
+                        ? { ...i, is_checked: newChecked }
+                        : i
+                    )
+                  );
+                } catch (error) {
+                  console.error('Toggle failed:', error);
+                  // Revert optimistic update on error
+                  setInspectionItems(prev =>
+                    prev.map(i =>
+                      (i.inspection_item_id === itemId || i.id === itemId)
+                        ? { ...i, is_checked: null }
+                        : i
+                    )
+                  );
+                }
+              }}
+              className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-400 bg-transparent transition-all checked:border-[#1FC16B] checked:bg-[#1FC16B]"
+            />
+            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100">
+              <Check className="h-3.5 w-3.5" strokeWidth={3} />
+            </div>
           </div>
         </div>
       )
@@ -207,7 +296,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
             <GlassDataTable
               key={`document-group-${index}`}
               columns={columns}
-              data={group}
+              data={index === 0 ? inspectionItems : group}
               emptyMessage="Tidak ada dokumen"
             />
           ))}
@@ -222,8 +311,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
         <div className="mt-8">
           <button
             type="button"
-            className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setIsDialogOpen(true)}
+            disabled={submitting}
           >
             Submit
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
@@ -233,42 +323,57 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
       {mounted && isDialogOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="confirmation-title"
-              className="relative w-full mx-4 sm:mx-0 max-w-[360px] rounded-[28px] bg-white p-6 sm:p-8 text-center shadow-[0_24px_60px_rgba(15,23,42,0.15)] max-h-[85vh] overflow-y-auto"
+              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20"
             >
-              <button
-                type="button"
-                aria-label="Tutup dialog"
-                onClick={() => setIsDialogOpen(false)}
-                className="absolute -right-4 -top-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#FF4D4F] text-white shadow-[0_8px_20px_rgba(255,77,79,0.35)] transition hover:bg-[#e13d3f]"
-              >
-                <X className="h-6 w-6" strokeWidth={2.5} />
-              </button>
-
-              <h2 id="confirmation-title" className="text-2xl font-semibold text-[#222222]">
-                Konfirmasi
-              </h2>
-              <p className="mt-2 text-sm text-[#525252]">
-                Simpan dan konfirmasi status penerbangan
-              </p>
-
-              <div className="mt-8 flex gap-4">
+              {/* Close Button */}
+              <div className="relative p-8 pb-4">
+                <button
+                  type="button"
+                  aria-label="Tutup dialog"
+                  onClick={() => setIsDialogOpen(false)}
+                  className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-2xl bg-red-500 text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all duration-200"
+                >
+                  <X className="h-5 w-5" strokeWidth={2.5} />
+                </button>
+    
+                {/* Header */}
+                <div className="text-center mb-2">
+                  <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl grid place-items-center mb-4">
+                    <ArrowLeftRight className="h-8 w-8 text-blue-600" strokeWidth={2} />
+                  </div>
+                  <h2 id="confirmation-title" className="text-2xl font-bold text-gray-900 mb-2">
+                    Submit Inspection
+                  </h2>
+                  <p className="text-gray-600 leading-relaxed max-w-sm mx-auto">
+                    Apakah Anda yakin ingin menyelesaikan dan submit inspection ini?
+                  </p>
+                </div>
+              </div>
+    
+              {/* Action Buttons */}
+              <div className="px-8 pb-8 space-y-3">
                 <button
                   type="button"
                   onClick={() => handleDialogSelection("delay")}
-                  className="flex-1 rounded-full border-2 border-[#FF4D4F] px-6 py-3 text-sm font-semibold text-[#FF4D4F] transition hover:bg-[#FFE6E6] active:scale-95"
+                  disabled={submitting}
+                  className="w-full h-14 rounded-2xl border-2 border-red-400 bg-red-50 text-red-600 font-semibold text-lg shadow-sm hover:bg-red-100 hover:border-red-500 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
                 >
+                  <AlertCircle className="h-5 w-5" />
                   Delay
                 </button>
+                
                 <button
                   type="button"
                   onClick={() => handleDialogSelection("ready")}
-                  className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_12px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95"
+                  disabled={submitting}
+                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 active:scale-[0.98] active:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
                 >
+                  <Check className="h-5 w-5" />
                   Ready
                 </button>
               </div>
@@ -276,8 +381,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
           </div>,
           document.body
         )}
-    </PageLayout>
-  );
+      </PageLayout>
+    );
 };
 
 export default DetailValidasiBarangPage;
+

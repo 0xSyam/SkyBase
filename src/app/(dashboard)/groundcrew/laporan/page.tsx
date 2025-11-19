@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
-import { ArrowRight, Calendar, Download } from "lucide-react";
+import Calendar from "@/component/Calendar";
+import { ArrowRight, Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
@@ -27,36 +28,6 @@ interface ReportSection {
 
 const fallbackSections: ReportSection[] = [];
 
-interface DateFieldProps {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
-const DateField: React.FC<DateFieldProps> = ({
-  id,
-  value,
-  onChange,
-  placeholder,
-}) => {
-  return (
-    <label
-      htmlFor={id}
-      className="group relative inline-flex w-full md:w-auto flex-1 items-center gap-2 rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
-    >
-      <Calendar className="h-4 w-4 flex-shrink-0 text-[#0D63F3]" strokeWidth={2.5} />
-      <input
-        id={id}
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        className="w-full md:w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
-      />
-    </label>
-  );
-};
 
 export default function GroundcrewLaporanPage() {
   const [startDate, setStartDate] = useState("");
@@ -193,14 +164,14 @@ export default function GroundcrewLaporanPage() {
                 Pilih tanggal laporan :
               </span>
               <div className="flex w-full md:w-auto items-center gap-3">
-                <DateField
+                <Calendar
                   id="laporan-start-date"
                   value={startDate}
                   onChange={setStartDate}
                   placeholder="dd/mm/yyyy"
                 />
                 <span className="text-lg font-semibold text-[#94A3B8]">-</span>
-                <DateField
+                <Calendar
                   id="laporan-end-date"
                   value={endDate}
                   onChange={setEndDate}
@@ -227,30 +198,11 @@ export default function GroundcrewLaporanPage() {
                     {section.title}
                   </h2>
                   <div className="flex items-center">
-                    <button
-                      type="button"
-                      className="sm:hidden grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
-                      aria-label="Unduh Laporan"
-                      onClick={() => handleDownloadSection(section)}
-                      disabled={downloading === section.id}
-                    >
-                      <Download className="h-5 w-5" strokeWidth={2} />
-                    </button>
-                    <button
-                      type="button"
-                      className="hidden sm:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-60"
-                      onClick={() => handleDownloadSection(section)}
-                      disabled={downloading === section.id}
-                    >
-                      <Download className="h-4 w-4" strokeWidth={2} />
-                      {downloading === section.id ? "Mengunduh..." : "Unduh Laporan"}
-                    </button>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-between bg-[#EEF5FF] px-4 md:px-8 py-3 md:py-4 text-sm font-semibold text-[#111827]">
                   <span>Jadwal</span>
-                  <span className="hidden sm:inline">Action</span>
                 </div>
               </div>
 
@@ -278,14 +230,6 @@ export default function GroundcrewLaporanPage() {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-[#0D63F3] text-white shadow-[0_12px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95"
-                      aria-label={`Lihat laporan ${schedule.registration}`}
-                      onClick={() => handleDownloadSection({ id: schedule.id, title: schedule.registration, schedules: [schedule] })}
-                    >
-                      <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                    </button>
                   </div>
                 ))}
               </div>

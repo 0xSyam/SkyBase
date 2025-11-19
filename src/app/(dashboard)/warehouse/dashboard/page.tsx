@@ -6,29 +6,24 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
-import type { Flight, WarehouseRequest } from "@/types/api";
+import type { WarehouseRequest, ItemCatalog } from "@/types/api";
 
-type ScheduleItem = { 
-  flight_id: number;
-  aircraft: string; 
-  reg: string; 
-  time: string;
-  route_to: string;
+type RequestItem = {
+  item_id: number;
+  qty: number;
+  reason?: string | null;
+  item?: {
+    item_id: number;
+    name: string;
+  };
+};
+
+type HistoryRow = {
+  id: number | string;
+  document: string;
+  jumlah: number;
   status: string;
 };
-
-
-type StockRow = { 
-  id: number | string;
-  document: string; 
-  jumlah: number;
-};
-
-function chunk<T>(arr: T[], size: number): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
 
 const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   children,
@@ -39,80 +34,48 @@ const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   </div>
 );
 
-const ScheduleGroup: React.FC<{ title: string; items: ScheduleItem[] }> = ({
-  title,
-  items,
-}) => (
-  <GlassCard className="p-0">
-    <div className="flex h-[60px] px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
-      <span>{title}</span>
-      <span>Arrival</span>
-      <span>Action</span>
-    </div>
-    <div className="divide-y divide-[#E9EEF3]">
-      {items.map((it, idx) => (
-        <div
-          key={idx}
-          className="flex h-[60px] px-3 justify-between items-center text-[#222222]"
-        >
-          <span className="font-medium tracking-tight">{it.reg}</span>
-          <span className="text-[15px]">{it.time}</span>
+const RequestSummaryTable: React.FC<{ data: { documentName: string; quantity: number }[], onMore?: () => void }> = ({ data, onMore }) => (
+    <>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-[#222222]">Request item</h2>
+        {onMore && (
           <button
-            className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
-            aria-label="Detail"
+            onClick={onMore}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
           >
-            <span className="-mt-[1px]">&gt;</span>
+            Selengkapnya <span>&gt;</span>
           </button>
+        )}
+      </div>
+  
+      <WhiteCard className="overflow-hidden">
+        <div className="grid grid-cols-2 bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
+          <span>Nama Item</span>
+          <span className="text-right">Jumlah Request</span>
         </div>
-      ))}
-    </div>
-  </GlassCard>
-);
-
-const StockTable: React.FC<{
-  title: string;
-  data: StockRow[];
-  onMore?: () => void;
-  leftHeader?: string;
-  rightHeader?: string;
-}> = ({ title, data, onMore, leftHeader = "Document", rightHeader = "Jumlah" }) => (
-  <GlassCard className="w-full p-4">
-    <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-2xl font-semibold text-[#222222]">{title}</h2>
-      {onMore && (
-        <button
-          onClick={onMore}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
-        >
-          Selengkapnya <span>&gt;</span>
-        </button>
-      )}
-    </div>
-
-    <WhiteCard className="overflow-hidden">
-      <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-        <span>{leftHeader}</span>
-        <span className="text-right">{rightHeader}</span>
-      </div>
-      <div className="divide-y divide-[#E9EEF3]">
-        {data.map((row, i) => (
-          <div
-            key={`${row.document}-${i}`}
-            className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
-          >
-            <span className="truncate font-medium">{row.document}</span>
-            <span className="text-right">{row.jumlah}</span>
-          </div>
-        ))}
-      </div>
-    </WhiteCard>
-  </GlassCard>
-);
+        <div className="divide-y divide-[#E9EEF3]">
+          {data.length === 0 && (
+              <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                Tidak ada item yang di-request.
+              </div>
+          )}
+          {data.map((item, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-2 px-4 h-[56px] items-center text-sm text-[#222222]"
+            >
+              <span className="truncate font-medium">{item.documentName}</span>
+              <span className="text-right">{item.quantity}</span>
+            </div>
+          ))}
+        </div>
+      </WhiteCard>
+    </>
+  );
 
 export default function WarehouseDashboardPage() {
   const router = useRouter();
   const [welcome, setWelcome] = React.useState<string | null>(null);
-  const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
   const [requestsData, setRequestsData] = React.useState<WarehouseRequest[]>([]);
   const [historyData, setHistoryData] = React.useState<WarehouseRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -124,44 +87,28 @@ export default function WarehouseDashboardPage() {
         const dashboardRes = await skybase.dashboard.warehouse();
         if (!ignore) setWelcome((dashboardRes as { message?: string })?.message ?? null);
 
-        const flightsRes = await skybase.flights.list();
-        const flightsData = flightsRes?.data;
-        let flights: Flight[] = [];
-        if (Array.isArray(flightsData)) {
-          if (flightsData.length > 0 && 'flight_id' in flightsData[0]) {
-            flights = flightsData as unknown as Flight[];
-          }
-        } else if (flightsData && 'flights' in flightsData && Array.isArray(flightsData.flights)) {
-          flights = flightsData.flights;
-        }
-        
-        if (!ignore) {
-          
-          const mapped: ScheduleItem[] = flights.map((f) => {
-            const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
-            const time = arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB" : "--:-- WIB";
-            return {
-              flight_id: f?.flight_id ?? 0,
-              aircraft: f?.aircraft?.type ?? "-",
-              reg: f?.aircraft?.registration_code ?? "-",
-              time,
-              route_to: f?.route_to ?? "",
-              status: f?.status ?? "SCHEDULED",
-            };
-          });
-          setScheduleData(mapped);
-        }
-
         const requestsRes = await skybase.warehouseRequests.list();
         if (!ignore && requestsRes.data) {
-          const requests = Array.isArray(requestsRes.data) ? requestsRes.data : [];
+          const requestsData = requestsRes.data;
+          let requests: WarehouseRequest[] = [];
+          if (Array.isArray(requestsData)) {
+            requests = requestsData;
+          } else if (requestsData && typeof requestsData === 'object' && 'items' in requestsData && !('wh_req_id' in requestsData)) {
+            requests = (requestsData as { items: WarehouseRequest[] }).items;
+          }
           setRequestsData(requests.filter((r) => r.status === 'PENDING'));
         }
 
-        const historyRes = await skybase.warehouseRequests.myRequests();
+        const historyRes = await skybase.warehouseRequests.list();
         if (!ignore && historyRes.data) {
-          const history = Array.isArray(historyRes.data) ? historyRes.data : [];
-          setHistoryData(history.filter((r) => r.status !== 'PENDING'));
+          const historyData = historyRes.data;
+          let history: WarehouseRequest[] = [];
+          if (Array.isArray(historyData)) {
+            history = historyData;
+          } else if (historyData && typeof historyData === 'object' && 'items' in historyData && !('wh_req_id' in historyData)) {
+            history = (historyData as { items: WarehouseRequest[] }).items;
+          }
+          setHistoryData(history);
         }
 
         if (!ignore) setLoading(false);
@@ -176,32 +123,49 @@ export default function WarehouseDashboardPage() {
     return () => { ignore = true; };
   }, [router]);
 
-  const docRequestsData: StockRow[] = requestsData
+  const requestSummaryData = React.useMemo(() => {
+    if (!requestsData) return [];
+    
+    const allRequestedItems = requestsData.flatMap(req => req.items || []);
+    
+    const aggregatedItems = allRequestedItems.reduce((acc, requestedItem) => {
+      const { item_id, qty, item } = requestedItem as any;
+      const name = item?.name || `Item #${item_id}`;
+      
+      if (acc[item_id]) {
+        acc[item_id].quantity += qty;
+      } else {
+        acc[item_id] = {
+          documentName: name,
+          quantity: qty,
+        };
+      }
+      return acc;
+    }, {} as Record<number, { documentName: string; quantity: number }>);
+
+    return Object.values(aggregatedItems);
+  }, [requestsData]);
+
+  const historyTableData: HistoryRow[] = historyData
     .slice(0, 10)
-    .map((req) => ({
-      id: req.wh_req_id,
-      document: `Request #${req.wh_req_id}`,
-      jumlah: req.items?.length || 0,
-    }));
+    .map((req) => {
+      const firstItem = req.items?.[0] as RequestItem | undefined;
+      const itemName = firstItem?.item?.name || `Item #${firstItem?.item_id || req.wh_req_id}`;
+      return {
+        id: req.wh_req_id,
+        document: itemName,
+        jumlah: req.items?.length || 0,
+        status: req.status,
+      };
+    });
 
-  const aseRequestsData: StockRow[] = requestsData
-    .slice(0, 6)
-    .map((req) => ({
-      id: req.wh_req_id,
-      document: `Request #${req.wh_req_id}`,
-      jumlah: req.items?.length || 0,
-    }));
-
-  const historyTableData: StockRow[] = historyData
-    .slice(0, 10)
-    .map((req) => ({
-      id: req.wh_req_id,
-      document: `Request #${req.wh_req_id} (${req.status})`,
-      jumlah: req.items?.length || 0,
-    }));
-
-  const groups = chunk(scheduleData, 5);
-  const handleSelengkapnya = () => console.log("Selengkapnya clicked");
+  const handleSelengkapnya = () => {
+    router.push("/warehouse/riwayat");
+  };
+  
+  const handleRequestSelengkapnya = () => {
+    router.push("/warehouse/request");
+  };
 
   return (
     <PageLayout sidebarRole="warehouse">
@@ -236,54 +200,15 @@ export default function WarehouseDashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative z-10">
         <section className="md:col-span-2 p-0">
-          <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-0">
-            <div>
-              <div className="text-sm mb-3 sm:mb-8 text-[#222222]">
-                {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
-            </div>
-            <div className="sm:text-right">
-              <div className="text-sm mb-1 sm:mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
-              <div className="text-xl sm:text-2xl font-semibold text-[#222222]">
-                {scheduleData.length} Pesawat
-              </div>
+          <div className="mb-4">
+            <div className="text-sm mb-3 sm:mb-8 text-[#222222]">
+              {new Date().toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
           </div>
-
-          {groups.length === 0 && !loading && (
-            <GlassCard className="p-6 text-center text-gray-500">
-              Tidak ada jadwal penerbangan hari ini
-            </GlassCard>
-          )}
-
-          <div className="space-y-3 sm:space-y-4">
-            {groups.map((items, idx) => (
-              <ScheduleGroup
-                key={idx}
-                title={items[0]?.aircraft ?? "Schedule"}
-                items={items}
-              />
-            ))}
-          </div>
+          <RequestSummaryTable data={requestSummaryData} onMore={handleRequestSelengkapnya} />
         </section>
 
         <aside className="flex flex-col gap-6">
-          <StockTable
-            title="Request Item DOC"
-            data={docRequestsData}
-            onMore={handleSelengkapnya}
-            leftHeader="Request"
-            rightHeader="Jumlah Item"
-          />
-
-          <StockTable
-            title="Request Item ASE"
-            data={aseRequestsData}
-            onMore={handleSelengkapnya}
-            leftHeader="Request"
-            rightHeader="Jumlah Item"
-          />
 
           <GlassCard className="w-full p-4">
             <div className="mb-2 flex items-center justify-between">
@@ -300,8 +225,9 @@ export default function WarehouseDashboardPage() {
             </div>
 
             <WhiteCard className="overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-                <span>Request</span>
+              <div className="grid grid-cols-[1fr_auto_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl gap-x-8">
+                <span>Nama Item</span>
+                <span className="text-center">Status</span>
                 <span className="text-right">Jumlah</span>
               </div>
               {historyTableData.length === 0 && !loading && (
@@ -313,9 +239,10 @@ export default function WarehouseDashboardPage() {
                 {historyTableData.map((row) => (
                   <div
                     key={`his-${row.id}`}
-                    className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
+                    className="grid grid-cols-[1fr_auto_auto] px-4 h-[56px] items-center text-sm text-[#222222] gap-x-8"
                   >
                     <span className="truncate font-medium">{row.document}</span>
+                    <span className="text-center">{row.status}</span>
                     <span className="text-right">{row.jumlah}</span>
                   </div>
                 ))}

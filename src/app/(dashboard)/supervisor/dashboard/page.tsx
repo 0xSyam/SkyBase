@@ -41,6 +41,10 @@ export default function SupervisorDashboardPage() {
     const loadFlights = async () => {
       setLoadingFlights(true);
       try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today (local time)
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        
         const res = await skybase.flights.list();
         const data = res?.data;
         let list: Flight[] = [];
@@ -51,23 +55,59 @@ export default function SupervisorDashboardPage() {
         } else if (data && 'flights' in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
+        
         if (!ignore) {
-          const fmtTime = (d?: string | null) => {
-            if (!d) return "--:-- WIB";
-            try {
-              const dt = new Date(d);
-              return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-            } catch {
-              return "--:-- WIB";
-            }
-          };
-          const mapped: ScheduleItem[] = list.map((f) => ({
-            start: fmtTime(f?.sched_dep ?? null),
-            end: fmtTime(f?.sched_arr ?? null),
-            jenis: f?.aircraft?.type ?? "-",
-            idPesawat: f?.aircraft?.registration_code ?? "-",
-            destination: f?.route_to ?? "-",
-          }));
+          // Filter flights for TODAY using date range (fixes timezone issues)
+          const todayStart = today.toISOString().split('T')[0] + 'T00:00:00';
+          const todayEnd = tomorrow.toISOString().split('T')[0] + 'T00:00:00';
+          
+          const mapped: ScheduleItem[] = list
+            .filter((f) => {
+              const schedArr = f?.sched_arr;
+              const schedDep = f?.sched_dep;
+              
+              // STRICT date-only filter matching MySQL DATE() function
+              const getDateOnly = (timeStr: string | null | undefined) => {
+                if (!timeStr) return null;
+                // Extract YYYY-MM-DD from "YYYY-MM-DD HH:MM:SS"
+                const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                if (!dateMatch) return null;
+                return new Date(dateMatch[1]);
+              };
+              
+              const arrDate = getDateOnly(schedArr);
+              const depDate = getDateOnly(schedDep);
+              
+              const isToday = (date: Date | null) => {
+                if (!date || isNaN(date.getTime())) return false;
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Reset to midnight
+                return date.getFullYear() === now.getFullYear() &&
+                       date.getMonth() === now.getMonth() &&
+                       date.getDate() === now.getDate();
+              };
+              
+              return isToday(arrDate) || isToday(depDate);
+            })
+            .map((f) => {
+              // EXTRACT TIME DIRECTLY from MySQL string - NO DATE parsing needed
+              const arrRaw = f?.sched_arr || f?.sched_dep || null;
+              let time = "--:-- WIB";
+              if (arrRaw) {
+                // MySQL: "2025-11-19 09:00:00" → extract "09:00"
+                const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
+                if (timeMatch) {
+                  time = `${timeMatch[1]}:${timeMatch[2]} WIB`;
+                }
+              }
+              return {
+                start: time,
+                end: time,
+                jenis: f?.aircraft?.type ?? "-",
+                idPesawat: f?.aircraft?.registration_code ?? "-",
+                destination: f?.route_to ?? "-",
+              };
+            });
           setScheduleData(mapped);
         }
       } catch (e) {
@@ -117,13 +157,6 @@ export default function SupervisorDashboardPage() {
             <span className="text-sm text-gray-500">{today}</span>
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-semibold text-[#222222]">Jadwal Hari Ini</h2>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#0D63F3] text-white text-sm font-semibold hover:bg-blue-700 transition"
-              >
-                Selengkapnya
-                <ChevronRight className="w-4 h-4" />
-              </button>
             </div>
           </div>
 
@@ -131,7 +164,7 @@ export default function SupervisorDashboardPage() {
             <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl text-center">
               <div className="w-1/3">Jenis</div>
               <div className="w-1/3">ID Pesawat</div>
-              <div className="w-1/3">Arrival</div>
+              <div className="w-1/3">Waktu</div>
             </div>
 
             <div className="divide-y divide-[#E9EEF3]">

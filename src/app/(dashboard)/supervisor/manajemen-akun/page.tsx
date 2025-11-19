@@ -37,11 +37,7 @@ export default function SupervisorManajemenAkunPage() {
     password: "",
     password_confirmation: "",
   });
-  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
-  const [resetPasswordForm, setResetPasswordForm] = useState({
-    password: "",
-    password_confirmation: "",
-  });
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   useEffect(() => {
     setIsMounted(true);
@@ -122,19 +118,17 @@ export default function SupervisorManajemenAkunPage() {
     }
   };
 
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleConfirmResetPassword = async () => {
     if (!selectedAccount) return;
-
+  
     setResetLoading(true);
     try {
-      await authApi.resetPassword(selectedAccount.id, resetPasswordForm);
+      await authApi.resetPassword(selectedAccount.id);
       setNotification({
         type: 'success',
-        message: `Password untuk ${selectedAccount.username} berhasil direset`
+        message: `Password untuk ${selectedAccount.username} berhasil direset ke "password123"`
       });
-      setIsResetPasswordModalOpen(false);
-      setResetPasswordForm({ password: "", password_confirmation: "" });
+      setIsResetConfirmOpen(false);
       setSelectedAccount(null);
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
@@ -261,6 +255,19 @@ export default function SupervisorManajemenAkunPage() {
                   <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">
                     <button
                       type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#F59E0B] text-white active:scale-95 transition hover:bg-amber-600"
+                      aria-label="Reset Password"
+                      onClick={() => {
+                        setSelectedAccount(row);
+                        setIsResetConfirmOpen(true);
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10.6667 6.66667V5.33333C10.6667 3.86058 9.47276 2.66667 8 2.66667C6.52724 2.66667 5.33333 3.86058 5.33333 5.33333V6.66667M3.33333 6.66667H12.6667C13.0349 6.66667 13.3333 6.96514 13.3333 7.33333V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V7.33333C2.66667 6.96514 2.96514 6.66667 3.33333 6.66667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EF4444] text-white active:scale-95 transition hover:bg-red-600"
                       aria-label="Hapus akun"
                       onClick={() => {
@@ -268,27 +275,11 @@ export default function SupervisorManajemenAkunPage() {
                         setIsDeleteModalOpen(true);
                       }}
                     >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4"
-                          stroke="currentColor"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#F59E0B] text-white active:scale-95 transition hover:bg-amber-600"
-                      aria-label="Reset Password"
-                      onClick={() => {
-                        setSelectedAccount(row);
-                        setIsResetPasswordModalOpen(true);
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10.6667 6.66667V5.33333C10.6667 3.86058 9.47276 2.66667 8 2.66667C6.52724 2.66667 5.33333 3.86058 5.33333 5.33333V6.66667M3.33333 6.66667H12.6667C13.0349 6.66667 13.3333 6.96514 13.3333 7.33333V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V7.33333C2.66667 6.96514 2.96514 6.66667 3.33333 6.66667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                        <line x1="14" y1="11" x2="14" y2="17"></line>
                       </svg>
                     </button>
                   </div>
@@ -341,54 +332,40 @@ export default function SupervisorManajemenAkunPage() {
           document.body
         )}
 
-      {isMounted && isResetPasswordModalOpen && createPortal(
+      {isMounted && isResetConfirmOpen && createPortal(
         <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
-          <div className="w-full max-w-md rounded-[32px] bg-white p-6 sm:p-8 shadow-xl max-h-[85vh] overflow-y-auto">
-            <h2 className="text-2xl font-semibold text-[#11264D] text-center mb-6">
-              Reset Password
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-password-title"
+            className="w-full max-w-sm rounded-[32px] bg-white p-6 sm:p-8 text-center shadow-xl max-h-[85vh] overflow-y-auto"
+          >
+            <h2 id="reset-password-title" className="text-2xl font-semibold text-[#11264D]">
+              Reset Password?
             </h2>
-            <form onSubmit={handleResetPassword} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
-                <input
-                  type="password"
-                  required
-                  className="w-full rounded-xl border-2 border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#0D63F3] transition"
-                  value={resetPasswordForm.password}
-                  onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, password: e.target.value })}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password</label>
-                <input
-                  type="password"
-                  required
-                  className="w-full rounded-xl border-2 border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#0D63F3] transition"
-                  value={resetPasswordForm.password_confirmation}
-                  onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, password_confirmation: e.target.value })}
-                />
-              </div>
-              <div className="flex gap-3 mt-8">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsResetPasswordModalOpen(false);
-                    setResetPasswordForm({ password: "", password_confirmation: "" });
-                    setSelectedAccount(null);
-                  }}
-                  className="flex-1 rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  disabled={resetLoading}
-                  className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
-                >
-                  {resetLoading ? "Menyimpan..." : "Simpan"}
-                </button>
-              </div>
-            </form>
+            {selectedAccount && (
+              <p className="mt-3 text-sm text-[#5B5F6B]">
+                Password akun <span className="font-semibold text-[#0D63F3]">{selectedAccount.username}</span> akan direset menjadi "password123".
+              </p>
+            )}
+            <div className="mt-8 flex items-center justify-center gap-4">
+              <button
+                type="button"
+                disabled={resetLoading}
+                className="w-32 rounded-full border border-[#FF3B30] px-6 py-2 text-sm font-semibold text-[#FF3B30] transition hover:bg-[#FF3B30]/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleConfirmResetPassword}
+              >
+                {resetLoading ? 'Mereset...' : 'Ya, Reset'}
+              </button>
+              <button
+                type="button"
+                disabled={resetLoading}
+                className="w-32 rounded-full bg-[#0D63F3] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#0B53CF] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => setIsResetConfirmOpen(false)}
+              >
+                Batal
+              </button>
+            </div>
           </div>
         </div>,
         document.body

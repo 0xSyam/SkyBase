@@ -102,6 +102,10 @@ export default function DashboardPage() {
     const loadFlights = async () => {
       setLoadingFlights(true);
       try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Start of today (local time)
+        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+        
         const res = await skybase.flights.list();
         const data = res?.data;
         let list: Flight[] = [];
@@ -112,23 +116,51 @@ export default function DashboardPage() {
         } else if (data && 'flights' in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
+        
         if (!ignore) {
-          const now = new Date();
+          // Filter flights for TODAY using date range (fixes timezone issues)
+          const todayStart = today.toISOString().split('T')[0] + 'T00:00:00';
+          const todayEnd = tomorrow.toISOString().split('T')[0] + 'T00:00:00';
+          
           const mapped: ScheduleItem[] = list
             .filter((f) => {
-              const d = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
-              return (
-                d &&
-                d.getDate() === now.getDate() &&
-                d.getMonth() === now.getMonth() &&
-                d.getFullYear() === now.getFullYear()
-              );
+              const schedArr = f?.sched_arr;
+              const schedDep = f?.sched_dep;
+              
+              // STRICT date-only filter matching MySQL DATE() function
+              const getDateOnly = (timeStr: string | null | undefined) => {
+                if (!timeStr) return null;
+                // Extract YYYY-MM-DD from "YYYY-MM-DD HH:MM:SS"
+                const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
+                if (!dateMatch) return null;
+                return new Date(dateMatch[1]);
+              };
+              
+              const arrDate = getDateOnly(schedArr);
+              const depDate = getDateOnly(schedDep);
+              
+              const isToday = (date: Date | null) => {
+                if (!date || isNaN(date.getTime())) return false;
+                const now = new Date();
+                now.setHours(0, 0, 0, 0); // Reset to midnight
+                return date.getFullYear() === now.getFullYear() &&
+                       date.getMonth() === now.getMonth() &&
+                       date.getDate() === now.getDate();
+              };
+              
+              return isToday(arrDate) || isToday(depDate);
             })
             .map((f) => {
-              const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
-              const time = arr
-                ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB"
-                : "--:-- WIB";
+              // EXTRACT TIME DIRECTLY from MySQL string - NO DATE parsing needed
+              const arrRaw = f?.sched_arr || f?.sched_dep || null;
+              let time = "--:-- WIB";
+              if (arrRaw) {
+                // MySQL: "2025-11-19 09:00:00" → extract "09:00"
+                const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
+                if (timeMatch) {
+                  time = `${timeMatch[1]}:${timeMatch[2]} WIB`;
+                }
+              }
               return {
                 aircraft: f?.aircraft?.type ?? "-",
                 reg: f?.aircraft?.registration_code ?? "-",

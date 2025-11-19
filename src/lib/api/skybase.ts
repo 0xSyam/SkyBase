@@ -145,10 +145,13 @@ export const authApi = {
       method: "DELETE",
     });
   },
-  async resetPassword(userId: string | number, data: { password: string; password_confirmation: string }) {
+  async resetPassword(userId: string | number) {
     return request<ApiResponse<{ message: string }>>(`/users/${userId}/reset-password`, {
       method: "PUT",
-      body: data,
+      body: {
+        new_password: "password123",
+        new_password_confirmation: "password123"
+      }
     });
   },
 };
@@ -236,10 +239,18 @@ export const inventoryApi = {
   addAse(data: { item_id: number; serial_number: string; seal_number: string; expires_at: string; condition?: string }) {
     return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", { method: "POST", body: data });
   },
+  updateAse(gcAseId: number, data: { serial_number: string; seal_number: string; expires_at: string; quantity: number }) {
+    return request<ApiResponse<unknown>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "PUT", body: data });
+  },
+  deleteAse(gcAseId: number) {
+    return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "DELETE" });
+  },
 };
 
-// Inspections (validation flow)
 export const inspectionApi = {
+  today() {
+    return request<ApiListResponse<Flight>>("/inspections/today");
+  },
   availableFlights() {
     return request<ApiListResponse<Flight>>("/inspections/available-flights");
   },
@@ -250,13 +261,13 @@ export const inspectionApi = {
     return request<ApiResponse<AircraftValidation>>(`/inspections/aircraft/${aircraftId}/validation`);
   },
   toggleItem(inspectionItemId: number | string) {
-    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "POST" });
+    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "PUT" });
   },
   replaceItem(inspectionItemId: number | string, data: { replacement_item_id: number; notes?: string }) {
     return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/replace`, { method: "POST", body: data });
   },
   submit(inspectionId: number | string, data: { notes?: string }) {
-    return request<ApiResponse<unknown>>(`/inspections/${inspectionId}/submit`, { method: "POST", body: data });
+    return request<ApiResponse<unknown>>(`/inspections/${inspectionId}/submit`, { method: "PUT", body: data });
   },
   summary() {
     return request<ApiResponse<InspectionSummary>>("/inspections/summary");
@@ -312,8 +323,8 @@ export const warehouseRequestApi = {
   approve(id: number | string) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT" });
   },
-  reject(id: number | string, data?: { reason?: string }) {
-    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data ?? {} });
+  reject(id: number | string, data: { rejection_reason: string }) {
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data });
   },
   fulfill(id: number | string) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/fulfill`, { method: "PUT" });

@@ -16,7 +16,8 @@ interface StockItem {
   hasAlert?: boolean;
   jumlah: number;
   itemId: number;
-  gcDocId?: number;
+  gcId?: number;
+  type: 'doc' | 'ase';
 }
 
 interface StockGroup {
@@ -30,6 +31,7 @@ interface StockEditFormData {
   revisi: string;
   efektif: string;
   jumlah: string;
+  seal_number?: string;
 }
 
 interface StockRequestFormData {
@@ -39,10 +41,11 @@ interface StockRequestFormData {
 
 interface StockAddFormData {
   nomor: string;
-  nomorSeal: string;
+  revisi: string;
   efektif: string;
   jumlah: string;
-  itemId: string;
+  jenisDokumen: "doc" | "ase";
+  seal_number: string;
 }
 
 type DialogMode = "edit" | "delete" | "request" | "add" | null;
@@ -53,13 +56,10 @@ const StokBarangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedGroupId, setExpandedGroupId] = useState<string>("");
   const [groups, setGroups] = useState<StockGroup[]>(initialGroups);
-  const [catalogItems, setCatalogItems] = useState<any[]>([]);
-  const [availableItemsForAdd, setAvailableItemsForAdd] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
-  const [selectedGroup, setSelectedGroup] = useState<Pick<StockGroup, "id" | "title"> | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
   const [mounted, setMounted] = useState(false);
   const [formData, setFormData] = useState<StockEditFormData>({
@@ -74,10 +74,11 @@ const StokBarangPage = () => {
   });
   const [addData, setAddData] = useState<StockAddFormData>({
     nomor: "",
-    nomorSeal: "",
+    revisi: "",
     efektif: "",
     jumlah: "",
-    itemId: "",
+    jenisDokumen: "doc",
+    seal_number: "",
   });
 
   useEffect(() => {
@@ -89,39 +90,51 @@ const StokBarangPage = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [invRes, docCatalogRes] = await Promise.all([
+        const [invRes, docCatalogRes, aseCatalogRes] = await Promise.all([
           skybase.inventory.groundcrewAll(),
           skybase.inventory.itemsByCategory("DOC"),
+          skybase.inventory.itemsByCategory("ASE"),
         ]);
+
         const docs = invRes?.data?.doc_inventory ?? [];
-        const catalogData = docCatalogRes?.data;
-        const catalogItems = Array.isArray(catalogData)
-          ? catalogData
-          : (catalogData && 'items' in catalogData && Array.isArray(catalogData.items))
-            ? catalogData.items
+        const ases = invRes?.data?.ase_inventory ?? [];
+
+        const docCatalogData = docCatalogRes?.data;
+        const aseCatalogData = aseCatalogRes?.data;
+
+        const docCatalogItems = Array.isArray(docCatalogData)
+          ? docCatalogData
+          : (docCatalogData && 'items' in docCatalogData && Array.isArray(docCatalogData.items))
+            ? docCatalogData.items
+            : [];
+        
+        const aseCatalogItems = Array.isArray(aseCatalogData)
+          ? aseCatalogData
+          : (aseCatalogData && 'items' in aseCatalogData && Array.isArray(aseCatalogData.items))
+            ? aseCatalogData.items
             : [];
 
-        if (!ignore) {
-          setCatalogItems(catalogItems);
-        }
-
-        const docCatalog: Record<number, { item_id?: number; name?: string }> = {};
-        for (const it of catalogItems) {
-          if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
+        const catalog: Record<number, { item_id?: number; name?: string }> = {};
+        for (const it of [...docCatalogItems, ...aseCatalogItems]) {
+          if (it?.item_id != null) catalog[Number(it.item_id)] = it;
         }
 
         const bucket = new Map<string, StockItem[]>();
-        const titleFor = (name?: string): string => {
+        
+        const titleFor = (name?: string, category: 'doc' | 'ase' = 'doc'): string => {
           const n = (name || "").toLowerCase();
-          if (n.includes("sic")) return "SIC";
-          if (n.includes("sop")) return "SOP";
-          if (n.includes("manual")) return "Manual";
-          return name || "Dokumen Lainnya";
+          if (category === 'doc') {
+            if (n.includes("sic")) return "SIC";
+            if (n.includes("sop")) return "SOP";
+            if (n.includes("manual")) return "Manual";
+            return name || "Dokumen Lainnya";
+          }
+          return name || "ASE Lainnya";
         };
 
         for (const d of docs) {
-          const cat = docCatalog[Number(d?.item_id)] || {};
-          const title = titleFor(cat?.name);
+          const cat = catalog[Number(d?.item_id)] || {};
+          const title = titleFor(cat?.name, 'doc');
           const item: StockItem = {
             namaDokumen: cat?.name || title,
             nomor: d?.doc_number ?? "-",
@@ -132,7 +145,28 @@ const StokBarangPage = () => {
             jumlah: Number(d?.quantity ?? 0) || 0,
             hasAlert: false,
             itemId: Number(d?.item_id),
-            gcDocId: Number(d?.gc_doc_id),
+            gcId: Number(d?.gc_doc_id),
+            type: 'doc',
+          };
+          if (!bucket.has(title)) bucket.set(title, []);
+          bucket.get(title)!.push(item);
+        }
+        
+        for (const a of ases) {
+          const cat = catalog[Number(a?.item_id)] || {};
+          const title = titleFor(cat?.name, 'ase');
+          const item: StockItem = {
+            namaDokumen: cat?.name || title,
+            nomor: a?.serial_number ?? "-",
+            revisi: a?.serial_number ?? "-",
+            efektif: a?.expires_at
+              ? new Date(a.expires_at).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" })
+              : "-",
+            jumlah: 1,
+            hasAlert: false,
+            itemId: Number(a?.item_id),
+            gcId: Number(a?.gc_ase_id),
+            type: 'ase',
           };
           if (!bucket.has(title)) bucket.set(title, []);
           bucket.get(title)!.push(item);
@@ -140,7 +174,7 @@ const StokBarangPage = () => {
 
         if (!ignore) {
           const built: StockGroup[] = Array.from(bucket.entries())
-            .map(([title, items]) => ({ id: `${title.toLowerCase().replace(/\s+/g, "-")}-doc`, title, items }))
+            .map(([title, items]) => ({ id: `${title.toLowerCase().replace(/\s+/g, "-")}`, title, items }))
             .sort((a, b) => a.title.localeCompare(b.title));
           setGroups(built);
           if (built[0]?.id) setExpandedGroupId(built[0].id);
@@ -167,6 +201,7 @@ const StokBarangPage = () => {
       revisi: selectedItem.revisi,
       efektif: selectedItem.efektif,
       jumlah: selectedItem.jumlah.toString(),
+      seal_number: selectedItem.type === 'ase' ? selectedItem.revisi : '', // Assuming revisi is serial number for ase
     });
   }, [activeDialog, selectedItem]);
 
@@ -203,31 +238,21 @@ const StokBarangPage = () => {
     setExpandedGroupId((current) => (current === groupId ? "" : groupId));
   };
 
-  const handleAddItem = (event: React.MouseEvent, group: StockGroup) => {
-    event.stopPropagation();
+  const handleOpenAddDialog = () => {
     setSelectedItem(null);
-    setSelectedGroup({ id: group.id, title: group.title });
-
-    // Get ALL DOC catalog items that are NOT already in ANY inventory
-    const allExistingItemIds = new Set(groups.flatMap(g => g.items.map(i => i.itemId)));
-    const available = catalogItems.filter(item =>
-      item.item_id && !allExistingItemIds.has(item.item_id)
-    );
-
-    setAvailableItemsForAdd(available);
-
     setAddData({
       nomor: "",
-      nomorSeal: "",
+      revisi: "",
       efektif: "",
       jumlah: "1",
-      itemId: available.length > 0 ? String(available[0].item_id) : "",
+      jenisDokumen: "doc",
+      seal_number: "",
     });
-
     setActiveDialog("add");
   };
 
   const handleEditClick = useCallback((item: StockItem) => {
+    console.log('Editing item:', item);
     setSelectedItem(item);
     setActiveDialog("edit");
   }, []);
@@ -241,14 +266,13 @@ const StokBarangPage = () => {
     setActiveDialog(null);
     setSelectedItem(null);
     setRequestData({ jumlah: "", catatan: "" });
-    setSelectedGroup(null);
-    setAvailableItemsForAdd([]);
     setAddData({
       nomor: "",
-      nomorSeal: "",
+      revisi: "",
       efektif: "",
       jumlah: "",
-      itemId: "",
+      jenisDokumen: "doc",
+      seal_number: "",
     });
   }, []);
 
@@ -277,30 +301,34 @@ const StokBarangPage = () => {
   );
 
   const handleDeleteClick = useCallback((item: StockItem) => {
+    console.log('Deleting item:', item);
     setSelectedItem(item);
     setActiveDialog("delete");
   }, []);
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedItem || !selectedItem.gcDocId) {
+    console.log('Confirming delete for item:', selectedItem);
+    if (!selectedItem || !selectedItem.gcId) {
       alert("ID dokumen tidak ditemukan");
       return;
     }
 
     setDeleteLoading(true);
     try {
-      // TODO: Backend endpoint belum ada - untuk sekarang simulasi delete
-      // await skybase.inventory.deleteDoc(selectedItem.gcDocId);
+      if (selectedItem.type === 'doc') {
+        await skybase.inventory.deleteDoc(selectedItem.gcId);
+      } else {
+        await skybase.inventory.deleteAse(selectedItem.gcId);
+      }
       
-      // Optimistic delete
       const updatedGroups = groups.map(group => ({
         ...group,
-        items: group.items.filter(item => item.gcDocId !== selectedItem.gcDocId)
+        items: group.items.filter(item => item.gcId !== selectedItem.gcId)
       })).filter(group => group.items.length > 0);
       
       setGroups(updatedGroups);
 
-      alert("Berhasil menghapus stok barang! (Backend endpoint belum tersedia)");
+      alert("Berhasil menghapus stok barang!");
       setActiveDialog(null);
       setSelectedItem(null);
     } catch (error) {
@@ -312,21 +340,36 @@ const StokBarangPage = () => {
   }, [selectedItem, groups]);
 
   const handleRequestSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!selectedItem || activeDialog !== "request") {
         return;
       }
 
-      console.log("Request stok", {
-        ...selectedItem,
-        jumlahRequest: Number(requestData.jumlah) || 0,
-        catatan: requestData.catatan,
-      });
+      const jumlah = Number(requestData.jumlah) || 0;
+      
+      if (jumlah <= 0) {
+        alert("Jumlah harus lebih dari 0");
+        return;
+      }
 
-      setActiveDialog(null);
-      setSelectedItem(null);
-      setRequestData({ jumlah: "", catatan: "" });
+      try {
+        await skybase.warehouseRequests.create({
+          notes: requestData.catatan || undefined,
+          items: [{
+            item_id: selectedItem.itemId,
+            qty: jumlah,
+          }]
+        });
+
+        alert("Request berhasil dikirim ke warehouse!");
+        setActiveDialog(null);
+        setSelectedItem(null);
+        setRequestData({ jumlah: "", catatan: "" });
+      } catch (error) {
+        console.error("Failed to create warehouse request", error);
+        alert("Gagal mengirim request");
+      }
     },
     [activeDialog, requestData, selectedItem],
   );
@@ -345,36 +388,42 @@ const StokBarangPage = () => {
   const handleAddSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (activeDialog !== "add" || !selectedGroup) {
-        return;
-      }
-
-      if (!addData.itemId || addData.itemId === "") {
-        alert("Pilih dokumen terlebih dahulu");
+      if (activeDialog !== "add") {
         return;
       }
 
       try {
-        await skybase.inventory.addDoc({
-          item_id: Number(addData.itemId),
-          quantity: Number(addData.jumlah) || 1,
-          doc_number: addData.nomor || `DOC-${Date.now()}`,
-          revision_no: addData.nomorSeal || "Rev-001",
-          effective_date: addData.efektif || new Date().toISOString().split('T')[0],
-          condition: "Good"
+        // Create a new item in the catalog first
+        const newItem = await skybase.items.create({
+          name: addData.nomor, // Or a more descriptive name
+          category: addData.jenisDokumen.toUpperCase(),
         });
 
-        // Refresh data
-        const [invRes, docCatalogRes] = await Promise.all([
-          skybase.inventory.groundcrewAll(),
-          skybase.inventory.itemsByCategory("DOC"),
-        ]);
-        // ... (re-run the load logic or just trigger a reload state)
-        // For simplicity, we can just reload the page or trigger the effect
-        // But since we are inside a callback, we might need to extract the load logic.
-        // For now, let's just close and maybe alert.
-        alert("Berhasil menambah stok dokumen!");
-        window.location.reload(); // Simple reload to refresh data
+        if (!newItem.data.item_id) {
+          throw new Error("Failed to create a new item in the catalog.");
+        }
+
+        if (addData.jenisDokumen === 'doc') {
+          await skybase.inventory.addDoc({
+            item_id: newItem.data.item_id,
+            doc_number: addData.nomor,
+            revision_no: addData.revisi,
+            effective_date: addData.efektif,
+            quantity: Number(addData.jumlah) || 1,
+            condition: "Good",
+          });
+        } else {
+          await skybase.inventory.addAse({
+            item_id: newItem.data.item_id,
+            serial_number: addData.nomor,
+            seal_number: addData.seal_number,
+            expires_at: addData.efektif,
+            condition: "Good",
+          });
+        }
+
+        alert(`Berhasil menambah stok ${addData.jenisDokumen.toUpperCase()}!`);
+        window.location.reload();
 
       } catch (error) {
         console.error("Failed to add stock", error);
@@ -382,38 +431,53 @@ const StokBarangPage = () => {
       }
 
       setActiveDialog(null);
-      setSelectedGroup(null);
       setAddData({
         nomor: "",
-        nomorSeal: "",
+        revisi: "",
         efektif: "",
         jumlah: "",
-        itemId: "",
+        jenisDokumen: "doc",
+        seal_number: "",
       });
     },
-    [activeDialog, addData, selectedGroup, groups],
+    [activeDialog, addData],
   );
 
   const handleDialogSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
+      console.log('Submitting dialog for item:', selectedItem);
       if (!selectedItem || activeDialog !== "edit") {
         return;
       }
 
-      if (!selectedItem.gcDocId) {
+      if (!selectedItem.gcId) {
         alert("ID dokumen tidak ditemukan");
         return;
       }
 
       setEditLoading(true);
       try {
-        // TODO: Backend endpoint belum ada - untuk sekarang tetap local update
-        // Ketika backend siap: skybase.inventory.updateDoc(selectedItem.gcDocId, { ... })
+        if (selectedItem.type === 'doc') {
+          await skybase.inventory.updateDoc(selectedItem.gcId, {
+            doc_number: formData.nomor,
+            revision_no: formData.revisi,
+            effective_date: formData.efektif,
+            quantity: Number(formData.jumlah) || selectedItem.jumlah,
+          });
+        } else {
+          await skybase.inventory.updateAse(selectedItem.gcId, {
+            serial_number: formData.revisi,
+            seal_number: formData.seal_number || '',
+            expires_at: formData.efektif,
+            quantity: Number(formData.jumlah) || selectedItem.jumlah,
+          });
+        }
+
         const updatedGroups = groups.map(group => ({
           ...group,
           items: group.items.map(item =>
-            item.gcDocId === selectedItem.gcDocId
+            item.gcId === selectedItem.gcId
               ? {
                   ...item,
                   nomor: formData.nomor,
@@ -426,7 +490,7 @@ const StokBarangPage = () => {
         }));
         setGroups(updatedGroups);
 
-        alert("Berhasil mengupdate stok barang! (Backend endpoint belum tersedia)");
+        alert("Berhasil mengupdate stok barang!");
         setActiveDialog(null);
         setSelectedItem(null);
       } catch (error) {
@@ -623,6 +687,14 @@ const StokBarangPage = () => {
                 />
               </svg>
             </button>
+            <button 
+              onClick={handleOpenAddDialog}
+              className="hidden md:flex items-center gap-2 rounded-lg bg-[#0D63F3] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A4EC1]">
+              Tambah Dokumen
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[#0D63F3] text-xs leading-none">
+                +
+              </span>
+            </button>
           </div>
         </header>
 
@@ -631,7 +703,7 @@ const StokBarangPage = () => {
             <div className="text-center text-sm text-gray-500">Memuat stok...</div>
           )}
           <GlassCard className="p-4">
-            <h2 className="text-2xl font-semibold text-[#111827] mb-3">Dokumen</h2>
+            <h2 className="text-2xl font-semibold text-[#111827] mb-3">Stok Dokumen & ASE</h2>
             <div className="space-y-4">
               {filteredGroups.map((group) => {
                 const isOpen = expandedGroupId === group.id;
@@ -640,14 +712,6 @@ const StokBarangPage = () => {
                     <div className="flex items-center justify-between px-4 py-3 bg-[#F4F8FB] rounded-t-xl">
                       <div className="text-base font-semibold text-[#111827]">{group.title}</div>
                       <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={(event) => handleAddItem(event, group)}
-                          className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
-                          aria-label="Tambah"
-                        >
-                          <span className="text-lg leading-none">+</span>
-                        </button>
                         <button
                           type="button"
                           onClick={() => handleToggleGroup(group.id)}
@@ -720,7 +784,7 @@ const StokBarangPage = () => {
         <GlassCard className="hidden md:block overflow-hidden rounded-2xl">
           <div className="flex items-center justify-between bg-[#F4F8FB] px-6 py-5">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Dokumen</h2>
+              <h2 className="text-lg font-semibold text-[#111827]">Stok Dokumen & ASE</h2>
             </div>
           </div>
 
@@ -743,16 +807,6 @@ const StokBarangPage = () => {
                       </span>
                     </button>
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={(event) => handleAddItem(event, group)}
-                        className="flex items-center gap-2 rounded-lg bg-[#0D63F3] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0A4EC1]"
-                      >
-                        Tambah
-                        <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[#0D63F3] text-xs leading-none">
-                          +
-                        </span>
-                      </button>
                       <button
                         type="button"
                         onClick={() => handleToggleGroup(group.id)}
@@ -915,6 +969,25 @@ const StokBarangPage = () => {
                         />
                       </div>
 
+                      {selectedItem?.type === 'ase' && (
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="edit-seal-number"
+                            className="text-sm font-semibold text-[#0E1D3D]"
+                          >
+                            Nomor Seal
+                          </label>
+                          <input
+                            id="edit-seal-number"
+                            type="text"
+                            placeholder="Masukan nomor seal"
+                            value={formData.seal_number}
+                            onChange={handleInputChange("seal_number")}
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                          />
+                        </div>
+                      )}
+
                       <div className="space-y-2">
                         <label
                           htmlFor="edit-efektif"
@@ -1042,60 +1115,46 @@ const StokBarangPage = () => {
                         id="add-stock-title"
                         className="text-2xl font-semibold text-[#0E1D3D]"
                       >
-                        {selectedGroup?.title
-                          ? `Tambah ${selectedGroup.title}`
-                          : "Tambah Barang"}
+                        Tambah Dokumen
                       </h2>
                     </div>
 
                     <div className="space-y-4">
                       <div className="space-y-2">
                         <label
-                          htmlFor="add-item-id"
+                          htmlFor="add-jenis-dokumen"
                           className="text-sm font-semibold text-[#0E1D3D]"
                         >
-                          Nama Dokumen
+                          Jenis Dokumen
                         </label>
-                        {availableItemsForAdd.length > 0 ? (
-                          <div className="relative">
-                            <select
-                              id="add-item-id"
-                              value={addData.itemId}
-                              onChange={handleAddInputChange("itemId")}
-                              className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                        <div className="relative">
+                          <select
+                            id="add-jenis-dokumen"
+                            value={addData.jenisDokumen}
+                            onChange={handleAddInputChange("jenisDokumen")}
+                            className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                          >
+                            <option value="doc">DOC</option>
+                            <option value="ase">ASE</option>
+                          </select>
+                          <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 16 16"
+                              fill="none"
+                              xmlns="http://www.w3.org/2000/svg"
                             >
-                              <option value="" disabled>
-                                Pilih dokumen
-                              </option>
-                              {availableItemsForAdd.map((item) => (
-                                <option key={item.item_id} value={item.item_id}>
-                                  {item.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]">
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 16 16"
-                                fill="none"
-                                xmlns="http://www.w3.org/2000/svg"
-                              >
-                                <path
-                                  d="M4 6L8 10L12 6"
-                                  stroke="currentColor"
-                                  strokeWidth="1.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                />
-                              </svg>
-                            </div>
+                              <path
+                                d="M4 6L8 10L12 6"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
                           </div>
-                        ) : (
-                          <div className="rounded-xl bg-yellow-50 p-3 text-sm text-yellow-700 border border-yellow-200">
-                            Tidak ada dokumen baru tersedia di katalog
-                          </div>
-                        )}
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -1117,20 +1176,39 @@ const StokBarangPage = () => {
 
                       <div className="space-y-2">
                         <label
-                          htmlFor="add-nomor-seal"
+                          htmlFor="add-revisi"
                           className="text-sm font-semibold text-[#0E1D3D]"
                         >
-                          Nomor Seal
+                          Revisi
                         </label>
                         <input
-                          id="add-nomor-seal"
+                          id="add-revisi"
                           type="text"
-                          placeholder="Masukan nomor"
-                          value={addData.nomorSeal}
-                          onChange={handleAddInputChange("nomorSeal")}
+                          placeholder="Masukan nomor revisi"
+                          value={addData.revisi}
+                          onChange={handleAddInputChange("revisi")}
                           className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                         />
                       </div>
+
+                      {addData.jenisDokumen === 'ase' && (
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="add-seal-number"
+                            className="text-sm font-semibold text-[#0E1D3D]"
+                          >
+                            Nomor Seal
+                          </label>
+                          <input
+                            id="add-seal-number"
+                            type="text"
+                            placeholder="Masukan nomor seal"
+                            value={addData.seal_number}
+                            onChange={handleAddInputChange("seal_number")}
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                          />
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <label

@@ -73,7 +73,7 @@ export default function RequestPage() {
 
   const transformedRequests = useMemo(() => {
     return requests
-      .filter(req => req.status === 'pending')
+      .filter(req => req.status.toLowerCase() === 'pending')
       .map((req): RequestRow => {
         const date = new Date(req.created_at);
         const tanggal = date.toLocaleDateString('id-ID', {
@@ -140,26 +140,6 @@ export default function RequestPage() {
     }
   }, []);
 
-  const handleFulfillClick = useCallback(async (row: RequestRow) => {
-    try {
-      await skybase.warehouseRequests.fulfill(row.id);
-      console.log("Request fulfilled:", row.id);
-
-      const response = await skybase.warehouseRequests.list();
-      let requestsData: WarehouseRequest[] = [];
-      if (Array.isArray(response.data)) {
-        requestsData = response.data;
-      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-        requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
-      }
-      setRequests(requestsData);
-      alert("Request berhasil diselesaikan!");
-    } catch (err) {
-      console.error("Error fulfilling request:", err);
-      alert("Gagal menyelesaikan request: " + (err instanceof Error ? err.message : "Unknown error"));
-    }
-  }, []);
-
   const handleRejectCancel = useCallback(() => {
     setRejectDialogOpen(false);
     setRejectReason("");
@@ -167,11 +147,11 @@ export default function RequestPage() {
   }, []);
 
   const handleRejectSubmit = useCallback(async () => {
-    if (!selectedRequest) return;
+    if (!selectedRequest || !rejectReason.trim()) return;
 
     try {
       await skybase.warehouseRequests.reject(selectedRequest.id, {
-        reason: rejectReason
+        rejection_reason: rejectReason.trim()
       });
       console.log("Request rejected:", selectedRequest.id);
 
@@ -212,19 +192,11 @@ export default function RequestPage() {
           <span className="hidden sm:inline">Setujui</span>
           <Check className="h-4 w-4 sm:ml-2" />
         </button>
-        <button
-          type="button"
-          onClick={() => handleFulfillClick(row)}
-          className="inline-flex items-center justify-center rounded-xl bg-[#10B981] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#059669] active:scale-95"
-        >
-          <span className="hidden sm:inline">Selesaikan</span>
-          <Check className="h-4 w-4 sm:ml-2" />
-        </button>
       </div>
     );
     ActionButtons.displayName = "ActionButtons";
     return ActionButtons;
-  }, [handleApproveClick, handleRejectClick, handleFulfillClick]);
+  }, [handleApproveClick, handleRejectClick]);
 
   const documentColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
     { key: "jenis", header: "Dokumen", align: "left" },

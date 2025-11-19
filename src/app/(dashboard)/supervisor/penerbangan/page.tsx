@@ -7,7 +7,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
-import type { Flight } from "@/types/api";
+import type { Flight, FlightRescheduleData, FlightCreateData } from "@/types/api";
 
 interface FlightRow {
   jenisPesawat: string;
@@ -20,7 +20,7 @@ interface FlightRow {
 export default function SupervisorPenerbanganPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [rows, setRows] = useState<FlightRow[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
@@ -30,52 +30,49 @@ export default function SupervisorPenerbanganPage() {
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const loadFlights = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await skybase.flights.list();
+      const data = res?.data;
+      let list: Flight[] = [];
+      if (Array.isArray(data)) {
+        list = data;
+      } else if (data && typeof data === 'object' && 'flights' in data && Array.isArray(data.flights)) {
+        list = data.flights;
+      }
+      setFlights(list);
+    } catch (e) {
+      if ((e as { status?: number })?.status === 401) router.replace("/");
+      setFlights([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
 
   useEffect(() => {
-    let ignore = false;
-    const loadFlights = async () => {
-      setLoading(true);
+    setIsMounted(true);
+    loadFlights();
+  }, [loadFlights]);
+
+  const rows = useMemo(() => {
+    const fmtTime = (d?: string | null) => {
+      if (!d) return "--:-- WIB";
       try {
-        const res = await skybase.flights.list();
-        const data = res?.data;
-        let list: Flight[] = [];
-        if (Array.isArray(data)) {
-          list = data;
-        } else if (data && typeof data === 'object' && 'flights' in data && Array.isArray(data.flights)) {
-          list = data.flights;
-        }
-        if (!ignore) {
-          const fmtTime = (d?: string | null) => {
-            if (!d) return "--:-- WIB";
-            try {
-              const dt = new Date(d);
-              return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-            } catch {
-              return "--:-- WIB";
-            }
-          };
-          const mapped: FlightRow[] = list.map((f) => ({
-            jenisPesawat: f?.aircraft?.type ?? "-",
-            idPesawat: f?.aircraft?.registration_code ?? "-",
-            destinasi: f?.route_to ?? "-",
-            arrival: fmtTime(f?.sched_dep ?? null),
-            takeOff: fmtTime(f?.sched_arr ?? null),
-          }));
-          setRows(mapped);
-        }
-      } catch (e) {
-        if ((e as { status?: number })?.status === 401) router.replace("/");
-        if (!ignore) setRows([]);
-      } finally {
-        if (!ignore) setLoading(false);
+        const dt = new Date(d);
+        return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+      } catch {
+        return "--:-- WIB";
       }
     };
-    loadFlights();
-    return () => { ignore = true; };
-  }, [router]);
+    return flights.map((f) => ({
+      jenisPesawat: f?.aircraft?.type ?? "-",
+      idPesawat: f?.aircraft?.registration_code ?? "-",
+      destinasi: f?.route_to ?? "-",
+      arrival: fmtTime(f?.sched_dep ?? null),
+      takeOff: fmtTime(f?.sched_arr ?? null),
+    }));
+  }, [flights]);
 
   const uniqueJenisPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.jenisPesawat))), [rows]);
   const uniqueIdPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.idPesawat))), [rows]);
@@ -112,16 +109,118 @@ export default function SupervisorPenerbanganPage() {
     setEditForm({ ...editForm, [key]: value });
   };
 
-  const handleEditSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editForm) return;
 
     if (isCreateMode) {
-      setRows((prev) => [...prev, { ...editForm }]);
-    } else if (editingIndex !== null) {
-      setRows((prev) =>
-        prev.map((row, index) => (index === editingIndex ? { ...editForm } : row)),
-      );
+      try {
+        // Parse time inputs to ISO strings
+        const now = new Date();
+        const arrivalParts = editForm.arrival.replace(" WIB", "").split(':');
+        const takeOffParts = editForm.takeOff.replace(" WIB", "").split(':');
+        
+        let sched_dep = now.toISOString();
+        if (arrivalParts.length === 2) {
+          const depHours = parseInt(arrivalParts[0], 10);
+          const depMinutes = parseInt(arrivalParts[1], 10);
+          if (!isNaN(depHours) && !isNaN(depMinutes)) {
+            now.setHours(depHours, depMinutes, 0, 0);
+            sched_dep = now.toISOString();
+          }
+        }
+
+        let sched_arr = new Date(now.getTime() + 3600000).toISOString(); // 1 hour later
+        if (takeOffParts.length === 2) {
+          const arrHours = parseInt(takeOffParts[0], 10);
+          const arrMinutes = parseInt(takeOffParts[1], 10);
+          if (!isNaN(arrHours) && !isNaN(arrMinutes)) {
+            now.setHours(arrHours, arrMinutes, 0, 0);
+            sched_arr = now.toISOString();
+          }
+        }
+
+        // Find aircraft_id by registration_code or create with registration_code
+        const createData: FlightCreateData = {
+          registration_code: editForm.idPesawat,
+          route_to: editForm.destinasi,
+          sched_dep,
+          sched_arr
+        };
+
+        const result = await skybase.flights.create(createData);
+        await loadFlights(); // Reload from server
+        closeEditDialog();
+      } catch (error) {
+        console.error("Failed to create flight:", error);
+        alert("Gagal menyimpan ke server, tapi ditambahkan secara lokal");
+        // Fallback: add locally using calculated times
+        const fallbackFlight: Flight = {
+          flight_id: Date.now(),
+          aircraft: {
+            aircraft_id: Date.now(),
+            type: editForm.jenisPesawat,
+            registration_code: editForm.idPesawat
+          },
+          route_to: editForm.destinasi,
+          sched_dep: new Date().toISOString(),
+          sched_arr: new Date(Date.now() + 3600000).toISOString(),
+          status: "SCHEDULED",
+          rescheduled_at: null,
+          supervisor: undefined,
+          created_at: new Date().toISOString(),
+          has_inspection: false
+        };
+        setFlights((prev) => [...prev, fallbackFlight]);
+      }
+      closeEditDialog();
+      return;
+    }
+    
+    if (editingIndex !== null) {
+      const flightToUpdate = flights[editingIndex];
+      if (!flightToUpdate) return;
+
+      try {
+        const originalDepDate = flightToUpdate.sched_dep ? new Date(flightToUpdate.sched_dep) : new Date();
+        let sched_dep = flightToUpdate.sched_dep;
+        const arrivalParts = editForm.arrival.replace(" WIB", "").split(':');
+        if (arrivalParts.length === 2) {
+          const depHours = parseInt(arrivalParts[0], 10);
+          const depMinutes = parseInt(arrivalParts[1], 10);
+          if (!isNaN(depHours) && !isNaN(depMinutes)) {
+            originalDepDate.setHours(depHours, depMinutes, 0, 0);
+            sched_dep = originalDepDate.toISOString();
+          }
+        }
+
+        if (sched_dep === null) {
+          sched_dep = new Date().toISOString();
+        }
+
+        const originalArrDate = flightToUpdate.sched_arr ? new Date(flightToUpdate.sched_arr) : new Date();
+        let sched_arr = flightToUpdate.sched_arr;
+        const takeOffParts = editForm.takeOff.replace(" WIB", "").split(':');
+        if (takeOffParts.length === 2) {
+          const arrHours = parseInt(takeOffParts[0], 10);
+          const arrMinutes = parseInt(takeOffParts[1], 10);
+          if (!isNaN(arrHours) && !isNaN(arrMinutes)) {
+            originalArrDate.setHours(arrHours, arrMinutes, 0, 0);
+            sched_arr = originalArrDate.toISOString();
+          }
+        }
+
+        const data: FlightRescheduleData = {
+          sched_dep: sched_dep,
+          sched_arr: sched_arr,
+        };
+
+        await skybase.flights.reschedule(flightToUpdate.flight_id, data);
+        await loadFlights();
+      } catch (error) {
+        console.error("Failed to reschedule flight", error);
+        // You might want to show an error message to the user
+      }
     }
 
     closeEditDialog();
@@ -142,7 +241,7 @@ export default function SupervisorPenerbanganPage() {
       return;
     }
 
-    setRows((prev) => prev.filter((_, index) => index !== pendingDeleteIndex));
+    setFlights((prev) => prev.filter((_, index) => index !== pendingDeleteIndex));
     closeDeleteConfirm();
   };
 

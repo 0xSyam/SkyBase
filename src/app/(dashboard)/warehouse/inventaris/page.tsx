@@ -215,15 +215,6 @@ const WarehouseInventarisPage = () => {
       return;
     }
 
-    console.log("Tambah item baru ke inventaris", {
-      groupId: selectedGroup.id,
-      groupTitle: selectedGroup.title,
-      nomor: addData.nomor,
-      nomorSeal: addData.nomorSeal,
-      efektif: addData.efektif,
-      jumlah: Number(addData.jumlah) || 0,
-    });
-
 
     setActiveDialog(null);
     setSelectedGroup(null);
@@ -336,16 +327,7 @@ const WarehouseInventarisPage = () => {
                       </span>
                     </button>
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={(event) => handleAddItem(event, group)}
-                        className="hidden sm:flex items-center gap-2 rounded-lg bg-[#0D63F3] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#0A4EC1]"
-                      >
-                        Tambah
-                        <span className="grid h-4 w-4 place-items-center rounded-full bg-white text-[#0D63F3] text-xs leading-none">
-                          +
-                        </span>
-                      </button>
+
                       <button
                         type="button"
                         onClick={() => handleToggleGroup(group.id)}

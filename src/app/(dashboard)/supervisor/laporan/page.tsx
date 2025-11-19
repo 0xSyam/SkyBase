@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import { Calendar, Download } from "lucide-react";
+import Calendar from "@/component/Calendar";
+import { Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
 import type { Flight } from "@/types/api";
@@ -23,34 +24,6 @@ interface ReportSection {
 }
 
 
-interface DateFieldProps {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
-const DateField: React.FC<DateFieldProps> = ({
-  id,
-  value,
-  onChange,
-  placeholder,
-}) => (
-  <label
-    htmlFor={id}
-    className="group relative inline-flex h-12 w-[136px] sm:w-[200px] md:w-[240px] items-center gap-2 rounded-xl border-2 border-[#0D63F3] bg-white px-3 text-sm font-semibold text-[#0D63F3] transition focus-within:border-[#0A4EC1]"
-  >
-    <Calendar className="h-4 w-4 flex-shrink-0 text-[#0D63F3]" strokeWidth={2.5} />
-    <input
-      id={id}
-      type="text"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      className="flex-1 min-w-0 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
-    />
-  </label>
-);
 
 export default function SupervisorLaporanPage() {
   const router = useRouter();
@@ -170,14 +143,14 @@ export default function SupervisorLaporanPage() {
             <span className="hidden md:inline-block text-sm font-semibold text-[#111827] md:mr-2 whitespace-nowrap">
               Pilih tanggal laporan :
             </span>
-            <DateField
+            <Calendar
               id="supervisor-laporan-start-date"
               value={startDate}
               onChange={setStartDate}
               placeholder="dd/mm/yyyy"
             />
             <span className="text-lg font-semibold text-[#94A3B8]">-</span>
-            <DateField
+            <Calendar
               id="supervisor-laporan-end-date"
               value={endDate}
               onChange={setEndDate}

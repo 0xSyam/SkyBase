@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
-import { ArrowRight, Calendar, Download } from "lucide-react";
+import Calendar from "@/component/Calendar";
+import { ArrowRight, Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
@@ -25,34 +26,6 @@ interface ReportSection {
   schedules: ReportSchedule[];
 }
 
-interface DateFieldProps {
-  id: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-}
-
-const DateField: React.FC<DateFieldProps> = ({
-  id,
-  value,
-  onChange,
-  placeholder,
-}) => (
-  <label
-    htmlFor={id}
-    className="group relative inline-flex w-full md:w-auto flex-1 items-center gap-2 rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white px-3 py-2.5 md:py-2 text-sm font-semibold text-[#0D63F3] shadow-[0_8px_24px_rgba(13,99,243,0.12)] transition focus-within:border-[#0A4EC1] focus-within:shadow-[0_12px_28px_rgba(13,99,243,0.2)]"
-  >
-    <Calendar className="h-4 w-4 flex-shrink-0 text-[#0D63F3]" strokeWidth={2.5} />
-    <input
-      id={id}
-      type="text"
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      placeholder={placeholder}
-      className="w-full md:w-32 border-none bg-transparent text-sm font-semibold text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/60"
-    />
-  </label>
-);
 
 export default function WarehouseLaporanPage() {
   const [startDate, setStartDate] = useState("");
@@ -204,14 +177,14 @@ export default function WarehouseLaporanPage() {
                 Pilih tanggal laporan :
               </span>
               <div className="flex w-full md:w-auto items-center gap-3">
-                <DateField
+                <Calendar
                   id="warehouse-laporan-start-date"
                   value={startDate}
                   onChange={setStartDate}
                   placeholder="dd/mm/yyyy"
                 />
                 <span className="text-lg font-semibold text-[#0D63F3]">-</span>
-                <DateField
+                <Calendar
                   id="warehouse-laporan-end-date"
                   value={endDate}
                   onChange={setEndDate}

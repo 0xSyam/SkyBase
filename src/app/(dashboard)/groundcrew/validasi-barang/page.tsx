@@ -8,6 +8,7 @@ import GlassCard from "@/component/Glasscard";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
+import type { Flight } from "@/types/api";
 
 interface FlightSchedule {
   aircraft: string;
@@ -17,6 +18,15 @@ interface FlightSchedule {
   takeOff: string;
   aircraftId?: number;
 }
+
+type TodayFlightsResponse = {
+  status: string;
+  data: {
+    date: string;
+    total_flights: number;
+    flights: Flight[];
+  };
+};
 
 const ValidasiBarangPage = () => {
   const router = useRouter();
@@ -28,18 +38,73 @@ const ValidasiBarangPage = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await skybase.inspections.availableFlights();
-        const resData = res?.data;
-        const items = Array.isArray(resData) ? resData : (resData && 'items' in resData && Array.isArray(resData.items)) ? resData.items : [];
-        if (!ignore && items.length > 0) {
-          const mapped: FlightSchedule[] = items.map((it) => ({
-            aircraft: it?.aircraft?.type || "-",
-            registration: it?.aircraft?.registration_code || "-",
-            destination: it?.route_to || "-",
-            arrival: it?.sched_arr ? new Date(it.sched_arr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
-            takeOff: it?.sched_dep ? new Date(it.sched_dep).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "-",
-            aircraftId: it?.aircraft?.aircraft_id,
-          }));
+        const res = await skybase.inspections.today();
+        console.log('API Response:', JSON.stringify(res, null, 2));
+        
+        let apiData: any[] = [];
+        
+        // Handle expected nested structure first - cast to any to bypass TS
+        const nestedData = (res?.data as any)?.data?.flights;
+        if (Array.isArray(nestedData)) {
+          apiData = nestedData;
+        } else {
+          // Fallback to other structures
+          const flatData = res?.data;
+          if (Array.isArray(flatData)) {
+            apiData = flatData;
+          } else if ('items' in (flatData || {}) && Array.isArray((flatData as any).items)) {
+            apiData = (flatData as any).items;
+          } else if ('flights' in (flatData || {}) && Array.isArray((flatData as any).flights)) {
+            apiData = (flatData as any).flights;
+          }
+        }
+        
+        console.log('Extracted apiData:', apiData.length, 'items');
+        
+        if (!ignore) {
+          const mapped: FlightSchedule[] = apiData
+            .filter((it: any) => {
+              // Only show NOT_STARTED or IN_PROGRESS inspections
+              const inspectionStatus = it?.inspection?.status;
+              return inspectionStatus === 'NOT_STARTED' || inspectionStatus === 'IN_PROGRESS';
+            })
+            .map((it: any) => {
+              console.log('Processing flight:', it);
+              
+              // Handle both nested API structure and flat Flight type
+              const aircraftType = it?.aircraft?.type_code ||
+                                 it?.aircraft?.type ||
+                                 it?.aircraft_type || "-";
+              const registration = it?.aircraft?.registration_code ||
+                                 it?.registration || "-";
+              const destination = it?.route?.to ||
+                                it?.destination ||
+                                it?.route_to || "-";
+              const departureTime = it?.schedule?.departure ||
+                                  it?.sched_dep;
+              const arrivalTime = it?.schedule?.arrival ||
+                                it?.sched_arr;
+              
+              return {
+                aircraft: aircraftType,
+                registration,
+                destination,
+                arrival: arrivalTime
+                  ? new Date(arrivalTime).toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  : "-",
+                takeOff: departureTime
+                  ? new Date(departureTime).toLocaleTimeString('id-ID', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })
+                  : "-",
+                aircraftId: it?.aircraft?.aircraft_id || it?.aircraft_id,
+              };
+            })
+            .filter((it) => it.registration !== "-") as FlightSchedule[];
           setFlights(mapped);
         }
       } catch {
@@ -54,7 +119,13 @@ const ValidasiBarangPage = () => {
   const columns: ColumnDef<FlightSchedule>[] = [
     {
       key: "registration",
-      header: "B738 NG",
+      header: "Registrasi",
+      align: "left",
+      className: "font-semibold min-w-[100px]"
+    },
+    {
+      key: "aircraft",
+      header: "Jenis Pesawat",
       align: "left"
     },
     {

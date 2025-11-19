@@ -18,7 +18,7 @@ export default function GlassCard({ children, className = "" }: GlassCardProps) 
       <div
         className="absolute inset-0 z-0"
         style={{
-          backdropFilter: "blur(6px)",
+          backdropFilter: "blur(4px)",
           filter: `url(#${filterId})`,
           borderRadius: "inherit",
         }}
@@ -63,7 +63,7 @@ export default function GlassCard({ children, className = "" }: GlassCardProps) 
             <fePointLight x="-200" y="-200" z="300" />
           </feSpecularLighting>
           <feComposite in="specLight" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litImage" />
-          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="50" xChannelSelector="R" yChannelSelector="G" />
+          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="8" xChannelSelector="R" yChannelSelector="G" />
         </filter>
       </svg>
     </div>

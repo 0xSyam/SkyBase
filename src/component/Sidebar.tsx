@@ -90,9 +90,8 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
       >
         <div className="flex flex-col gap-12 w-full">
           <header className="mb-2" role="banner">
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center" />
-              <span className="text-2xl font-bold text-blue-600">SkyBase</span>
+            <div className="flex items-center justify-center mt-5">
+              <img src="/logo.svg" alt="Skybase Logo" />
             </div>
           </header>
 

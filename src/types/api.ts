@@ -278,7 +278,7 @@ export type WarehouseRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
 
 export type WarehouseRequest = {
   wh_req_id: number;
-  flight_id: number;
+  flight_id?: number;
   requested_by_gc_id: number;
   status: string;
   rejection_reason: string | null;
@@ -294,7 +294,8 @@ export type WarehouseRequest = {
 };
 
 export type WarehouseRequestCreateData = {
-  flight_id: number;
+  flight_id?: number;
+  notes?: string;
   items: Array<{
     item_id: number;
     qty: number;
