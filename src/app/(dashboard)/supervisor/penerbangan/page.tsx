@@ -119,7 +119,7 @@ export default function SupervisorPenerbanganPage() {
         const now = new Date();
         const arrivalParts = editForm.arrival.replace(" WIB", "").split(':');
         const takeOffParts = editForm.takeOff.replace(" WIB", "").split(':');
-        
+
         let sched_dep = now.toISOString();
         if (arrivalParts.length === 2) {
           const depHours = parseInt(arrivalParts[0], 10);
@@ -148,7 +148,7 @@ export default function SupervisorPenerbanganPage() {
           sched_arr
         };
 
-        const result = await skybase.flights.create(createData);
+        await skybase.flights.create(createData);
         await loadFlights(); // Reload from server
         closeEditDialog();
       } catch (error) {
@@ -176,7 +176,7 @@ export default function SupervisorPenerbanganPage() {
       closeEditDialog();
       return;
     }
-    
+
     if (editingIndex !== null) {
       const flightToUpdate = flights[editingIndex];
       if (!flightToUpdate) return;
@@ -391,20 +391,20 @@ export default function SupervisorPenerbanganPage() {
                     Jenis Pesawat
                   </label>
                   <div className="relative">
-                  <select
-                    id="edit-jenis-pesawat"
-                    value={editForm.jenisPesawat}
-                    onChange={(event) => handleEditChange("jenisPesawat", event.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                  >
-                    {uniqueJenisPesawat.length === 0 && (
-                      <option value="">Pilih jenis pesawat</option>
-                    )}
-                    {uniqueJenisPesawat.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
+                    <select
+                      id="edit-jenis-pesawat"
+                      value={editForm.jenisPesawat}
+                      onChange={(event) => handleEditChange("jenisPesawat", event.target.value)}
+                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                    >
+                      {uniqueJenisPesawat.length === 0 && (
+                        <option value="">Pilih jenis pesawat</option>
+                      )}
+                      {uniqueJenisPesawat.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                   </div>
@@ -415,20 +415,20 @@ export default function SupervisorPenerbanganPage() {
                     ID Pesawat
                   </label>
                   <div className="relative">
-                  <select
-                    id="edit-id-pesawat"
-                    value={editForm.idPesawat}
-                    onChange={(event) => handleEditChange("idPesawat", event.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                  >
-                    {uniqueIdPesawat.length === 0 && (
-                      <option value="">Pilih ID pesawat</option>
-                    )}
-                    {uniqueIdPesawat.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
+                    <select
+                      id="edit-id-pesawat"
+                      value={editForm.idPesawat}
+                      onChange={(event) => handleEditChange("idPesawat", event.target.value)}
+                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                    >
+                      {uniqueIdPesawat.length === 0 && (
+                        <option value="">Pilih ID pesawat</option>
+                      )}
+                      {uniqueIdPesawat.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
                     </select>
                     <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                   </div>

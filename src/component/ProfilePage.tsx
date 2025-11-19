@@ -122,96 +122,44 @@ const ProfilePage = () => {
 
 
 
-      React.useEffect(() => {
+  React.useEffect(() => {
 
 
 
-        const fetchProfile = async () => {
+    const fetchProfile = async () => {
 
 
 
-          try {
+      try {
 
 
 
-            setLoading(true);
+        setLoading(true);
 
 
 
-            const res = await skybase.auth.profile();
+        const res = await skybase.auth.profile();
 
 
 
-            const user = (res.data as any)?.user ?? res.data;
-          setProfile(user);
+        const user = (res.data as { user?: StoredUser })?.user ?? res.data as StoredUser;
+        setProfile(user);
 
 
 
-          } catch (err) {
+      } catch (err) {
 
 
 
-            setError(err instanceof Error ? err.message : "Failed to fetch profile");
+        setError(err instanceof Error ? err.message : "Failed to fetch profile");
 
 
 
-          } finally {
+      } finally {
 
 
 
-            setLoading(false);
-
-
-
-          }
-
-
-
-        };
-
-
-
-        fetchProfile();
-
-
-
-      }, []);
-
-
-
-    
-
-
-
-      if (loading) {
-
-
-
-        return (
-
-
-
-          <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
-
-
-
-            <div className="flex justify-center items-center h-64">
-
-
-
-              <p>Loading profile...</p>
-
-
-
-            </div>
-
-
-
-          </PageLayout>
-
-
-
-        );
+        setLoading(false);
 
 
 
@@ -219,103 +167,155 @@ const ProfilePage = () => {
 
 
 
-    
+    };
 
 
 
-      if (error) {
+    fetchProfile();
 
 
 
-        return (
+  }, []);
 
 
 
-          <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
 
 
 
-            <div className="flex justify-center items-center h-64">
 
+  if (loading) {
 
 
-              <p className="text-red-500">Error: {error}</p>
 
+    return (
 
 
-            </div>
 
+      <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
 
 
-          </PageLayout>
 
+        <div className="flex justify-center items-center h-64">
 
 
-        );
 
+          <p>Loading profile...</p>
 
 
-      }
 
+        </div>
 
 
-    
 
+      </PageLayout>
 
 
-      if (!profile || !profile.name) {
 
+    );
 
 
-        return (
 
+  }
 
 
-          <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
 
 
 
-            <div className="flex justify-center items-center h-64">
 
 
+  if (error) {
 
-              <p>No profile data found.</p>
 
 
+    return (
 
-            </div>
 
 
+      <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
 
-          </PageLayout>
 
 
+        <div className="flex justify-center items-center h-64">
 
-        );
 
 
+          <p className="text-red-500">Error: {error}</p>
 
-      }
 
 
+        </div>
 
-    
 
 
+      </PageLayout>
 
-      const displayProfile = {
 
 
+    );
 
-        ...profile,
 
 
+  }
 
-        role: roleLabels[sidebarRole],
 
 
 
-      };
+
+
+
+  if (!profile || !profile.name) {
+
+
+
+    return (
+
+
+
+      <PageLayout contentClassName="max-w-[1160px]" sidebarRole={sidebarRole}>
+
+
+
+        <div className="flex justify-center items-center h-64">
+
+
+
+          <p>No profile data found.</p>
+
+
+
+        </div>
+
+
+
+      </PageLayout>
+
+
+
+    );
+
+
+
+  }
+
+
+
+
+
+
+
+  const displayProfile = {
+
+
+
+    ...profile,
+
+
+
+    role: roleLabels[sidebarRole],
+
+
+
+  };
 
 
 
@@ -337,15 +337,15 @@ const ProfilePage = () => {
 
                 <div className="w-40 h-40 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-4xl font-semibold">
 
-                                    {(displayProfile.name || "")
+                  {(displayProfile.name || "")
 
-                                      .split(" ")
+                    .split(" ")
 
-                                      .map((part) => part[0])
+                    .map((part) => part[0])
 
-                                      .join("")
+                    .join("")
 
-                                      .slice(0, 2)}
+                    .slice(0, 2)}
 
                 </div>
 

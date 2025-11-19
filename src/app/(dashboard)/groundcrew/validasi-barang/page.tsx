@@ -8,7 +8,7 @@ import GlassCard from "@/component/Glasscard";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
-import type { Flight } from "@/types/api";
+
 
 interface FlightSchedule {
   aircraft: string;
@@ -19,14 +19,7 @@ interface FlightSchedule {
   aircraftId?: number;
 }
 
-type TodayFlightsResponse = {
-  status: string;
-  data: {
-    date: string;
-    total_flights: number;
-    flights: Flight[];
-  };
-};
+
 
 const ValidasiBarangPage = () => {
   const router = useRouter();
@@ -40,66 +33,88 @@ const ValidasiBarangPage = () => {
       try {
         const res = await skybase.inspections.today();
         console.log('API Response:', JSON.stringify(res, null, 2));
-        
-        let apiData: any[] = [];
-        
+
+        interface RawFlightData {
+          inspection?: { status?: string };
+          aircraft?: {
+            type_code?: string;
+            type?: string;
+            registration_code?: string;
+            aircraft_id?: number;
+          };
+          aircraft_type?: string;
+          registration?: string;
+          route?: { to?: string };
+          destination?: string;
+          route_to?: string;
+          schedule?: {
+            departure?: string;
+            arrival?: string;
+          };
+          sched_dep?: string;
+          sched_arr?: string;
+          aircraft_id?: number;
+        }
+
+        let apiData: RawFlightData[] = [];
+
         // Handle expected nested structure first - cast to any to bypass TS
-        const nestedData = (res?.data as any)?.data?.flights;
+        const nestedData = (res?.data as { data?: { flights?: RawFlightData[] } })?.data?.flights;
         if (Array.isArray(nestedData)) {
           apiData = nestedData;
         } else {
           // Fallback to other structures
           const flatData = res?.data;
           if (Array.isArray(flatData)) {
-            apiData = flatData;
-          } else if ('items' in (flatData || {}) && Array.isArray((flatData as any).items)) {
-            apiData = (flatData as any).items;
-          } else if ('flights' in (flatData || {}) && Array.isArray((flatData as any).flights)) {
-            apiData = (flatData as any).flights;
+            apiData = flatData as RawFlightData[];
+          } else if (flatData && typeof flatData === 'object' && 'items' in flatData && Array.isArray((flatData as { items: unknown[] }).items)) {
+            apiData = (flatData as { items: RawFlightData[] }).items;
+          } else if (flatData && typeof flatData === 'object' && 'flights' in flatData && Array.isArray((flatData as { flights: unknown[] }).flights)) {
+            apiData = (flatData as { flights: RawFlightData[] }).flights;
           }
         }
-        
+
         console.log('Extracted apiData:', apiData.length, 'items');
-        
+
         if (!ignore) {
           const mapped: FlightSchedule[] = apiData
-            .filter((it: any) => {
+            .filter((it) => {
               // Only show NOT_STARTED or IN_PROGRESS inspections
               const inspectionStatus = it?.inspection?.status;
               return inspectionStatus === 'NOT_STARTED' || inspectionStatus === 'IN_PROGRESS';
             })
-            .map((it: any) => {
+            .map((it) => {
               console.log('Processing flight:', it);
-              
+
               // Handle both nested API structure and flat Flight type
               const aircraftType = it?.aircraft?.type_code ||
-                                 it?.aircraft?.type ||
-                                 it?.aircraft_type || "-";
+                it?.aircraft?.type ||
+                it?.aircraft_type || "-";
               const registration = it?.aircraft?.registration_code ||
-                                 it?.registration || "-";
+                it?.registration || "-";
               const destination = it?.route?.to ||
-                                it?.destination ||
-                                it?.route_to || "-";
+                it?.destination ||
+                it?.route_to || "-";
               const departureTime = it?.schedule?.departure ||
-                                  it?.sched_dep;
+                it?.sched_dep;
               const arrivalTime = it?.schedule?.arrival ||
-                                it?.sched_arr;
-              
+                it?.sched_arr;
+
               return {
                 aircraft: aircraftType,
                 registration,
                 destination,
                 arrival: arrivalTime
                   ? new Date(arrivalTime).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
                   : "-",
                 takeOff: departureTime
                   ? new Date(departureTime).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
                   : "-",
                 aircraftId: it?.aircraft?.aircraft_id || it?.aircraft_id,
               };

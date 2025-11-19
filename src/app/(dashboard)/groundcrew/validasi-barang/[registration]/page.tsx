@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
-import PageHeader from "@/component/PageHeader";
+
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { AlertCircle, ArrowLeftRight, Check, X, ArrowRight } from "lucide-react";
 import skybase from "@/lib/api/skybase";
@@ -61,13 +61,13 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       setSubmitting(true);
       const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
       const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
-      
+
       if (!aircraftId || Number.isNaN(aircraftId)) {
         throw new Error("Aircraft ID tidak ditemukan");
       }
 
       await skybase.inspections.submit(aircraftId, {});
-      
+
       alert("Inspection berhasil disubmit!");
       setIsDialogOpen(false);
       window.location.reload();
@@ -107,17 +107,34 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
         const res = await skybase.inspections.aircraftValidation(aircraftId);
         const resData = res?.data;
         // Fix parsing untuk response structure baru
-        let items: any[] = [];
-        if (resData && typeof resData === 'object' && 'items' in resData && Array.isArray(resData.items)) {
-          items = resData.items;
+        interface InspectionItemResponse {
+          id?: string | number;
+          inspection_item_id?: string | number;
+          is_checked?: boolean | null;
+          nama_dokumen?: string;
+          name?: string;
+          item_name?: string;
+          item?: { name?: string };
+          nomor?: string;
+          doc_number?: string;
+          serial_number?: string;
+          revisi?: string;
+          revision_no?: string;
+          efektif?: string;
+          jumlah?: number;
+        }
+
+        let items: InspectionItemResponse[] = [];
+        if (resData && typeof resData === 'object' && 'items' in resData && Array.isArray((resData as { items: unknown[] }).items)) {
+          items = (resData as { items: InspectionItemResponse[] }).items;
         } else if (Array.isArray(resData)) {
-          items = resData;
+          items = resData as InspectionItemResponse[];
         } else if (resData && typeof resData === 'object') {
           // Direct object dengan items array
-          items = (resData as any).items || [];
+          items = ((resData as { items?: InspectionItemResponse[] }).items) || [];
         }
-        
-        const rows: DocumentRow[] = items.map((it: any) => {
+
+        const rows: DocumentRow[] = items.map((it) => {
           // Gunakan field 'efektif' langsung dari backend
           const effective = it?.efektif || "-";
 
@@ -222,7 +239,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
               onChange={async (e) => {
                 const newChecked = e.target.checked;
                 const itemId = row.inspection_item_id || row.id;
-                
+
                 if (!itemId) {
                   console.error('Item ID not found');
                   return;
@@ -230,7 +247,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
                 try {
                   await skybase.inspections.toggleItem(itemId);
-                  
+
                   // Optimistically update local state
                   setInspectionItems(prev =>
                     prev.map(i =>
@@ -340,7 +357,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
                 >
                   <X className="h-5 w-5" strokeWidth={2.5} />
                 </button>
-    
+
                 {/* Header */}
                 <div className="text-center mb-2">
                   <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl grid place-items-center mb-4">
@@ -354,7 +371,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
                   </p>
                 </div>
               </div>
-    
+
               {/* Action Buttons */}
               <div className="px-8 pb-8 space-y-3">
                 <button
@@ -366,7 +383,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
                   <AlertCircle className="h-5 w-5" />
                   Delay
                 </button>
-                
+
                 <button
                   type="button"
                   onClick={() => handleDialogSelection("ready")}
@@ -381,8 +398,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
           </div>,
           document.body
         )}
-      </PageLayout>
-    );
+    </PageLayout>
+  );
 };
 
 export default DetailValidasiBarangPage;

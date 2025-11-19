@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import Image from "next/image";
 import {
   Home,
   ClipboardList,
@@ -91,7 +92,7 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
         <div className="flex flex-col gap-12 w-full">
           <header className="mb-2" role="banner">
             <div className="flex items-center justify-center mt-5">
-              <img src="/logo.svg" alt="Skybase Logo" />
+              <Image src="/logo.svg" alt="Skybase Logo" width={140} height={40} priority />
             </div>
           </header>
 

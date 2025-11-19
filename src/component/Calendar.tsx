@@ -30,7 +30,7 @@ export default function Calendar({
   const [showCalendar, setShowCalendar] = useState(false);
   const [inputValue, setInputValue] = useState(value);
 
-  const selected = selectedDate ? new Date(selectedDate) : null;
+
 
   useEffect(() => {
     setInputValue(value);
@@ -47,7 +47,7 @@ export default function Calendar({
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
-    
+
     const parsed = parseDDMMYYYY(val);
     if (parsed) {
       const dateStr = parsed.toISOString().split('T')[0];
@@ -125,10 +125,10 @@ export default function Calendar({
           onClick={() => handleDateChange(dateStr)}
           className={`
             mx-0.5 h-10 w-10 rounded-lg text-sm font-semibold transition-all
-            ${isSelected 
-              ? 'bg-[#0D63F3] text-white shadow-lg shadow-[#0D63F3]/25' 
-              : isToday 
-                ? 'border-2 border-[#0D63F3] text-[#0D63F3] font-bold' 
+            ${isSelected
+              ? 'bg-[#0D63F3] text-white shadow-lg shadow-[#0D63F3]/25'
+              : isToday
+                ? 'border-2 border-[#0D63F3] text-[#0D63F3] font-bold'
                 : 'text-gray-700 hover:bg-gray-100'
             }
             ${!isSameMonth && 'text-gray-400'}
@@ -176,11 +176,11 @@ export default function Calendar({
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            
+
             <div className="text-lg font-semibold text-gray-900">
               {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
             </div>
-            
+
             <button
               type="button"
               onClick={goToNextMonth}

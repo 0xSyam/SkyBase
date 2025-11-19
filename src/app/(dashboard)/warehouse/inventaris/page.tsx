@@ -105,13 +105,13 @@ const WarehouseInventarisPage = () => {
     try {
       setLoading(true);
       const response = await skybase.items.list();
-      
+
       const rawItems: ItemCatalog[] = Array.isArray(response.data)
         ? response.data as ItemCatalog[]
         : (response.data as { items?: ItemCatalog[] })?.items || [];
 
       const categorizedItems: Record<string, StockItem[]> = {};
-      
+
       rawItems.forEach((item) => {
         const category = item.category || "DOC";
         const transformedItem: StockItem = {
@@ -186,14 +186,7 @@ const WarehouseInventarisPage = () => {
     setExpandedGroupId((current) => (current === groupId ? "" : groupId));
   };
 
-  const handleAddItem = (
-    event: React.MouseEvent,
-    group: StockGroup,
-  ) => {
-    event.stopPropagation();
-    setSelectedGroup({ id: group.id, title: group.title });
-    setActiveDialog("add");
-  };
+
 
   const handleDialogClose = () => {
     setActiveDialog(null);
@@ -202,12 +195,12 @@ const WarehouseInventarisPage = () => {
 
   const handleAddInputChange =
     (field: keyof StockAddFormData) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setAddData((previous) => ({
-        ...previous,
-        [field]: event.target.value,
-      }));
-    };
+      (event: React.ChangeEvent<HTMLInputElement>) => {
+        setAddData((previous) => ({
+          ...previous,
+          [field]: event.target.value,
+        }));
+      };
 
   const handleAddSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -224,7 +217,7 @@ const WarehouseInventarisPage = () => {
       efektif: "",
       jumlah: "",
     });
-    
+
     fetchInventoryData();
   };
 
@@ -331,9 +324,8 @@ const WarehouseInventarisPage = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleGroup(group.id)}
-                        className={`grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-sm transition ${
-                          isOpen ? "" : ""
-                        }`}
+                        className={`grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-sm transition ${isOpen ? "" : ""
+                          }`}
                         aria-label={isOpen ? "Tutup" : "Buka"}
                       >
                         {isOpen ? (

@@ -5,7 +5,7 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
 import Calendar from "@/component/Calendar";
-import { ArrowRight, Download } from "lucide-react";
+
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
@@ -28,13 +28,11 @@ interface ReportSection {
 
 const fallbackSections: ReportSection[] = [];
 
-
 export default function GroundcrewLaporanPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sections, setSections] = useState<ReportSection[]>(fallbackSections);
   const [loading, setLoading] = useState(false);
-  const [downloading, setDownloading] = useState<string | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -90,66 +88,6 @@ export default function GroundcrewLaporanPage() {
     load();
     return () => { ignore = true; };
   }, []);
-
-  const toISODateTime = (d: Date, endOfDay = false) => {
-    if (endOfDay) {
-      const e = new Date(d);
-      e.setHours(23, 59, 59, 999);
-      return e.toISOString();
-    }
-    const s = new Date(d);
-    s.setHours(0, 0, 0, 0);
-    return s.toISOString();
-  };
-
-  const parseDDMMYYYY = (val: string): Date | null => {
-    const m = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(val);
-    if (!m) return null;
-    const dd = parseInt(m[1], 10);
-    const mm = parseInt(m[2], 10) - 1;
-    const yyyy = parseInt(m[3], 10);
-    const dt = new Date(yyyy, mm, dd);
-    return isNaN(dt.getTime()) ? null : dt;
-  };
-
-  const handleDownloadSection = async (section: ReportSection) => {
-    if (!section?.schedules?.length) return;
-    setDownloading(section.id);
-    try {
-      const from = parseDDMMYYYY(startDate) || new Date(section.id);
-      const to = parseDDMMYYYY(endDate) || new Date(section.id);
-      const fromISO = toISODateTime(from, false);
-      const toISO = toISODateTime(to, true);
-
-      const calls = section.schedules
-        .filter((s) => typeof s.aircraftId === "number")
-        .map((s) =>
-          skybase.reports.aircraftStatus({
-            aircraft_id: s.aircraftId as number,
-            from_date: fromISO,
-            to_date: toISO,
-            group_by: "daily",
-            type: "ALL",
-          }).then((res) => ({ registration: s.registration, data: res?.data }))
-        );
-      const results = await Promise.allSettled(calls);
-      const ok = results
-        .filter((r) => r.status === "fulfilled")
-        .map((r) => (r as PromiseFulfilledResult<{ registration: string; data: unknown }>).value);
-      const exportBlob = new Blob([JSON.stringify({ section: section.title, from: fromISO, to: toISO, reports: ok }, null, 2)], { type: "application/json" });
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(exportBlob);
-      a.download = `laporan-${section.id}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (e) {
-      console.error("Failed to download report", e);
-      alert("Gagal mengunduh laporan. Coba lagi.");
-    } finally {
-      setDownloading(null);
-    }
-  };
 
   return (
     <PageLayout>
@@ -210,9 +148,8 @@ export default function GroundcrewLaporanPage() {
                 {section.schedules.map((schedule, index) => (
                   <div
                     key={schedule.id}
-                    className={`flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 ${
-                      index === 0 ? "" : "border-t border-[#E4E9F2]"
-                    }`}
+                    className={`flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 ${index === 0 ? "" : "border-t border-[#E4E9F2]"
+                      }`}
                   >
                     <div className="space-y-2">
                       <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">

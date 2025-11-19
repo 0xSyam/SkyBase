@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Filter } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import skybase, { authApi } from "@/lib/api/skybase";
+import { authApi } from "@/lib/api/skybase";
 
 interface AccountRow {
   id: string;
@@ -23,42 +23,17 @@ export default function SupervisorManajemenAkunPage() {
   const [selectedAccount, setSelectedAccount] = useState<AccountRow | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [roles, setRoles] = useState<Array<{ role_id: number; name: string }>>([]);
-  const [createLoading, setCreateLoading] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
+
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    role: "groundcrew" as "groundcrew" | "warehouse" | "supervisor",
-    password: "",
-    password_confirmation: "",
-  });
+
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  useEffect(() => {
-    const loadRoles = async () => {
-      try {
-        const res = await skybase.auth.roles();
-        const list = (res as { data?: { roles?: Array<{ role_id: number; name: string }> } })?.data?.roles ?? [];
-        setRoles(Array.isArray(list) ? list : []);
-      } catch {
-        setRoles([
-          { role_id: 1, name: "supervisor" },
-          { role_id: 2, name: "warehouse" },
-          { role_id: 3, name: "groundcrew" },
-        ]);
-      }
-    };
-    loadRoles();
-  }, []);
+
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -120,7 +95,7 @@ export default function SupervisorManajemenAkunPage() {
 
   const handleConfirmResetPassword = async () => {
     if (!selectedAccount) return;
-  
+
     setResetLoading(true);
     try {
       await authApi.resetPassword(selectedAccount.id);
@@ -345,7 +320,7 @@ export default function SupervisorManajemenAkunPage() {
             </h2>
             {selectedAccount && (
               <p className="mt-3 text-sm text-[#5B5F6B]">
-                Password akun <span className="font-semibold text-[#0D63F3]">{selectedAccount.username}</span> akan direset menjadi "password123".
+                Password akun <span className="font-semibold text-[#0D63F3]">{selectedAccount.username}</span> akan direset menjadi &quot;password123&quot;.
               </p>
             )}
             <div className="mt-8 flex items-center justify-center gap-4">

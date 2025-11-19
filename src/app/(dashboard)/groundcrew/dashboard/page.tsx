@@ -102,10 +102,6 @@ export default function DashboardPage() {
     const loadFlights = async () => {
       setLoadingFlights(true);
       try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0); // Start of today (local time)
-        const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
-        
         const res = await skybase.flights.list();
         const data = res?.data;
         let list: Flight[] = [];
@@ -116,17 +112,14 @@ export default function DashboardPage() {
         } else if (data && 'flights' in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
-        
+
         if (!ignore) {
           // Filter flights for TODAY using date range (fixes timezone issues)
-          const todayStart = today.toISOString().split('T')[0] + 'T00:00:00';
-          const todayEnd = tomorrow.toISOString().split('T')[0] + 'T00:00:00';
-          
           const mapped: ScheduleItem[] = list
             .filter((f) => {
               const schedArr = f?.sched_arr;
               const schedDep = f?.sched_dep;
-              
+
               // STRICT date-only filter matching MySQL DATE() function
               const getDateOnly = (timeStr: string | null | undefined) => {
                 if (!timeStr) return null;
@@ -135,19 +128,19 @@ export default function DashboardPage() {
                 if (!dateMatch) return null;
                 return new Date(dateMatch[1]);
               };
-              
+
               const arrDate = getDateOnly(schedArr);
               const depDate = getDateOnly(schedDep);
-              
+
               const isToday = (date: Date | null) => {
                 if (!date || isNaN(date.getTime())) return false;
                 const now = new Date();
                 now.setHours(0, 0, 0, 0); // Reset to midnight
                 return date.getFullYear() === now.getFullYear() &&
-                       date.getMonth() === now.getMonth() &&
-                       date.getDate() === now.getDate();
+                  date.getMonth() === now.getMonth() &&
+                  date.getDate() === now.getDate();
               };
-              
+
               return isToday(arrDate) || isToday(depDate);
             })
             .map((f) => {

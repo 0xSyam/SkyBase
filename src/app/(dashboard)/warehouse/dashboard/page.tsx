@@ -6,7 +6,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
-import type { WarehouseRequest, ItemCatalog } from "@/types/api";
+import type { WarehouseRequest } from "@/types/api";
 
 type RequestItem = {
   item_id: number;
@@ -35,43 +35,43 @@ const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
 );
 
 const RequestSummaryTable: React.FC<{ data: { documentName: string; quantity: number }[], onMore?: () => void }> = ({ data, onMore }) => (
-    <>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-2xl font-semibold text-[#222222]">Request item</h2>
-        {onMore && (
-          <button
-            onClick={onMore}
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
-          >
-            Selengkapnya <span>&gt;</span>
-          </button>
-        )}
+  <>
+    <div className="mb-4 flex items-center justify-between">
+      <h2 className="text-2xl font-semibold text-[#222222]">Request item</h2>
+      {onMore && (
+        <button
+          onClick={onMore}
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95"
+        >
+          Selengkapnya <span>&gt;</span>
+        </button>
+      )}
+    </div>
+
+    <WhiteCard className="overflow-hidden">
+      <div className="grid grid-cols-2 bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
+        <span>Nama Item</span>
+        <span className="text-right">Jumlah Request</span>
       </div>
-  
-      <WhiteCard className="overflow-hidden">
-        <div className="grid grid-cols-2 bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-          <span>Nama Item</span>
-          <span className="text-right">Jumlah Request</span>
-        </div>
-        <div className="divide-y divide-[#E9EEF3]">
-          {data.length === 0 && (
-              <div className="px-4 py-8 text-center text-gray-500 text-sm">
-                Tidak ada item yang di-request.
-              </div>
-          )}
-          {data.map((item, index) => (
-            <div
-              key={index}
-              className="grid grid-cols-2 px-4 h-[56px] items-center text-sm text-[#222222]"
-            >
-              <span className="truncate font-medium">{item.documentName}</span>
-              <span className="text-right">{item.quantity}</span>
-            </div>
-          ))}
-        </div>
-      </WhiteCard>
-    </>
-  );
+      <div className="divide-y divide-[#E9EEF3]">
+        {data.length === 0 && (
+          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+            Tidak ada item yang di-request.
+          </div>
+        )}
+        {data.map((item, index) => (
+          <div
+            key={index}
+            className="grid grid-cols-2 px-4 h-[56px] items-center text-sm text-[#222222]"
+          >
+            <span className="truncate font-medium">{item.documentName}</span>
+            <span className="text-right">{item.quantity}</span>
+          </div>
+        ))}
+      </div>
+    </WhiteCard>
+  </>
+);
 
 export default function WarehouseDashboardPage() {
   const router = useRouter();
@@ -125,13 +125,13 @@ export default function WarehouseDashboardPage() {
 
   const requestSummaryData = React.useMemo(() => {
     if (!requestsData) return [];
-    
+
     const allRequestedItems = requestsData.flatMap(req => req.items || []);
-    
+
     const aggregatedItems = allRequestedItems.reduce((acc, requestedItem) => {
-      const { item_id, qty, item } = requestedItem as any;
+      const { item_id, qty, item } = requestedItem as RequestItem;
       const name = item?.name || `Item #${item_id}`;
-      
+
       if (acc[item_id]) {
         acc[item_id].quantity += qty;
       } else {
@@ -162,7 +162,7 @@ export default function WarehouseDashboardPage() {
   const handleSelengkapnya = () => {
     router.push("/warehouse/riwayat");
   };
-  
+
   const handleRequestSelengkapnya = () => {
     router.push("/warehouse/request");
   };
@@ -174,7 +174,7 @@ export default function WarehouseDashboardPage() {
           {welcome}
         </div>
       )}
-      
+
       {loading && (
         <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm text-blue-800">
           Loading data...
