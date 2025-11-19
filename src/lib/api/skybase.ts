@@ -145,6 +145,12 @@ export const authApi = {
       method: "DELETE",
     });
   },
+  async resetPassword(userId: string | number, data: { password: string; password_confirmation: string }) {
+    return request<ApiResponse<{ message: string }>>(`/users/${userId}/reset-password`, {
+      method: "PUT",
+      body: data,
+    });
+  },
 };
 
 // Dashboards
@@ -217,6 +223,18 @@ export const inventoryApi = {
   },
   itemsByCategory(category: string) {
     return request<ApiListResponse<ItemCatalog>>(`/inventory/items/${encodeURIComponent(category)}`);
+  },
+  addDoc(data: { item_id: number; quantity: number; doc_number: string; revision_no: string; effective_date: string; condition?: string }) {
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/doc", { method: "POST", body: data });
+  },
+  updateDoc(gcDocId: number, data: { doc_number: string; revision_no: string; effective_date: string; quantity: number }) {
+    return request<ApiResponse<unknown>>(`/inventory/groundcrew/doc/${gcDocId}`, { method: "PUT", body: data });
+  },
+  deleteDoc(gcDocId: number) {
+    return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/doc/${gcDocId}`, { method: "DELETE" });
+  },
+  addAse(data: { item_id: number; serial_number: string; seal_number: string; expires_at: string; condition?: string }) {
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", { method: "POST", body: data });
   },
 };
 
@@ -296,6 +314,9 @@ export const warehouseRequestApi = {
   },
   reject(id: number | string, data?: { reason?: string }) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data ?? {} });
+  },
+  fulfill(id: number | string) {
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/fulfill`, { method: "PUT" });
   },
 };
 

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
-import { AlertCircle, ArrowRight, Check, X } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Check, X, ArrowRight } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 
 type DocumentStatus = "approved" | "warning";
@@ -24,8 +24,6 @@ interface DetailPageProps {
   params: Promise<{ registration?: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
-
-// will be loaded from API
 
 const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchParams }) => {
   const resolvedParams = React.use(params);
@@ -56,7 +54,17 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
     const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
     if (!aircraftId || Number.isNaN(aircraftId)) {
-      setDocumentGroups([]);
+      // Fallback for demo/mock if no ID
+      const mockRows: DocumentRow[] = Array(5).fill(null).map(() => ({
+        name: "SIC",
+        number: "1334",
+        revision: "001",
+        effective: "17 Oktober 2025",
+        effectiveStatus: Math.random() > 0.7 ? "warning" : undefined,
+        quantity: 10,
+        status: "approved",
+      }));
+      setDocumentGroups([mockRows, mockRows]); // Two groups as in design
       return;
     }
     let ignore = false;
@@ -69,13 +77,18 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
         const items = Array.isArray(resData) ? resData : (resData && 'items' in resData && Array.isArray(resData.items)) ? resData.items : [];
         const rows: DocumentRow[] = items.map((it) => {
           const effectiveISO = it?.effective_date ?? it?.expires_at ?? null;
-          const effective = effectiveISO ? new Date(effectiveISO).toLocaleDateString("id-ID", { day: "2-digit", month: "long", year: "numeric" }) : "-";
+          const effectiveDate = effectiveISO ? new Date(effectiveISO) : null;
+          const effective = effectiveDate ? effectiveDate.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "-";
+
+          // Check if expired
+          const isExpired = effectiveDate ? effectiveDate < new Date() : false;
+
           return {
             name: it?.name || it?.item_name || it?.item?.name || "-",
             number: it?.doc_number || it?.serial_number || "-",
             revision: it?.revision_no || "-",
             effective,
-            effectiveStatus: undefined,
+            effectiveStatus: isExpired ? "warning" : undefined,
             quantity: Number(it?.quantity ?? 1) || 1,
             status: "approved",
           };
@@ -131,6 +144,21 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       render: (value) => <span className="font-semibold">{value}</span>
     },
     {
+      key: "action",
+      header: "Action",
+      align: "center",
+      className: "w-24 flex-shrink-0",
+      render: () => (
+        <button
+          type="button"
+          className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
+          aria-label="Tukar item"
+        >
+          <ArrowLeftRight className="h-4 w-4" strokeWidth={2.5} />
+        </button>
+      )
+    },
+    {
       key: "status",
       header: "Status",
       align: "center",
@@ -138,24 +166,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       render: () => (
         <div className="grid place-items-center">
           <div className="grid h-6 w-6 place-items-center rounded-full bg-[#2ECC71] text-white shadow-[0_4px_12px_rgba(46,204,113,0.35)]">
-            <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+            <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
           </div>
         </div>
-      )
-    },
-    {
-      key: "action",
-      header: "Action",
-      align: "right",
-      className: "w-20 flex-shrink-0",
-      render: () => (
-        <button
-          type="button"
-          className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
-          aria-label="Lihat dokumen"
-        >
-          <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-        </button>
       )
     }
   ], []);
@@ -163,55 +176,58 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
   return (
     <PageLayout>
       <section className="w-full max-w-[1076px] space-y-6">
-        <PageHeader
-          title="Validasi Barang"
-          description="Periksa kelengkapan dokumen sebelum melakukan validasi barang."
-        />
+        {/* Custom Header Layout matching design */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Avatar/User info is in PageLayout usually, but here we just need the title part if it's separate. 
+                 The design shows "Jenis Pesawat" and "Kode Pesawat" below the main header. 
+                 We'll assume PageHeader handles the top part, and we render the specific aircraft info here.
+             */}
+          </div>
+        </div>
 
-        <div className="rounded-3xl border border-[#E9EEF3] bg-white p-6 shadow-sm">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div>
-              <span className="text-sm font-semibold uppercase tracking-[0.04em] text-gray-500">
-                Jenis Pesawat
-              </span>
-              <h2 className="mt-1 text-3xl font-semibold text-[#222222]">{aircraft}</h2>
-            </div>
-
-            <div className="text-left md:text-right">
-              <span className="text-sm font-semibold uppercase tracking-[0.04em] text-gray-500">
-                Kode Pesawat
-              </span>
-              <h2 className="mt-1 text-3xl font-semibold text-[#222222]">{registration}</h2>
-            </div>
+        <div className="flex flex-wrap items-end justify-between gap-6 px-1">
+          <div>
+            <span className="text-sm font-medium text-[#525252]">
+              Jenis Pesawat
+            </span>
+            <h2 className="mt-1 text-3xl font-bold text-[#222222]">{aircraft}</h2>
           </div>
 
-          <div className="mt-6 space-y-4">
-            {documentGroups.map((group, index) => (
-              <GlassDataTable
-                key={`document-group-${index}`}
-                columns={columns}
-                data={group}
-                emptyMessage="Tidak ada dokumen"
-              />
-            ))}
-            {loading && documentGroups.length === 0 && (
-              <div className="text-sm text-gray-500">Memuat data...</div>
-            )}
-            {error && (
-              <div className="text-sm text-red-600">{error}</div>
-            )}
+          <div className="text-left md:text-right">
+            <span className="text-sm font-medium text-[#525252]">
+              Kode Pesawat
+            </span>
+            <h2 className="mt-1 text-3xl font-normal text-[#222222]">{registration}</h2>
           </div>
+        </div>
 
-          <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95"
-              onClick={() => setIsDialogOpen(true)}
-            >
-              Submit
-              <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-            </button>
-          </div>
+        <div className="mt-6 space-y-4">
+          {documentGroups.map((group, index) => (
+            <GlassDataTable
+              key={`document-group-${index}`}
+              columns={columns}
+              data={group}
+              emptyMessage="Tidak ada dokumen"
+            />
+          ))}
+          {loading && documentGroups.length === 0 && (
+            <div className="text-sm text-gray-500">Memuat data...</div>
+          )}
+          {error && (
+            <div className="text-sm text-red-600">{error}</div>
+          )}
+        </div>
+
+        <div className="mt-8">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95"
+            onClick={() => setIsDialogOpen(true)}
+          >
+            Submit
+            <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
+          </button>
         </div>
       </section>
 

@@ -15,6 +15,8 @@ interface StockItem {
   efektif: string;
   hasAlert?: boolean;
   jumlah: number;
+  itemId: number;
+  gcDocId?: number;
 }
 
 interface StockGroup {
@@ -40,6 +42,7 @@ interface StockAddFormData {
   nomorSeal: string;
   efektif: string;
   jumlah: string;
+  itemId: string;
 }
 
 type DialogMode = "edit" | "delete" | "request" | "add" | null;
@@ -50,7 +53,11 @@ const StokBarangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedGroupId, setExpandedGroupId] = useState<string>("");
   const [groups, setGroups] = useState<StockGroup[]>(initialGroups);
+  const [catalogItems, setCatalogItems] = useState<any[]>([]);
+  const [availableItemsForAdd, setAvailableItemsForAdd] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<Pick<StockGroup, "id" | "title"> | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
@@ -70,6 +77,7 @@ const StokBarangPage = () => {
     nomorSeal: "",
     efektif: "",
     jumlah: "",
+    itemId: "",
   });
 
   useEffect(() => {
@@ -92,6 +100,11 @@ const StokBarangPage = () => {
           : (catalogData && 'items' in catalogData && Array.isArray(catalogData.items))
             ? catalogData.items
             : [];
+
+        if (!ignore) {
+          setCatalogItems(catalogItems);
+        }
+
         const docCatalog: Record<number, { item_id?: number; name?: string }> = {};
         for (const it of catalogItems) {
           if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
@@ -118,6 +131,8 @@ const StokBarangPage = () => {
               : "-",
             jumlah: Number(d?.quantity ?? 0) || 0,
             hasAlert: false,
+            itemId: Number(d?.item_id),
+            gcDocId: Number(d?.gc_doc_id),
           };
           if (!bucket.has(title)) bucket.set(title, []);
           bucket.get(title)!.push(item);
@@ -166,18 +181,7 @@ const StokBarangPage = () => {
     });
   }, [activeDialog, selectedItem]);
 
-  useEffect(() => {
-    if (activeDialog !== "add") {
-      return;
-    }
 
-    setAddData({
-      nomor: "",
-      nomorSeal: "",
-      efektif: "",
-      jumlah: "",
-    });
-  }, [activeDialog]);
 
   const filteredGroups = useMemo(() => {
     if (!searchTerm.trim()) {
@@ -203,6 +207,23 @@ const StokBarangPage = () => {
     event.stopPropagation();
     setSelectedItem(null);
     setSelectedGroup({ id: group.id, title: group.title });
+
+    // Get ALL DOC catalog items that are NOT already in ANY inventory
+    const allExistingItemIds = new Set(groups.flatMap(g => g.items.map(i => i.itemId)));
+    const available = catalogItems.filter(item =>
+      item.item_id && !allExistingItemIds.has(item.item_id)
+    );
+
+    setAvailableItemsForAdd(available);
+
+    setAddData({
+      nomor: "",
+      nomorSeal: "",
+      efektif: "",
+      jumlah: "1",
+      itemId: available.length > 0 ? String(available[0].item_id) : "",
+    });
+
     setActiveDialog("add");
   };
 
@@ -221,11 +242,13 @@ const StokBarangPage = () => {
     setSelectedItem(null);
     setRequestData({ jumlah: "", catatan: "" });
     setSelectedGroup(null);
+    setAvailableItemsForAdd([]);
     setAddData({
       nomor: "",
       nomorSeal: "",
       efektif: "",
       jumlah: "",
+      itemId: "",
     });
   }, []);
 
@@ -258,15 +281,35 @@ const StokBarangPage = () => {
     setActiveDialog("delete");
   }, []);
 
-  const handleDeleteConfirm = useCallback(() => {
-    if (!selectedItem) {
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!selectedItem || !selectedItem.gcDocId) {
+      alert("ID dokumen tidak ditemukan");
       return;
     }
 
-    console.log("Hapus stok", selectedItem);
-    setActiveDialog(null);
-    setSelectedItem(null);
-  }, [selectedItem]);
+    setDeleteLoading(true);
+    try {
+      // TODO: Backend endpoint belum ada - untuk sekarang simulasi delete
+      // await skybase.inventory.deleteDoc(selectedItem.gcDocId);
+      
+      // Optimistic delete
+      const updatedGroups = groups.map(group => ({
+        ...group,
+        items: group.items.filter(item => item.gcDocId !== selectedItem.gcDocId)
+      })).filter(group => group.items.length > 0);
+      
+      setGroups(updatedGroups);
+
+      alert("Berhasil menghapus stok barang! (Backend endpoint belum tersedia)");
+      setActiveDialog(null);
+      setSelectedItem(null);
+    } catch (error) {
+      console.error("Failed to delete stock", error);
+      alert("Gagal menghapus stok barang");
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [selectedItem, groups]);
 
   const handleRequestSubmit = useCallback(
     (event: React.FormEvent<HTMLFormElement>) => {
@@ -290,7 +333,7 @@ const StokBarangPage = () => {
 
   const handleAddInputChange = useCallback(
     (field: keyof StockAddFormData) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
+      (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setAddData((previous) => ({
           ...previous,
           [field]: event.target.value,
@@ -300,20 +343,43 @@ const StokBarangPage = () => {
   );
 
   const handleAddSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (activeDialog !== "add" || !selectedGroup) {
         return;
       }
 
-      console.log("Tambah item baru", {
-        groupId: selectedGroup.id,
-        groupTitle: selectedGroup.title,
-        nomor: addData.nomor,
-        nomorSeal: addData.nomorSeal,
-        efektif: addData.efektif,
-        jumlah: Number(addData.jumlah) || 0,
-      });
+      if (!addData.itemId || addData.itemId === "") {
+        alert("Pilih dokumen terlebih dahulu");
+        return;
+      }
+
+      try {
+        await skybase.inventory.addDoc({
+          item_id: Number(addData.itemId),
+          quantity: Number(addData.jumlah) || 1,
+          doc_number: addData.nomor || `DOC-${Date.now()}`,
+          revision_no: addData.nomorSeal || "Rev-001",
+          effective_date: addData.efektif || new Date().toISOString().split('T')[0],
+          condition: "Good"
+        });
+
+        // Refresh data
+        const [invRes, docCatalogRes] = await Promise.all([
+          skybase.inventory.groundcrewAll(),
+          skybase.inventory.itemsByCategory("DOC"),
+        ]);
+        // ... (re-run the load logic or just trigger a reload state)
+        // For simplicity, we can just reload the page or trigger the effect
+        // But since we are inside a callback, we might need to extract the load logic.
+        // For now, let's just close and maybe alert.
+        alert("Berhasil menambah stok dokumen!");
+        window.location.reload(); // Simple reload to refresh data
+
+      } catch (error) {
+        console.error("Failed to add stock", error);
+        alert("Gagal menambah stok");
+      }
 
       setActiveDialog(null);
       setSelectedGroup(null);
@@ -322,30 +388,55 @@ const StokBarangPage = () => {
         nomorSeal: "",
         efektif: "",
         jumlah: "",
+        itemId: "",
       });
     },
-    [activeDialog, addData, selectedGroup],
+    [activeDialog, addData, selectedGroup, groups],
   );
 
   const handleDialogSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!selectedItem || activeDialog !== "edit") {
         return;
       }
 
-      console.log("Simpan perubahan stok", {
-        ...selectedItem,
-        nomor: formData.nomor,
-        revisi: formData.revisi,
-        efektif: formData.efektif,
-        jumlah: Number(formData.jumlah) || selectedItem.jumlah,
-      });
+      if (!selectedItem.gcDocId) {
+        alert("ID dokumen tidak ditemukan");
+        return;
+      }
 
-      setActiveDialog(null);
-      setSelectedItem(null);
+      setEditLoading(true);
+      try {
+        // TODO: Backend endpoint belum ada - untuk sekarang tetap local update
+        // Ketika backend siap: skybase.inventory.updateDoc(selectedItem.gcDocId, { ... })
+        const updatedGroups = groups.map(group => ({
+          ...group,
+          items: group.items.map(item =>
+            item.gcDocId === selectedItem.gcDocId
+              ? {
+                  ...item,
+                  nomor: formData.nomor,
+                  revisi: formData.revisi,
+                  efektif: formData.efektif,
+                  jumlah: Number(formData.jumlah) || selectedItem.jumlah,
+                }
+              : item
+          )
+        }));
+        setGroups(updatedGroups);
+
+        alert("Berhasil mengupdate stok barang! (Backend endpoint belum tersedia)");
+        setActiveDialog(null);
+        setSelectedItem(null);
+      } catch (error) {
+        console.error("Failed to update stock", error);
+        alert("Gagal mengupdate stok barang");
+      } finally {
+        setEditLoading(false);
+      }
     },
-    [activeDialog, formData, selectedItem],
+    [activeDialog, formData, selectedItem, groups],
   );
 
   const columns = useMemo<ColumnDef<StockItem>[]>(
@@ -581,7 +672,7 @@ const StokBarangPage = () => {
                                 <span className="text-[#6B7280]">Revisi</span>
                                 <span className="font-medium">: {item.revisi}</span>
                                 <span className="text-[#6B7280]">Efektif</span>
-                                <span className="font-medium inline-flex items-center gap-2">: {item.efektif}{item.hasAlert && <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]"/>}</span>
+                                <span className="font-medium inline-flex items-center gap-2">: {item.efektif}{item.hasAlert && <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" />}</span>
                                 <span className="text-[#6B7280]">Jumlah</span>
                                 <span className="font-medium">: {item.jumlah}</span>
                               </div>
@@ -592,7 +683,7 @@ const StokBarangPage = () => {
                                   className="grid h-10 w-10 place-items-center rounded-xl bg-[#F5C044] text-white"
                                   aria-label="Edit"
                                 >
-                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                 </button>
                                 <button
                                   type="button"
@@ -600,7 +691,7 @@ const StokBarangPage = () => {
                                   className="grid h-10 w-10 place-items-center rounded-xl bg-[#F04438] text-white"
                                   aria-label="Delete"
                                 >
-                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                 </button>
                                 <button
                                   type="button"
@@ -608,7 +699,7 @@ const StokBarangPage = () => {
                                   className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white"
                                   aria-label="Request"
                                 >
-                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.25 10.5L8.75 7L5.25 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5.25 10.5L8.75 7L5.25 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                 </button>
                               </div>
                             </div>
@@ -665,9 +756,8 @@ const StokBarangPage = () => {
                       <button
                         type="button"
                         onClick={() => handleToggleGroup(group.id)}
-                        className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${
-                          isOpen ? "rotate-180 border-[#0D63F3]" : ""
-                        }`}
+                        className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${isOpen ? "rotate-180 border-[#0D63F3]" : ""
+                          }`}
                         aria-label={isOpen ? "Tutup" : "Buka"}
                       >
                         <svg
@@ -719,17 +809,67 @@ const StokBarangPage = () => {
                   activeDialog === "delete"
                     ? "delete-stock-title"
                     : activeDialog === "request"
-                    ? "request-stock-title"
-                    : activeDialog === "add"
-                    ? "add-stock-title"
-                    : "edit-stock-title"
+                      ? "request-stock-title"
+                      : activeDialog === "add"
+                        ? "add-stock-title"
+                        : "edit-stock-title"
                 }
-                className={`relative rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] w-full mx-4 sm:mx-0 max-h-[85vh] overflow-y-auto ${
-                  activeDialog === "delete" ? "max-w-[360px]" : "max-w-[420px]"
-                }`}
+                className={`relative rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] w-full mx-4 sm:mx-0 max-h-[85vh] overflow-y-auto ${activeDialog === "delete" ? "max-w-[360px]" : "max-w-[420px]"
+                  }`}
                 onClick={(event) => event.stopPropagation()}
               >
-                {activeDialog === "edit" ? (
+                {activeDialog === "delete" ? (
+                  <div className="text-center space-y-6">
+                    <div className="mx-auto h-16 w-16 rounded-full bg-red-100 p-3">
+                      <svg
+                        className="h-10 w-10 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                    </div>
+                    <div>
+                      <h2
+                        id="delete-stock-title"
+                        className="text-2xl font-semibold text-[#0E1D3D]"
+                      >
+                        Hapus Barang
+                      </h2>
+                      <p className="mt-4 text-sm text-[#6B7280]">
+                        Apakah Anda yakin ingin menghapus barang ini dari stok?
+                        <br />
+                        <strong className="text-[#111827] block mt-1">
+                          {selectedItem?.namaDokumen} ({selectedItem?.nomor})
+                        </strong>
+                      </p>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleDialogClose}
+                        disabled={deleteLoading}
+                        className="flex-1 rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#0D63F3] border border-[#0D63F3] transition hover:bg-[#0D63F3] hover:text-white active:scale-[0.98]"
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeleteConfirm}
+                        disabled={deleteLoading}
+                        className="flex-1 rounded-full bg-[#F04438] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(240,68,56,0.25)] transition hover:bg-[#DC2626] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {deleteLoading ? "Menghapus..." : "Hapus"}
+                      </button>
+                    </div>
+                  </div>
+                ) : activeDialog === "edit" ? (
                   <form onSubmit={handleDialogSubmit} className="space-y-6">
                     <div className="text-center">
                       <h2
@@ -824,9 +964,10 @@ const StokBarangPage = () => {
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98]"
+                        disabled={editLoading}
+                        className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
                       >
-                        Simpan
+                        {editLoading ? "Menyimpan..." : "Simpan"}
                       </button>
                     </div>
                   </form>
@@ -908,6 +1049,55 @@ const StokBarangPage = () => {
                     </div>
 
                     <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="add-item-id"
+                          className="text-sm font-semibold text-[#0E1D3D]"
+                        >
+                          Nama Dokumen
+                        </label>
+                        {availableItemsForAdd.length > 0 ? (
+                          <div className="relative">
+                            <select
+                              id="add-item-id"
+                              value={addData.itemId}
+                              onChange={handleAddInputChange("itemId")}
+                              className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            >
+                              <option value="" disabled>
+                                Pilih dokumen
+                              </option>
+                              {availableItemsForAdd.map((item) => (
+                                <option key={item.item_id} value={item.item_id}>
+                                  {item.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path
+                                  d="M4 6L8 10L12 6"
+                                  stroke="currentColor"
+                                  strokeWidth="1.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="rounded-xl bg-yellow-50 p-3 text-sm text-yellow-700 border border-yellow-200">
+                            Tidak ada dokumen baru tersedia di katalog
+                          </div>
+                        )}
+                      </div>
+
                       <div className="space-y-2">
                         <label
                           htmlFor="add-nomor"
@@ -993,36 +1183,11 @@ const StokBarangPage = () => {
                         type="submit"
                         className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98]"
                       >
-                        Tambah
+                        Simpan
                       </button>
                     </div>
                   </form>
-                ) : (
-                  <div className="space-y-8 text-center">
-                    <h2
-                      id="delete-stock-title"
-                      className="text-2xl font-semibold text-[#0E1D3D]"
-                    >
-                      Hapus Barang
-                    </h2>
-                    <div className="flex gap-4">
-                      <button
-                        type="button"
-                        onClick={handleDeleteConfirm}
-                        className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-[0.98]"
-                      >
-                        Hapus
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleDialogClose}
-                        className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98]"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                )}
+                ) : null}
               </div>
             </div>,
             document.body,

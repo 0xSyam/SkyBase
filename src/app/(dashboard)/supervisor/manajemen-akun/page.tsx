@@ -1,5 +1,5 @@
 "use client";
- 
+
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
@@ -37,6 +37,12 @@ export default function SupervisorManajemenAkunPage() {
     password: "",
     password_confirmation: "",
   });
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    password: "",
+    password_confirmation: "",
+  });
+  const [resetLoading, setResetLoading] = useState(false);
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -97,7 +103,7 @@ export default function SupervisorManajemenAkunPage() {
         message: `Akun ${selectedAccount.username} berhasil dihapus`
       });
       closeDeleteModal();
-      
+
       // Auto hide notification after 3 seconds
       setTimeout(() => setNotification(null), 3000);
     } catch (error) {
@@ -108,11 +114,39 @@ export default function SupervisorManajemenAkunPage() {
         message: errorMsg
       });
       closeDeleteModal();
-      
+
       // Auto hide notification after 5 seconds
       setTimeout(() => setNotification(null), 5000);
     } finally {
       setDeleteLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAccount) return;
+
+    setResetLoading(true);
+    try {
+      await authApi.resetPassword(selectedAccount.id, resetPasswordForm);
+      setNotification({
+        type: 'success',
+        message: `Password untuk ${selectedAccount.username} berhasil direset`
+      });
+      setIsResetPasswordModalOpen(false);
+      setResetPasswordForm({ password: "", password_confirmation: "" });
+      setSelectedAccount(null);
+      setTimeout(() => setNotification(null), 3000);
+    } catch (error) {
+      console.error("Failed to reset password", error);
+      const errorMsg = (error as { payload?: { message?: string } })?.payload?.message || "Gagal mereset password";
+      setNotification({
+        type: 'error',
+        message: errorMsg
+      });
+      setTimeout(() => setNotification(null), 5000);
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -127,11 +161,10 @@ export default function SupervisorManajemenAkunPage() {
       <section className="w-full max-w-[1076px] space-y-6">
         {notification && (
           <div
-            className={`fixed top-4 right-4 z-[1001] max-w-md rounded-xl p-4 shadow-lg backdrop-blur-sm transition-all duration-300 ${
-              notification.type === 'success'
-                ? 'bg-green-500/95 text-white'
-                : 'bg-red-500/95 text-white'
-            }`}
+            className={`fixed top-4 right-4 z-[1001] max-w-md rounded-xl p-4 shadow-lg backdrop-blur-sm transition-all duration-300 ${notification.type === 'success'
+              ? 'bg-green-500/95 text-white'
+              : 'bg-red-500/95 text-white'
+              }`}
           >
             <div className="flex items-start gap-3">
               {notification.type === 'success' ? (
@@ -245,6 +278,19 @@ export default function SupervisorManajemenAkunPage() {
                         />
                       </svg>
                     </button>
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#F59E0B] text-white active:scale-95 transition hover:bg-amber-600"
+                      aria-label="Reset Password"
+                      onClick={() => {
+                        setSelectedAccount(row);
+                        setIsResetPasswordModalOpen(true);
+                      }}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10.6667 6.66667V5.33333C10.6667 3.86058 9.47276 2.66667 8 2.66667C6.52724 2.66667 5.33333 3.86058 5.33333 5.33333V6.66667M3.33333 6.66667H12.6667C13.0349 6.66667 13.3333 6.96514 13.3333 7.33333V12.6667C13.3333 13.0349 13.0349 13.3333 12.6667 13.3333H3.33333C2.96514 13.3333 2.66667 13.0349 2.66667 12.6667V7.33333C2.66667 6.96514 2.96514 6.66667 3.33333 6.66667Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))
@@ -294,6 +340,59 @@ export default function SupervisorManajemenAkunPage() {
           </div>,
           document.body
         )}
+
+      {isMounted && isResetPasswordModalOpen && createPortal(
+        <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
+          <div className="w-full max-w-md rounded-[32px] bg-white p-6 sm:p-8 shadow-xl max-h-[85vh] overflow-y-auto">
+            <h2 className="text-2xl font-semibold text-[#11264D] text-center mb-6">
+              Reset Password
+            </h2>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password Baru</label>
+                <input
+                  type="password"
+                  required
+                  className="w-full rounded-xl border-2 border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#0D63F3] transition"
+                  value={resetPasswordForm.password}
+                  onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, password: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password</label>
+                <input
+                  type="password"
+                  required
+                  className="w-full rounded-xl border-2 border-[#E5E7EB] px-4 py-3 outline-none focus:border-[#0D63F3] transition"
+                  value={resetPasswordForm.password_confirmation}
+                  onChange={(e) => setResetPasswordForm({ ...resetPasswordForm, password_confirmation: e.target.value })}
+                />
+              </div>
+              <div className="flex gap-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResetPasswordModalOpen(false);
+                    setResetPasswordForm({ password: "", password_confirmation: "" });
+                    setSelectedAccount(null);
+                  }}
+                  className="flex-1 rounded-full border border-gray-300 px-6 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={resetLoading}
+                  className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition disabled:opacity-50"
+                >
+                  {resetLoading ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
     </PageLayout>
   );
 }

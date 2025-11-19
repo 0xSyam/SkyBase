@@ -8,7 +8,13 @@ import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
-type ScheduleItem = { aircraft: string; reg: string; time: string };
+type ScheduleItem = {
+  aircraft: string;
+  reg: string;
+  time: string;
+  flight_id?: number;
+  aircraft_id?: number;
+};
 type StockRow = { document: string; jumlah: number };
 
 
@@ -27,73 +33,47 @@ const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   </div>
 );
 
-const ScheduleGroup: React.FC<{ title: string; items: ScheduleItem[] }> = ({
+const ScheduleGroup: React.FC<{
+  title: string;
+  items: ScheduleItem[];
+  router: ReturnType<typeof useRouter>;
+}> = ({
   title,
   items,
+  router,
 }) => (
-  <GlassCard className="p-0">
-    <div className="flex h-[56px] md:h-[60px] px-4 md:px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
-      <span>{title}</span>
-      <span>Arrival</span>
-      <span>Action</span>
-    </div>
-    <div className="divide-y divide-[#E9EEF3]">
-      {items.map((it, idx) => (
-        <div
-          key={idx}
-          className="flex h-[60px] px-4 md:px-3 justify-between items-center text-[#222222]"
-        >
-          <span className="font-medium tracking-tight">{it.reg}</span>
-          <span className="text-sm md:text-[15px]">{it.time}</span>
-          <button
-            className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
-            aria-label="Detail"
-          >
-            <span className="-mt-[1px]">›</span>
-          </button>
-        </div>
-      ))}
-    </div>
-  </GlassCard>
-);
-
-const StockTable: React.FC<{ title: string; data: StockRow[]; onMore?: () => void }> = ({
-  title,
-  data,
-  onMore,
-}) => (
-  <GlassCard className="w-full p-4">
-    <div className="mb-4 flex items-center justify-between">
-      <h2 className="text-2xl font-semibold text-[#222222]">{title}</h2>
-      {onMore && (
-        <button
-          onClick={onMore}
-          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm"
-        >
-          Selengkapnya <span>→</span>
-        </button>
-      )}
-    </div>
-
-    <WhiteCard className="overflow-hidden">
-      <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
-        <span>Document</span>
-        <span className="text-right">Jumlah</span>
+    <GlassCard className="p-0">
+      <div className="flex h-[56px] md:h-[60px] px-4 md:px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
+        <span>{title}</span>
+        <span>Arrival</span>
+        <span>Action</span>
       </div>
       <div className="divide-y divide-[#E9EEF3]">
-        {data.map((row, i) => (
+        {items.map((it, idx) => (
           <div
-            key={`${row.document}-${i}`}
-            className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
+            key={idx}
+            className="flex h-[60px] px-4 md:px-3 justify-between items-center text-[#222222]"
           >
-            <span className="truncate font-medium">{row.document}</span>
-            <span className="text-right">{row.jumlah}</span>
+            <span className="font-medium tracking-tight">{it.reg}</span>
+            <span className="text-sm md:text-[15px]">{it.time}</span>
+            <button
+              onClick={() => {
+                router.push(
+                  `/groundcrew/validasi-barang/${encodeURIComponent(it.reg)}?aircraft=${encodeURIComponent(it.aircraft)}${it.aircraft_id ? `&aircraftId=${it.aircraft_id}` : ""}`
+                );
+              }}
+              className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
+              aria-label="Detail"
+            >
+              <span className="-mt-[1px]">›</span>
+            </button>
           </div>
         ))}
       </div>
-    </WhiteCard>
-  </GlassCard>
-);
+    </GlassCard>
+  );
+
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -133,15 +113,30 @@ export default function DashboardPage() {
           list = data.flights;
         }
         if (!ignore) {
-          const mapped: ScheduleItem[] = list.map((f) => {
-            const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
-            const time = arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB" : "--:-- WIB";
-            return {
-              aircraft: f?.aircraft?.type ?? "-",
-              reg: f?.aircraft?.registration_code ?? "-",
-              time,
-            };
-          });
+          const now = new Date();
+          const mapped: ScheduleItem[] = list
+            .filter((f) => {
+              const d = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
+              return (
+                d &&
+                d.getDate() === now.getDate() &&
+                d.getMonth() === now.getMonth() &&
+                d.getFullYear() === now.getFullYear()
+              );
+            })
+            .map((f) => {
+              const arr = f?.sched_arr ? new Date(f.sched_arr) : f?.sched_dep ? new Date(f.sched_dep) : null;
+              const time = arr
+                ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB"
+                : "--:-- WIB";
+              return {
+                aircraft: f?.aircraft?.type ?? "-",
+                reg: f?.aircraft?.registration_code ?? "-",
+                time,
+                flight_id: f?.flight_id,
+                aircraft_id: f?.aircraft?.aircraft_id,
+              };
+            });
           setScheduleData(mapped);
         }
       } catch {
@@ -153,7 +148,7 @@ export default function DashboardPage() {
     return () => { ignore = true; };
   }, []);
   const groups = chunk(scheduleData, 5);
-  const handleSelengkapnya = () => console.log("Selengkapnya clicked");
+  const handleSelengkapnya = () => router.push("/groundcrew/stok-barang");
   const todayLabel = React.useMemo(() => {
     try {
       const fmt = new Intl.DateTimeFormat("id-ID", {
@@ -202,8 +197,8 @@ export default function DashboardPage() {
         }
 
         if (!ignore) {
-          const docRows: StockRow[] = Array.from(docAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a,b)=>b.jumlah-a.jumlah).slice(0, 10);
-          const aseRows: StockRow[] = Array.from(aseAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a,b)=>b.jumlah-a.jumlah).slice(0, 10);
+          const docRows: StockRow[] = Array.from(docAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a, b) => b.jumlah - a.jumlah).slice(0, 10);
+          const aseRows: StockRow[] = Array.from(aseAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a, b) => b.jumlah - a.jumlah).slice(0, 10);
           setDocStocks(docRows);
           setAseStocks(aseRows);
         }
@@ -265,6 +260,7 @@ export default function DashboardPage() {
                 key={idx}
                 title={items[0]?.aircraft ?? "Schedule"}
                 items={items}
+                router={router}
               />
             ))}
             {loadingFlights && groups.length === 0 && (
@@ -273,16 +269,65 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        <aside className="flex flex-col gap-6">
-          <StockTable title="Stok Barang" data={docStocks} onMore={handleSelengkapnya} />
+        <GlassCard className="w-full p-4 flex flex-col gap-20">
+          {/* Stock Section */}
+          <div>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold text-[#222222]">Stok Barang</h2>
+              <button
+                onClick={handleSelengkapnya}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm"
+              >
+                Selengkapnya <span>→</span>
+              </button>
+            </div>
+            <WhiteCard className="overflow-hidden">
+              <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
+                <span>Document</span>
+                <span className="text-right">Jumlah</span>
+              </div>
+              <div className="divide-y divide-[#E9EEF3]">
+                {docStocks.map((row, i) => (
+                  <div
+                    key={`${row.document}-${i}`}
+                    className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
+                  >
+                    <span className="truncate font-medium">{row.document}</span>
+                    <span className="text-right">{row.jumlah}</span>
+                  </div>
+                ))}
+              </div>
+            </WhiteCard>
+          </div>
 
-          <StockTable title="ASE" data={aseStocks} onMore={handleSelengkapnya} />
+          {/* ASE Section */}
+          <div className="mt-8">
+            <WhiteCard className="overflow-hidden">
+              <div className="grid grid-cols-[1fr_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
+                <span>ASE</span>
+                <span className="text-right">Jumlah</span>
+              </div>
+              <div className="divide-y divide-[#E9EEF3]">
+                {aseStocks.map((row, i) => (
+                  <div
+                    key={`${row.document}-${i}`}
+                    className="grid grid-cols-[1fr_auto] px-4 h-[56px] items-center text-sm text-[#222222]"
+                  >
+                    <span className="truncate font-medium">{row.document}</span>
+                    <span className="text-right">{row.jumlah}</span>
+                  </div>
+                ))}
+              </div>
+            </WhiteCard>
+          </div>
 
-          {(loadingStocks && docStocks.length === 0 && aseStocks.length === 0) && (
-            <div className="text-sm text-gray-500">Memuat stok...</div>
-          )}
-        </aside>
-      </div>
-    </PageLayout>
+          {
+            (loadingStocks && docStocks.length === 0 && aseStocks.length === 0) && (
+              <div className="text-sm text-gray-500">Memuat stok...</div>
+            )
+          }
+        </GlassCard >
+      </div >
+    </PageLayout >
   );
 }

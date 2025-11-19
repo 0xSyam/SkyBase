@@ -51,14 +51,14 @@ export default function RequestPage() {
         setLoading(true);
         setError(null);
         const response = await skybase.warehouseRequests.list();
-        
+
         let requestsData: WarehouseRequest[] = [];
         if (Array.isArray(response.data)) {
           requestsData = response.data;
         } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
           requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
         }
-        
+
         setRequests(requestsData);
       } catch (err) {
         console.error("Error fetching warehouse requests:", err);
@@ -76,13 +76,13 @@ export default function RequestPage() {
       .filter(req => req.status === 'pending')
       .map((req): RequestRow => {
         const date = new Date(req.created_at);
-        const tanggal = date.toLocaleDateString('id-ID', { 
-          day: '2-digit', 
-          month: 'long', 
-          year: 'numeric' 
+        const tanggal = date.toLocaleDateString('id-ID', {
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
         });
-        const jam = date.toLocaleTimeString('id-ID', { 
-          hour: '2-digit', 
+        const jam = date.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
           minute: '2-digit',
           timeZoneName: 'short'
         });
@@ -104,13 +104,13 @@ export default function RequestPage() {
   }, [requests]);
 
   const documentRequests = useMemo(() => {
-    return transformedRequests.filter(req => 
+    return transformedRequests.filter(req =>
       req.rawData.items?.some(item => item.item?.category === 'DOC')
     );
   }, [transformedRequests]);
 
   const itemRequests = useMemo(() => {
-    return transformedRequests.filter(req => 
+    return transformedRequests.filter(req =>
       req.rawData.items?.some(item => item.item?.category === 'ASE')
     );
   }, [transformedRequests]);
@@ -125,7 +125,7 @@ export default function RequestPage() {
     try {
       await skybase.warehouseRequests.approve(row.id);
       console.log("Request approved:", row.id);
-      
+
       const response = await skybase.warehouseRequests.list();
       let requestsData: WarehouseRequest[] = [];
       if (Array.isArray(response.data)) {
@@ -140,6 +140,26 @@ export default function RequestPage() {
     }
   }, []);
 
+  const handleFulfillClick = useCallback(async (row: RequestRow) => {
+    try {
+      await skybase.warehouseRequests.fulfill(row.id);
+      console.log("Request fulfilled:", row.id);
+
+      const response = await skybase.warehouseRequests.list();
+      let requestsData: WarehouseRequest[] = [];
+      if (Array.isArray(response.data)) {
+        requestsData = response.data;
+      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
+        requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
+      }
+      setRequests(requestsData);
+      alert("Request berhasil diselesaikan!");
+    } catch (err) {
+      console.error("Error fulfilling request:", err);
+      alert("Gagal menyelesaikan request: " + (err instanceof Error ? err.message : "Unknown error"));
+    }
+  }, []);
+
   const handleRejectCancel = useCallback(() => {
     setRejectDialogOpen(false);
     setRejectReason("");
@@ -150,11 +170,11 @@ export default function RequestPage() {
     if (!selectedRequest) return;
 
     try {
-      await skybase.warehouseRequests.reject(selectedRequest.id, { 
-        reason: rejectReason 
+      await skybase.warehouseRequests.reject(selectedRequest.id, {
+        reason: rejectReason
       });
       console.log("Request rejected:", selectedRequest.id);
-      
+
       const response = await skybase.warehouseRequests.list();
       let requestsData: WarehouseRequest[] = [];
       if (Array.isArray(response.data)) {
@@ -163,7 +183,7 @@ export default function RequestPage() {
         requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
       }
       setRequests(requestsData);
-      
+
       setRejectDialogOpen(false);
       setRejectReason("");
       setSelectedRequest(null);
@@ -192,11 +212,19 @@ export default function RequestPage() {
           <span className="hidden sm:inline">Setujui</span>
           <Check className="h-4 w-4 sm:ml-2" />
         </button>
+        <button
+          type="button"
+          onClick={() => handleFulfillClick(row)}
+          className="inline-flex items-center justify-center rounded-xl bg-[#10B981] h-10 w-10 sm:h-auto sm:w-auto sm:px-4 sm:py-2 text-sm font-semibold text-white transition hover:bg-[#059669] active:scale-95"
+        >
+          <span className="hidden sm:inline">Selesaikan</span>
+          <Check className="h-4 w-4 sm:ml-2" />
+        </button>
       </div>
     );
     ActionButtons.displayName = "ActionButtons";
     return ActionButtons;
-  }, [handleApproveClick, handleRejectClick]);
+  }, [handleApproveClick, handleRejectClick, handleFulfillClick]);
 
   const documentColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
     { key: "jenis", header: "Dokumen", align: "left" },
