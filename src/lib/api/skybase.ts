@@ -138,7 +138,12 @@ export const authApi = {
     return request<ApiResponse<{ permissions: string[] }>>("/auth/permissions");
   },
   async getAllUsers() {
-    return request<ApiResponse<{ id: string; name: string; role: string }[]>>("/users");
+    return request<ApiResponse<Array<{ user_id: number; name: string; email: string; phone?: string; role: string; is_active: boolean; created_at: string }>>>("/users");
+  },
+  async deleteUser(userId: string | number) {
+    return request<ApiResponse<{ message: string }>>(`/users/${userId}`, {
+      method: "DELETE",
+    });
   },
 };
 

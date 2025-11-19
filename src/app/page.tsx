@@ -18,9 +18,14 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await skybase.auth.login(email, password);
-      const role = res?.data?.user?.role?.toLowerCase?.() ?? "groundcrew";
-      const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
-      router.push(target);
+      if (res?.data?.user?.role) {
+        const role = res.data.user.role.toLowerCase();
+        const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
+        router.push(target);
+      } else {
+        // default to groundcrew if role is not specified
+        router.push("/groundcrew/dashboard");
+      }
     } catch (e) {
       setError((e as Error)?.message || "Login gagal");
     } finally {
