@@ -136,13 +136,13 @@ export default function RiwayatPage() {
       align: "left",
       render: (_value, row) => (
         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-          row.status === "approved" 
+          row.status === "APPROVED" 
             ? "bg-green-100 text-green-800" 
-            : row.status === "rejected"
+            : row.status === "REJECTED"
             ? "bg-red-100 text-red-800"
             : "bg-yellow-100 text-yellow-800"
         }`}>
-          {row.status === "approved" ? "Disetujui" : row.status === "rejected" ? "Ditolak" : "Pending"}
+          {row.status === "APPROVED" ? "Disetujui" : row.status === "REJECTED" ? "Ditolak" : "Pending"}
         </span>
       ),
     },
@@ -159,13 +159,13 @@ export default function RiwayatPage() {
       align: "left",
       render: (_value, row) => (
         <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-          row.status === "approved" 
+          row.status === "APPROVED" 
             ? "bg-green-100 text-green-800" 
-            : row.status === "rejected"
+            : row.status === "REJECTED"
             ? "bg-red-100 text-red-800"
             : "bg-yellow-100 text-yellow-800"
         }`}>
-          {row.status === "approved" ? "Disetujui" : row.status === "rejected" ? "Ditolak" : "Pending"}
+          {row.status === "APPROVED" ? "Disetujui" : row.status === "REJECTED" ? "Ditolak" : "Pending"}
         </span>
       ),
     },
