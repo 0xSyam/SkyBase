@@ -8,6 +8,45 @@ import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 
+const formatDateForApi = (dateStr: string): string | undefined => {
+    if (!dateStr || dateStr.trim() === '-' || dateStr.trim() === '') {
+        return undefined;
+    }
+
+    // Check if it's already in YYYY-MM-DD format
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr;
+    }
+
+    const months: { [key: string]: string } = {
+      'januari': '01', 'februari': '02', 'maret': '03', 'april': '04',
+      'mei': '05', 'juni': '06', 'juli': '07', 'agustus': '08',
+      'september': '09', 'oktober': '10', 'november': '11', 'desember': '12'
+    };
+
+    const parts = dateStr.split(' ');
+    if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const month = months[parts[1].toLowerCase()];
+        const year = parts[2];
+
+        if (day && month && year && !isNaN(parseInt(day)) && !isNaN(parseInt(year))) {
+            return `${year}-${month}-${day}`;
+        }
+    }
+
+    const parsedDate = new Date(dateStr);
+    if (!isNaN(parsedDate.getTime())) {
+        const year = parsedDate.getFullYear();
+        const month = (parsedDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = parsedDate.getDate().toString().padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    return dateStr;
+};
+
+
 interface StockItem {
   namaDokumen: string;
   nomor: string;
@@ -199,7 +238,7 @@ const StokBarangPage = () => {
     setFormData({
       nomor: selectedItem.nomor,
       revisi: selectedItem.revisi,
-      efektif: selectedItem.efektif,
+      efektif: formatDateForApi(selectedItem.efektif) || '',
       jumlah: selectedItem.jumlah.toString(),
       seal_number: selectedItem.type === 'ase' ? selectedItem.revisi : '', // Assuming revisi is serial number for ase
     });
@@ -408,7 +447,7 @@ const StokBarangPage = () => {
             item_id: newItem.data.item_id,
             doc_number: addData.nomor,
             revision_no: addData.revisi,
-            effective_date: addData.efektif,
+            effective_date: formatDateForApi(addData.efektif),
             quantity: Number(addData.jumlah) || 1,
             condition: "Good",
           });
@@ -417,7 +456,7 @@ const StokBarangPage = () => {
             item_id: newItem.data.item_id,
             serial_number: addData.nomor,
             seal_number: addData.seal_number,
-            expires_at: addData.efektif,
+            expires_at: formatDateForApi(addData.efektif),
             condition: "Good",
           });
         }
@@ -462,37 +501,20 @@ const StokBarangPage = () => {
           await skybase.inventory.updateDoc(selectedItem.gcId, {
             doc_number: formData.nomor,
             revision_no: formData.revisi,
-            effective_date: formData.efektif,
+            effective_date: formatDateForApi(formData.efektif),
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
           });
         } else {
           await skybase.inventory.updateAse(selectedItem.gcId, {
             serial_number: formData.revisi,
             seal_number: formData.seal_number || '',
-            expires_at: formData.efektif,
+            expires_at: formatDateForApi(formData.efektif),
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
           });
         }
 
-        const updatedGroups = groups.map(group => ({
-          ...group,
-          items: group.items.map(item =>
-            item.gcId === selectedItem.gcId
-              ? {
-                  ...item,
-                  nomor: formData.nomor,
-                  revisi: formData.revisi,
-                  efektif: formData.efektif,
-                  jumlah: Number(formData.jumlah) || selectedItem.jumlah,
-                }
-              : item
-          )
-        }));
-        setGroups(updatedGroups);
-
         alert("Berhasil mengupdate stok barang!");
-        setActiveDialog(null);
-        setSelectedItem(null);
+        window.location.reload();
       } catch (error) {
         console.error("Failed to update stock", error);
         alert("Gagal mengupdate stok barang");
@@ -996,14 +1018,12 @@ const StokBarangPage = () => {
                           Waktu efektif
                         </label>
                         <div className="relative">
-                          <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                           <input
                             id="edit-efektif"
-                            type="text"
-                            placeholder="--/--/----"
+                            type="date"
                             value={formData.efektif}
                             onChange={handleInputChange("efektif")}
-                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           />
                         </div>
                       </div>
@@ -1218,14 +1238,12 @@ const StokBarangPage = () => {
                           Waktu efektif
                         </label>
                         <div className="relative">
-                          <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                           <input
                             id="add-efektif"
-                            type="text"
-                            placeholder="--/--/----"
+                            type="date"
                             value={addData.efektif}
                             onChange={handleAddInputChange("efektif")}
-                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           />
                         </div>
                       </div>
