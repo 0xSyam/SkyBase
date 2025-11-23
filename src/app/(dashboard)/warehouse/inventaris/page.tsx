@@ -7,9 +7,24 @@ import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
 import { skybase } from "@/lib/api/skybase";
-import type { ItemCatalog } from "@/types/api";
+
+// Helper untuk format tanggal sederhana (DD/MM/YYYY)
+const formatDate = (dateString: string | null | undefined) => {
+  if (!dateString) return "-";
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('id-ID', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    }).format(date);
+  } catch (e) {
+    return dateString;
+  }
+};
 
 interface StockItem {
+  id: number | string;
   item_id: number;
   namaDokumen: string;
   nomor: string;
@@ -19,10 +34,9 @@ interface StockItem {
   jumlah: number;
   name?: string;
   category?: string;
-  type?: string;
+  type?: "DOC" | "ASE";
   serial_number?: string;
   part_number?: string;
-  qty_in_stock?: number;
   unit?: string;
 }
 
@@ -44,38 +58,53 @@ type DialogMode = "add" | null;
 const columns: ColumnDef<StockItem>[] = [
   {
     key: "namaDokumen",
-    header: "Dokumen",
+    header: "Nama Item",
     align: "left",
-    className: "sm:hidden",
+    className: "min-w-[200px]",
+    render: (value, row) => (
+        <div className="flex flex-col">
+            <span className="font-medium text-[#111827]">{value}</span>
+            <span className="text-xs text-gray-500 md:hidden">{row.nomor}</span>
+        </div>
+    )
   },
   {
     key: "nomor",
-    header: "Nomor",
+    header: "Nomor / SN",
     align: "left",
+    className: "hidden md:table-cell",
   },
   {
     key: "revisi",
     header: "Revisi",
     align: "left",
+    render: (value) => (
+        <span className={value === "-" || !value ? "text-gray-400" : ""}>{value || "-"}</span>
+    )
   },
   {
     key: "efektif",
-    header: "Efektif",
+    header: "Efektif / Exp",
     align: "left",
     render: (value, row) => (
       <div className="flex items-center gap-2">
         <span>{value}</span>
         {row.hasAlert && (
-          <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" />
+          <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" title="Expired / Warning" />
         )}
       </div>
     ),
   },
   {
     key: "jumlah",
-    header: "Jumlah",
+    header: "Qty",
     align: "center",
     className: "w-24",
+    render: (value, row) => (
+        <span className="font-semibold text-[#0D63F3]">
+            {value} {row.unit || ""}
+        </span>
+    )
   },
 ];
 
@@ -89,6 +118,7 @@ const WarehouseInventarisPage = () => {
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  
   const [addData, setAddData] = useState<StockAddFormData>({
     nomor: "",
     nomorSeal: "",
@@ -101,37 +131,61 @@ const WarehouseInventarisPage = () => {
     fetchInventoryData();
   }, []);
 
-  const fetchInventoryData = async () => {
+  // --- PERBAIKAN UTAMA ADA DI FUNGSI INI ---
+const fetchInventoryData = async () => {
     try {
       setLoading(true);
-      const response = await skybase.items.list();
-
-      const rawItems: ItemCatalog[] = Array.isArray(response.data)
-        ? response.data as ItemCatalog[]
-        : (response.data as { items?: ItemCatalog[] })?.items || [];
+      
+      const response = await skybase.inventory.groundcrewAll();
+      const data = response.data as any; 
+      
+      const docs = Array.isArray(data?.doc_inventory) ? data.doc_inventory : [];
+      const ase = Array.isArray(data?.ase_inventory) ? data.ase_inventory : [];
 
       const categorizedItems: Record<string, StockItem[]> = {};
 
-      rawItems.forEach((item) => {
-        const category = item.category || "DOC";
-        const transformedItem: StockItem = {
-          item_id: item.item_id,
-          namaDokumen: category,
-          nomor: "-",
-          revisi: "001",
-          efektif: "-",
-          jumlah: 0,
-          hasAlert: false,
-          name: item.name,
-          category: item.category,
-          unit: item.unit || undefined,
+      const mapItemToStock = (item: any, type: "DOC" | "ASE") => {
+        const categoryName = item.item?.category || (type === "DOC" ? "Documents" : "Safety Equipment");
+        
+        let isExpired = false;
+        if (type === "ASE" && item.expires_at) {
+            const expiryDate = new Date(item.expires_at);
+            const today = new Date();
+            if (expiryDate < today) isExpired = true;
+        }
+
+        // PERBAIKAN GLOBAL:
+        // Gunakan operator logika OR (||).
+        // Jika item.quantity bernilai 0, null, atau undefined, maka otomatis menjadi 1.
+        // Jika item.quantity ada nilainya (misal: 54), maka tetap pakai angka tersebut.
+        const itemQuantity = item.quantity || 1;
+
+        const stockItem: StockItem = {
+            id: type === "DOC" ? `doc-${item.gc_doc_id}` : `ase-${item.gc_ase_id}`,
+            item_id: item.item_id,
+            namaDokumen: item.item?.name || "Unknown Item", 
+            name: item.item?.name,
+            nomor: type === "DOC" ? (item.doc_number || "-") : (item.serial_number || "-"),
+            revisi: type === "DOC" ? item.revision_no : "-",
+            efektif: formatDate(type === "DOC" ? item.effective_date : item.expires_at),
+            hasAlert: isExpired,
+            
+            // Gunakan variabel itemQuantity yang sudah diperbaiki
+            jumlah: itemQuantity,
+            
+            unit: item.item?.unit || "unit",
+            category: categoryName,
+            type: type
         };
 
-        if (!categorizedItems[category]) {
-          categorizedItems[category] = [];
+        if (!categorizedItems[categoryName]) {
+            categorizedItems[categoryName] = [];
         }
-        categorizedItems[category].push(transformedItem);
-      });
+        categorizedItems[categoryName].push(stockItem);
+      };
+
+      docs.forEach((d: any) => mapItemToStock(d, "DOC"));
+      ase.forEach((a: any) => mapItemToStock(a, "ASE"));
 
       const groups: StockGroup[] = Object.entries(categorizedItems).map(
         ([category, items]) => ({
@@ -142,7 +196,8 @@ const WarehouseInventarisPage = () => {
       );
 
       setStockGroups(groups);
-      if (groups.length > 0) {
+      
+      if (groups.length > 0 && !expandedGroupId) {
         setExpandedGroupId(groups[0].id);
       }
     } catch (error) {
@@ -179,14 +234,12 @@ const WarehouseInventarisPage = () => {
           .filter(Boolean)
           .some((value) => value?.toLowerCase().includes(query)),
       ),
-    }));
+    })).filter(group => group.items.length > 0);
   }, [searchTerm, stockGroups]);
 
   const handleToggleGroup = (groupId: string) => {
     setExpandedGroupId((current) => (current === groupId ? "" : groupId));
   };
-
-
 
   const handleDialogClose = () => {
     setActiveDialog(null);
@@ -195,12 +248,12 @@ const WarehouseInventarisPage = () => {
 
   const handleAddInputChange =
     (field: keyof StockAddFormData) =>
-      (event: React.ChangeEvent<HTMLInputElement>) => {
-        setAddData((previous) => ({
-          ...previous,
-          [field]: event.target.value,
-        }));
-      };
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setAddData((previous) => ({
+        ...previous,
+        [field]: event.target.value,
+      }));
+    };
 
   const handleAddSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -208,7 +261,7 @@ const WarehouseInventarisPage = () => {
       return;
     }
 
-
+    // Simulasi atau Panggil API Add
     setActiveDialog(null);
     setSelectedGroup(null);
     setAddData({
@@ -251,10 +304,10 @@ const WarehouseInventarisPage = () => {
             <div className="relative w-full max-w-[320px]">
               <input
                 type="text"
-                placeholder="Nama, Nomor, Revisi"
+                placeholder="Cari Nama, Nomor, Revisi..."
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
-                className="w-full rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white py-3 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]"
+                className="w-full rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white py-3 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/70 transition focus:ring-4 focus:ring-[#0D63F3]/10"
               />
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]"
@@ -273,8 +326,9 @@ const WarehouseInventarisPage = () => {
                 />
               </svg>
             </div>
-            <button className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2">
-              <span className="hidden md:inline">Filter</span>
+            
+            <button className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2 hover:bg-[#0B53D0] transition">
+              <span className="hidden md:inline font-medium">Filter</span>
               <svg
                 width="18"
                 height="18"
@@ -294,74 +348,67 @@ const WarehouseInventarisPage = () => {
           </div>
         </header>
 
-        <GlassCard className="overflow-hidden rounded-2xl">
-          <div className="flex items-center justify-between bg-[#F4F8FB] px-6 py-5">
+        <GlassCard className="overflow-hidden rounded-2xl min-h-[50vh]">
+          <div className="flex items-center justify-between bg-[#F4F8FB] px-6 py-5 border-b border-[#E9EEF3]">
             <div>
-              <h2 className="text-lg font-semibold text-[#111827]">Dokumen</h2>
+              <h2 className="text-lg font-semibold text-[#111827]">Stok Barang</h2>
             </div>
           </div>
 
           <div className="divide-y divide-[#E9EEF3] bg-white">
-            {filteredGroups.map((group) => {
-              const isOpen = expandedGroupId === group.id;
-              return (
-                <div key={group.id}>
-                  <div className="flex w-full items-center justify-between px-4 md:px-6 py-4 transition hover:bg-[#F7FAFC]">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleGroup(group.id)}
-                      className="flex items-center gap-3 text-left flex-1"
-                    >
-                      <span className="text-base font-semibold text-[#111827]">
-                        {group.title}
-                      </span>
-                      <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-xs font-semibold text-[#4F46E5]">
-                        {group.items.length} dokumen
-                      </span>
-                    </button>
-                    <div className="flex items-center gap-3">
-
-                      <button
-                        type="button"
-                        onClick={() => handleToggleGroup(group.id)}
-                        className={`grid h-11 w-11 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-sm transition ${isOpen ? "" : ""
-                          }`}
-                        aria-label={isOpen ? "Tutup" : "Buka"}
-                      >
-                        {isOpen ? (
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        ) : (
-                          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6 4L10 8L6 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          </svg>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-
-                  {isOpen && (
-                    <div className="px-3 md:px-6 pb-6">
-                      <div className="rounded-2xl overflow-hidden border border-[#E9EEF3] bg-white">
-                        <div className="flex items-center justify-between bg-[#F4F8FB] px-4 py-3">
-                          <div className="text-base font-semibold text-[#0E1D3D]">{group.title}</div>
-                        </div>
-                        <div className="p-0">
-                          <GlassDataTable
-                            columns={columns}
-                            data={group.items}
-                            variant="flat"
-                            hideHeaderOnMobile
-                            emptyMessage="Tidak ada data inventaris"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+            {filteredGroups.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                    Tidak ada data inventaris yang ditemukan.
                 </div>
-              );
-            })}
+            ) : (
+                filteredGroups.map((group) => {
+                const isOpen = expandedGroupId === group.id;
+                return (
+                    <div key={group.id}>
+                    <div className="flex w-full items-center justify-between px-4 md:px-6 py-4 transition hover:bg-[#F7FAFC] cursor-pointer" onClick={() => handleToggleGroup(group.id)}>
+                        <button
+                        type="button"
+                        className="flex items-center gap-3 text-left flex-1"
+                        >
+                        <span className="text-base font-semibold text-[#111827]">
+                            {group.title}
+                        </span>
+                        <span className="rounded-full bg-[#EEF2FF] px-3 py-1 text-xs font-semibold text-[#4F46E5]">
+                            {group.items.length} item
+                        </span>
+                        </button>
+                        <div className="flex items-center gap-3">
+                        <button
+                            type="button"
+                            className={`grid h-8 w-8 place-items-center rounded-lg border border-[#E2E8F0] text-gray-500 transition hover:bg-gray-50 ${isOpen ? "bg-gray-100 rotate-180" : ""}`}
+                            aria-label={isOpen ? "Tutup" : "Buka"}
+                        >
+                             <svg width="12" height="12" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                        </div>
+                    </div>
+
+                    {isOpen && (
+                        <div className="px-3 md:px-6 pb-6">
+                        <div className="rounded-xl overflow-hidden border border-[#E9EEF3] bg-white shadow-sm">
+                            <div className="p-0">
+                            <GlassDataTable
+                                columns={columns}
+                                data={group.items}
+                                variant="flat"
+                                hideHeaderOnMobile
+                                emptyMessage="Tidak ada item di kategori ini"
+                            />
+                            </div>
+                        </div>
+                        </div>
+                    )}
+                    </div>
+                );
+                })
+            )}
           </div>
         </GlassCard>
 
@@ -389,7 +436,7 @@ const WarehouseInventarisPage = () => {
                     </h2>
                     {selectedGroup && (
                       <p className="mt-1 text-sm text-[#6B7280]">
-                        Inventaris: {selectedGroup.title}
+                        Kategori: {selectedGroup.title}
                       </p>
                     )}
                   </div>
@@ -400,7 +447,7 @@ const WarehouseInventarisPage = () => {
                         htmlFor="add-nomor"
                         className="text-sm font-semibold text-[#0E1D3D]"
                       >
-                        Nomor
+                        Nomor / Serial Number
                       </label>
                       <input
                         id="add-nomor"
@@ -417,12 +464,12 @@ const WarehouseInventarisPage = () => {
                         htmlFor="add-nomor-seal"
                         className="text-sm font-semibold text-[#0E1D3D]"
                       >
-                        Nomor Seal
+                        Nomor Seal (Optional)
                       </label>
                       <input
                         id="add-nomor-seal"
                         type="text"
-                        placeholder="Masukan nomor"
+                        placeholder="Masukan nomor seal"
                         value={addData.nomorSeal}
                         onChange={handleAddInputChange("nomorSeal")}
                         className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
@@ -434,14 +481,13 @@ const WarehouseInventarisPage = () => {
                         htmlFor="add-efektif"
                         className="text-sm font-semibold text-[#0E1D3D]"
                       >
-                        Waktu efektif
+                        Waktu Efektif / Expired
                       </label>
                       <div className="relative">
                         <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                         <input
                           id="add-efektif"
-                          type="text"
-                          placeholder="--/--/----"
+                          type="date"
                           value={addData.efektif}
                           onChange={handleAddInputChange("efektif")}
                           className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
@@ -474,13 +520,13 @@ const WarehouseInventarisPage = () => {
                       onClick={handleDialogClose}
                       className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-[0.98]"
                     >
-                      Cancel
+                      Batal
                     </button>
                     <button
                       type="submit"
                       className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98]"
                     >
-                      Tambah
+                      Simpan
                     </button>
                   </div>
                 </form>
