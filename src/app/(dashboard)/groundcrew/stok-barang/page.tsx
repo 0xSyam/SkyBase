@@ -5,22 +5,6 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
-import {
-  ArrowLeft,
-  CalendarDays,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Filter,
-  MoreHorizontal,
-  Plus,
-  Search,
-  Trash2,
-  Upload,
-  File as FileIcon,
-  X,
-  Pencil,
-} from "lucide-react";
 import skybase from "@/lib/api/skybase";
 
 const formatDateForApi = (dateStr: string): string | undefined => {

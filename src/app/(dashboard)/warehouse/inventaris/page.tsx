@@ -10,7 +10,6 @@ import { skybase } from "@/lib/api/skybase";
 import {
 	GcDocInventory,
 	GcAseInventory,
-	GroundcrewInventoryResponse,
 } from "@/types/api";
 
 // Helper untuk format tanggal sederhana (DD/MM/YYYY)
