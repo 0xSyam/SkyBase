@@ -129,6 +129,7 @@ export type GcDocInventory = {
   condition: string | null;
   created_at: string | null;
   updated_at: string | null;
+  item?: ItemCatalog;
 };
 
 export type GcAseInventory = {
@@ -141,6 +142,8 @@ export type GcAseInventory = {
   condition: string | null;
   created_at: string | null;
   updated_at: string | null;
+  item?: ItemCatalog;
+  quantity?: number;
 };
 
 export type AircraftDocInventory = {

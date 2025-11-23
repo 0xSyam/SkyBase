@@ -5,7 +5,22 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
-import { Calendar } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ChevronDown,
+  ChevronRight,
+  Download,
+  Filter,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Trash2,
+  Upload,
+  File as FileIcon,
+  X,
+  Pencil,
+} from "lucide-react";
 import skybase from "@/lib/api/skybase";
 
 const formatDateForApi = (dateStr: string): string | undefined => {
@@ -431,6 +446,12 @@ const StokBarangPage = () => {
         return;
       }
 
+      const effectiveDate = formatDateForApi(addData.efektif);
+      if (!effectiveDate) {
+        alert("Tanggal efektif tidak valid.");
+        return;
+      }
+
       try {
         // Create a new item in the catalog first
         const newItem = await skybase.items.create({
@@ -447,7 +468,7 @@ const StokBarangPage = () => {
             item_id: newItem.data.item_id,
             doc_number: addData.nomor,
             revision_no: addData.revisi,
-            effective_date: formatDateForApi(addData.efektif),
+            effective_date: effectiveDate,
             quantity: Number(addData.jumlah) || 1,
             condition: "Good",
           });
@@ -456,7 +477,7 @@ const StokBarangPage = () => {
             item_id: newItem.data.item_id,
             serial_number: addData.nomor,
             seal_number: addData.seal_number,
-            expires_at: formatDateForApi(addData.efektif),
+            expires_at: effectiveDate,
             condition: "Good",
           });
         }
@@ -495,20 +516,26 @@ const StokBarangPage = () => {
         return;
       }
 
+      const effectiveDate = formatDateForApi(formData.efektif);
+      if (!effectiveDate) {
+        alert("Tanggal efektif tidak valid.");
+        return;
+      }
+
       setEditLoading(true);
       try {
         if (selectedItem.type === 'doc') {
           await skybase.inventory.updateDoc(selectedItem.gcId, {
             doc_number: formData.nomor,
             revision_no: formData.revisi,
-            effective_date: formatDateForApi(formData.efektif),
+            effective_date: effectiveDate,
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
           });
         } else {
           await skybase.inventory.updateAse(selectedItem.gcId, {
             serial_number: formData.revisi,
             seal_number: formData.seal_number || '',
-            expires_at: formatDateForApi(formData.efektif),
+            expires_at: effectiveDate,
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
           });
         }
@@ -522,7 +549,7 @@ const StokBarangPage = () => {
         setEditLoading(false);
       }
     },
-    [activeDialog, formData, selectedItem, groups],
+    [activeDialog, formData, selectedItem],
   );
 
   const columns = useMemo<ColumnDef<StockItem>[]>(
