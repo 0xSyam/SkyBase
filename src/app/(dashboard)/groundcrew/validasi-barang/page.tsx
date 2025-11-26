@@ -58,12 +58,10 @@ const ValidasiBarangPage = () => {
 
         let apiData: RawFlightData[] = [];
 
-        // Handle expected nested structure first - cast to any to bypass TS
         const nestedData = (res?.data as { data?: { flights?: RawFlightData[] } })?.data?.flights;
         if (Array.isArray(nestedData)) {
           apiData = nestedData;
         } else {
-          // Fallback to other structures
           const flatData = res?.data;
           if (Array.isArray(flatData)) {
             apiData = flatData as RawFlightData[];
@@ -79,14 +77,12 @@ const ValidasiBarangPage = () => {
         if (!ignore) {
           const mapped: FlightSchedule[] = apiData
             .filter((it) => {
-              // Only show NOT_STARTED or IN_PROGRESS inspections
               const inspectionStatus = it?.inspection?.status;
               return inspectionStatus === 'NOT_STARTED' || inspectionStatus === 'IN_PROGRESS';
             })
             .map((it) => {
               console.log('Processing flight:', it);
 
-              // Handle both nested API structure and flat Flight type
               const aircraftType = it?.aircraft?.type_code ||
                 it?.aircraft?.type ||
                 it?.aircraft_type || "-";

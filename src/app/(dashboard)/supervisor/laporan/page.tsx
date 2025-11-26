@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import Calendar from "@/component/Calendar";
+import PageHeader from "@/component/PageHeader";
 import { Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
@@ -33,69 +33,79 @@ export default function SupervisorLaporanPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await skybase.flights.list();
-        const data = res?.data;
-        let list: Flight[] = [];
-        if (Array.isArray(data)) {
-          if (data.length > 0 && 'flight_id' in data[0]) {
-            list = data as unknown as Flight[];
-          }
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
-          list = data.flights;
-        }
+      let ignore = false;
+      const load = async () => {
+          setLoading(true);
+          try {
+              const res = await skybase.flights.list();
+              const data = res?.data;
+              let list: Flight[] = [];
+              if (Array.isArray(data)) {
+                  if (data.length > 0 && 'flight_id' in data[0]) {
+                      list = data as unknown as Flight[];
+                  }
+              } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+                  list = data.flights;
+              }
 
-        if (!ignore) {
-          const byDate = new Map<string, ReportSection>();
-          const fmtDate = (d: Date) => {
-            try {
-              return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-            } catch {
-              return d.toDateString();
-            }
-          };
-          const toTime = (s?: string | null) => {
-            if (!s) return "--:-- WIB";
-            try {
-              const d = new Date(s);
-              return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-            } catch {
-              return "--:-- WIB";
-            }
-          };
-          for (const f of list) {
-            const basis = f?.sched_dep || f?.created_at || f?.sched_arr || null;
-            if (!basis) continue;
-            const dt = new Date(basis);
-            const id = dt.toISOString().slice(0, 10); 
-            const title = fmtDate(dt);
-            const sec = byDate.get(id) ?? { id, title, schedules: [] };
-            const schedule: ReportSchedule = {
-              id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
-              timeRange: `${toTime(f?.sched_dep ?? null)} - ${toTime(f?.sched_arr ?? null)}`,
-              aircraft: f?.aircraft?.type ?? "-",
-              registration: f?.aircraft?.registration_code ?? "-",
-              destination: f?.route_to ?? "-",
-            };
-            sec.schedules.push(schedule);
-            byDate.set(id, sec);
+              if (!ignore) {
+                  const byDate = new Map<string, ReportSection>();
+                  const fmtDate = (d: Date) => {
+                      try {
+                          return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+                      } catch {
+                          return d.toDateString();
+                      }
+                  };
+                  const toTime = (s?: string | null) => {
+                      if (!s) return "--:-- WIB";
+                      try {
+                          const d = new Date(s);
+                          return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+                      } catch {
+                          return "--:-- WIB";
+                      }
+                  };
+                  for (const f of list) {
+                      const basis = f?.sched_dep || f?.created_at || f?.sched_arr || null;
+                      if (!basis) continue;
+                      const dt = new Date(basis);
+                      const id = dt.toISOString().slice(0, 10);
+                      const title = fmtDate(dt);
+                      const sec = byDate.get(id) ?? { id, title, schedules: [] };
+                      const schedule: ReportSchedule = {
+                          id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
+                          timeRange: `${toTime(f?.sched_dep ?? null)} - ${toTime(f?.sched_arr ?? null)}`,
+                          aircraft: f?.aircraft?.type ?? "-",
+                          registration: f?.aircraft?.registration_code ?? "-",
+                          destination: f?.route_to ?? "-",
+                      };
+                      sec.schedules.push(schedule);
+                      byDate.set(id, sec);
+                  }
+
+                  const filteredByDate = Array.from(byDate.values()).filter((section) => {
+                      const sectionDate = new Date(section.id);
+                      const start = startDate ? new Date(startDate) : null;
+                      const end = endDate ? new Date(endDate) : null;
+                      if (start && sectionDate < start) return false;
+                      if (end && sectionDate > end) return false;
+                      return true;
+                  });
+
+                  const sorted = filteredByDate.sort((a, b) => b.id.localeCompare(a.id));
+                  setSections(sorted);
+              }
+          } catch (e) {
+              if ((e as { status?: number })?.status === 401) router.replace("/");
+              if (!ignore) setSections([]);
+          } finally {
+              if (!ignore) setLoading(false);
           }
-          const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
-          setSections(sorted);
-        }
-      } catch (e) {
-        if ((e as { status?: number })?.status === 401) router.replace("/");
-        if (!ignore) setSections([]);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    load();
-    return () => { ignore = true; };
-  }, [router]);
+      };
+      load();
+      return () => { ignore = true; };
+  }, [router, startDate, endDate]);
 
   const parseInputDate = (s: string): Date | null => {
     const t = s.trim();
@@ -133,31 +143,36 @@ export default function SupervisorLaporanPage() {
   return (
     <PageLayout sidebarRole="supervisor">
       <section className="w-full max-w-[1076px] space-y-8">
-        <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="text-center md:text-left">
-            <h1 className="text-3xl md:text-4xl font-semibold text-[#111827]">Laporan</h1>
-            <p className="text-[#6B7280]">Lihat dan generate laporan terkini.</p>
-          </div>
-
-          <div className="flex w-full md:w-auto items-center gap-3 md:gap-4 justify-center md:justify-end flex-wrap">
-            <span className="hidden md:inline-block text-sm font-semibold text-[#111827] md:mr-2 whitespace-nowrap">
-              Pilih tanggal laporan :
-            </span>
-            <Calendar
-              id="supervisor-laporan-start-date"
-              value={startDate}
-              onChange={setStartDate}
-              placeholder="dd/mm/yyyy"
-            />
-            <span className="text-lg font-semibold text-[#94A3B8]">-</span>
-            <Calendar
-              id="supervisor-laporan-end-date"
-              value={endDate}
-              onChange={setEndDate}
-              placeholder="dd/mm/yyyy"
-            />
-          </div>
-        </div>
+        <PageHeader
+          title="Laporan"
+          description="Lihat dan generate laporan terkini."
+          align="center"
+          action={
+            <div className="w-full flex flex-wrap items-center justify-center gap-3 text-sm font-medium text-[#111827]">
+              <span className="w-full text-center md:w-auto whitespace-nowrap text-sm font-semibold">
+                Pilih tanggal laporan :
+              </span>
+              <div className="flex w-full md:w-auto items-center gap-3">
+                <input
+                  id="laporan-start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                />
+                <span className="text-lg font-semibold text-[#94A3B8]">-</span>
+                <input
+                  id="laporan-end-date"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                />
+              </div>
+            </div>
+          }
+          className="mb-0"
+        />
 
         <div className="space-y-8">
           {loading && filteredSections.length === 0 && (

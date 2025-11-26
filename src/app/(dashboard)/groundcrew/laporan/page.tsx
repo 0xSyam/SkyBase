@@ -4,8 +4,6 @@ import React, { useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
-import Calendar from "@/component/Calendar";
-
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
@@ -34,60 +32,67 @@ export default function GroundcrewLaporanPage() {
   const [sections, setSections] = useState<ReportSection[]>(fallbackSections);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await skybase.flights.list();
-        const data = res?.data;
-        let flights: Flight[] = [];
-        if (Array.isArray(data)) {
-          // Check if it's directly an array of flights
-          if (data.length > 0 && 'flight_id' in data[0]) {
-            flights = data as unknown as Flight[];
-          }
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
-          flights = data.flights;
-        }
-        if (!ignore) {
-          const byDate = new Map<string, ReportSchedule[]>();
-          for (const f of flights) {
-            const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
-            const arr = f?.sched_arr ? new Date(f.sched_arr) : null;
-            const dateKey = dep ? dep.toDateString() : arr ? arr.toDateString() : null;
-            if (!dateKey) continue;
-            const key = dateKey;
-            const timeRange = `${dep ? dep.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB - ${arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB`;
-            const item: ReportSchedule = {
-              id: String(f.flight_id ?? Math.random()),
-              timeRange,
-              aircraft: f?.aircraft?.type ?? "-",
-              registration: f?.aircraft?.registration_code ?? "-",
-              destination: f?.route_to ?? "-",
-              aircraftId: f?.aircraft?.aircraft_id,
-              depISO: f?.sched_dep ?? null,
-              arrISO: f?.sched_arr ?? null,
-            };
-            if (!byDate.has(key)) byDate.set(key, []);
-            byDate.get(key)!.push(item);
-          }
-          const formatted: ReportSection[] = Array.from(byDate.entries()).map(([k, schedules]) => {
-            const date = new Date(k);
-            const title = date.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-            return { id: date.toISOString().split("T")[0], title, schedules };
-          }).sort((a, b) => (a.id < b.id ? 1 : -1));
-          setSections(formatted);
-        }
-      } catch {
-        if (!ignore) setSections(fallbackSections);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    load();
-    return () => { ignore = true; };
-  }, []);
+ useEffect(() => {
+     let ignore = false;
+     const load = async () => {
+         setLoading(true);
+         try {
+             const res = await skybase.flights.list();
+             const data = res?.data;
+             let flights: Flight[] = [];
+             if (Array.isArray(data)) {
+                 if (data.length > 0 && 'flight_id' in data[0]) {
+                     flights = data as unknown as Flight[];
+                 }
+             } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+                 flights = data.flights;
+             }
+             if (!ignore) {
+                 const byDate = new Map<string, ReportSchedule[]>();
+                 for (const f of flights) {
+                     const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
+                     const arr = f?.sched_arr ? new Date(f.sched_arr) : null;
+                     const dateKey = dep ? dep.toDateString() : arr ? arr.toDateString() : null;
+                     if (!dateKey) continue;
+
+                     const timeRange = `${dep ? dep.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB - ${arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB`;
+                     const item: ReportSchedule = {
+                         id: String(f.flight_id ?? Math.random()),
+                         timeRange,
+                         aircraft: f?.aircraft?.type ?? "-",
+                         registration: f?.aircraft?.registration_code ?? "-",
+                         destination: f?.route_to ?? "-",
+                         aircraftId: f?.aircraft?.aircraft_id,
+                         depISO: f?.sched_dep ?? null,
+                         arrISO: f?.sched_arr ?? null,
+                     };
+                     if (!byDate.has(dateKey)) byDate.set(dateKey, []);
+                     byDate.get(dateKey)!.push(item);
+                 }
+                 const filteredByDate = Array.from(byDate.entries()).filter(([key]) => {
+                     const sectionDate = new Date(key);
+                     const start = startDate ? new Date(startDate) : null;
+                     const end = endDate ? new Date(endDate) : null;
+                     if (start && sectionDate < start) return false;
+                     if (end && sectionDate > end) return false;
+                     return true;
+                 });
+                 const formatted: ReportSection[] = filteredByDate.map(([k, schedules]) => {
+                     const date = new Date(k);
+                     const title = date.toLocaleDateString("id-ID", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+                     return { id: date.toISOString().split("T")[0], title, schedules };
+                 }).sort((a, b) => (a.id < b.id ? 1 : -1));
+                 setSections(formatted);
+             }
+         } catch {
+             if (!ignore) setSections(fallbackSections);
+         } finally {
+             if (!ignore) setLoading(false);
+         }
+     };
+     load();
+     return () => { ignore = true; };
+ }, [startDate, endDate]);
 
   return (
     <PageLayout>
@@ -102,18 +107,20 @@ export default function GroundcrewLaporanPage() {
                 Pilih tanggal laporan :
               </span>
               <div className="flex w-full md:w-auto items-center gap-3">
-                <Calendar
+                <input
                   id="laporan-start-date"
+                  type="date"
                   value={startDate}
-                  onChange={setStartDate}
-                  placeholder="dd/mm/yyyy"
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                 />
                 <span className="text-lg font-semibold text-[#94A3B8]">-</span>
-                <Calendar
+                <input
                   id="laporan-end-date"
+                  type="date"
                   value={endDate}
-                  onChange={setEndDate}
-                  placeholder="dd/mm/yyyy"
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                 />
               </div>
             </div>

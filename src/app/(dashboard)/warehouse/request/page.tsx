@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import { Check, X } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
@@ -9,7 +10,6 @@ import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
-// Extended type with nested item details for UI display
 type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
   items?: Array<{
     item_id: number;
@@ -39,6 +39,7 @@ export default function RequestPage() {
   const [selectedRequest, setSelectedRequest] = useState<RequestRow | null>(null);
   const [requests, setRequests] = useState<WarehouseRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -134,9 +135,17 @@ export default function RequestPage() {
         requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
       }
       setRequests(requestsData);
+
+      setNotification({
+        type: "success",
+        message: "Request berhasil disetujui.",
+      });
     } catch (err) {
       console.error("Error approving request:", err);
-      alert("Gagal menyetujui request: " + (err instanceof Error ? err.message : "Unknown error"));
+      setNotification({
+        type: "error",
+        message: "Gagal menyetujui request: " + (err instanceof Error ? err.message : "Unknown error"),
+      });
     }
   }, []);
 
@@ -164,12 +173,20 @@ export default function RequestPage() {
       }
       setRequests(requestsData);
 
+      setNotification({
+        type: "success",
+        message: "Request berhasil ditolak.",
+      });
+
       setRejectDialogOpen(false);
       setRejectReason("");
       setSelectedRequest(null);
     } catch (err) {
       console.error("Error rejecting request:", err);
-      alert("Gagal menolak request: " + (err instanceof Error ? err.message : "Unknown error"));
+      setNotification({
+        type: "error",
+        message: "Gagal menolak request: " + (err instanceof Error ? err.message : "Unknown error"),
+      });
     }
   }, [rejectReason, selectedRequest]);
 
@@ -289,7 +306,7 @@ export default function RequestPage() {
                   id="reject-reason"
                   value={rejectReason}
                   onChange={(event) => setRejectReason(event.target.value)}
-                  placeholder="Masukan jumlah barang yang di request"
+                  placeholder="Masukan alasan penolakan barang yang di request"
                   className="h-32 w-full resize-none rounded-3xl border border-[#C5D0DD] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 placeholder:text-[#9CA3AF]"
                 />
               </div>
@@ -315,6 +332,13 @@ export default function RequestPage() {
           </div>,
           document.body,
         )}
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </PageLayout>
   );
 }

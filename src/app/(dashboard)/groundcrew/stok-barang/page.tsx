@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
@@ -12,7 +13,6 @@ const formatDateForApi = (dateStr: string): string | undefined => {
         return undefined;
     }
 
-    // Check if it's already in YYYY-MM-DD format
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
         return dateStr;
     }
@@ -100,6 +100,7 @@ const StokBarangPage = () => {
   const [selectedItem, setSelectedItem] = useState<StockItem | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
   const [mounted, setMounted] = useState(false);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [formData, setFormData] = useState<StockEditFormData>({
     nomor: "",
     revisi: "",
@@ -239,7 +240,7 @@ const StokBarangPage = () => {
       revisi: selectedItem.revisi,
       efektif: formatDateForApi(selectedItem.efektif) || '',
       jumlah: selectedItem.jumlah.toString(),
-      seal_number: selectedItem.type === 'ase' ? selectedItem.revisi : '', // Assuming revisi is serial number for ase
+      seal_number: selectedItem.type === 'ase' ? selectedItem.revisi : '', 
     });
   }, [activeDialog, selectedItem]);
 
@@ -347,7 +348,10 @@ const StokBarangPage = () => {
   const handleDeleteConfirm = useCallback(async () => {
     console.log('Confirming delete for item:', selectedItem);
     if (!selectedItem || !selectedItem.gcId) {
-      alert("ID dokumen tidak ditemukan");
+      setNotification({
+        type: "error",
+        message: "ID dokumen tidak ditemukan",
+      });
       return;
     }
 
@@ -366,12 +370,18 @@ const StokBarangPage = () => {
       
       setGroups(updatedGroups);
 
-      alert("Berhasil menghapus stok barang!");
+      setNotification({
+        type: "success",
+        message: "Berhasil menghapus stok barang!",
+      });
       setActiveDialog(null);
       setSelectedItem(null);
     } catch (error) {
       console.error("Failed to delete stock", error);
-      alert("Gagal menghapus stok barang");
+      setNotification({
+        type: "error",
+        message: "Gagal menghapus stok barang",
+      });
     } finally {
       setDeleteLoading(false);
     }
@@ -387,7 +397,10 @@ const StokBarangPage = () => {
       const jumlah = Number(requestData.jumlah) || 0;
       
       if (jumlah <= 0) {
-        alert("Jumlah harus lebih dari 0");
+        setNotification({
+          type: "error",
+          message: "Jumlah harus lebih dari 0",
+        });
         return;
       }
 
@@ -400,13 +413,19 @@ const StokBarangPage = () => {
           }]
         });
 
-        alert("Request berhasil dikirim ke warehouse!");
+        setNotification({
+          type: "success",
+          message: "Request berhasil dikirim ke warehouse!",
+        });
         setActiveDialog(null);
         setSelectedItem(null);
         setRequestData({ jumlah: "", catatan: "" });
       } catch (error) {
         console.error("Failed to create warehouse request", error);
-        alert("Gagal mengirim request");
+        setNotification({
+          type: "error",
+          message: "Gagal mengirim request",
+        });
       }
     },
     [activeDialog, requestData, selectedItem],
@@ -432,14 +451,16 @@ const StokBarangPage = () => {
 
       const effectiveDate = formatDateForApi(addData.efektif);
       if (!effectiveDate) {
-        alert("Tanggal efektif tidak valid.");
+        setNotification({
+          type: "error",
+          message: "Tanggal efektif tidak valid.",
+        });
         return;
       }
 
       try {
-        // Create a new item in the catalog first
         const newItem = await skybase.items.create({
-          name: addData.nomor, // Or a more descriptive name
+          name: addData.nomor, 
           category: addData.jenisDokumen.toUpperCase(),
         });
 
@@ -466,12 +487,18 @@ const StokBarangPage = () => {
           });
         }
 
-        alert(`Berhasil menambah stok ${addData.jenisDokumen.toUpperCase()}!`);
+        setNotification({
+          type: "success",
+          message: `Berhasil menambah stok ${addData.jenisDokumen.toUpperCase()}!`,
+        });
         window.location.reload();
 
       } catch (error) {
         console.error("Failed to add stock", error);
-        alert("Gagal menambah stok");
+        setNotification({
+          type: "error",
+          message: "Gagal menambah stok",
+        });
       }
 
       setActiveDialog(null);
@@ -496,13 +523,19 @@ const StokBarangPage = () => {
       }
 
       if (!selectedItem.gcId) {
-        alert("ID dokumen tidak ditemukan");
+        setNotification({
+          type: "error",
+          message: "ID dokumen tidak ditemukan",
+        });
         return;
       }
 
       const effectiveDate = formatDateForApi(formData.efektif);
       if (!effectiveDate) {
-        alert("Tanggal efektif tidak valid.");
+        setNotification({
+          type: "error",
+          message: "Tanggal efektif tidak valid.",
+        });
         return;
       }
 
@@ -524,11 +557,17 @@ const StokBarangPage = () => {
           });
         }
 
-        alert("Berhasil mengupdate stok barang!");
+        setNotification({
+          type: "success",
+          message: "Berhasil mengupdate stok barang!",
+        });
         window.location.reload();
       } catch (error) {
         console.error("Failed to update stock", error);
-        alert("Gagal mengupdate stok barang");
+        setNotification({
+          type: "error",
+          message: "Gagal mengupdate stok barang",
+        });
       } finally {
         setEditLoading(false);
       }
@@ -1300,6 +1339,13 @@ const StokBarangPage = () => {
             document.body,
           )}
       </section>
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </PageLayout>
   );
 };

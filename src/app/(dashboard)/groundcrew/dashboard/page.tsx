@@ -114,16 +114,13 @@ export default function DashboardPage() {
         }
 
         if (!ignore) {
-          // Filter flights for TODAY using date range (fixes timezone issues)
           const mapped: ScheduleItem[] = list
             .filter((f) => {
               const schedArr = f?.sched_arr;
               const schedDep = f?.sched_dep;
 
-              // STRICT date-only filter matching MySQL DATE() function
               const getDateOnly = (timeStr: string | null | undefined) => {
                 if (!timeStr) return null;
-                // Extract YYYY-MM-DD from "YYYY-MM-DD HH:MM:SS"
                 const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
                 if (!dateMatch) return null;
                 return new Date(dateMatch[1]);
@@ -135,7 +132,7 @@ export default function DashboardPage() {
               const isToday = (date: Date | null) => {
                 if (!date || isNaN(date.getTime())) return false;
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); // Reset to midnight
+                now.setHours(0, 0, 0, 0); 
                 return date.getFullYear() === now.getFullYear() &&
                   date.getMonth() === now.getMonth() &&
                   date.getDate() === now.getDate();
@@ -144,11 +141,9 @@ export default function DashboardPage() {
               return isToday(arrDate) || isToday(depDate);
             })
             .map((f) => {
-              // EXTRACT TIME DIRECTLY from MySQL string - NO DATE parsing needed
               const arrRaw = f?.sched_arr || f?.sched_dep || null;
               let time = "--:-- WIB";
               if (arrRaw) {
-                // MySQL: "2025-11-19 09:00:00" → extract "09:00"
                 const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
                 if (timeMatch) {
                   time = `${timeMatch[1]}:${timeMatch[2]} WIB`;

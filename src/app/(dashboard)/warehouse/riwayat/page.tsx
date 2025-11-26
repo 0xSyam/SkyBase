@@ -7,7 +7,6 @@ import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
-// Extended type with nested item details for UI display
 type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
   items?: Array<{
     item_id: number;

@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Notification from "@/component/Notification";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
-import Calendar from "@/component/Calendar";
-import { ArrowRight, Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
@@ -33,70 +32,80 @@ export default function WarehouseLaporanPage() {
   const [sections, setSections] = useState<ReportSection[]>([]);
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
-    let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await skybase.flights.list();
-        const data = res?.data;
-        let flights: Flight[] = [];
-        if (Array.isArray(data)) {
-          if (data.length > 0 && 'flight_id' in data[0]) {
-            flights = data as unknown as Flight[];
+      let ignore = false;
+      const load = async () => {
+          setLoading(true);
+          try {
+              const res = await skybase.flights.list();
+              const data = res?.data;
+              let flights: Flight[] = [];
+              if (Array.isArray(data)) {
+                  if (data.length > 0 && 'flight_id' in data[0]) {
+                      flights = data as unknown as Flight[];
+                  }
+              } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+                  flights = data.flights;
+              }
+              
+              if (!ignore) {
+                  const byDate = new Map<string, ReportSchedule[]>();
+                  for (const f of flights) {
+                      const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
+                      const arr = f?.sched_arr ? new Date(f.sched_arr) : null;
+                      const dateKey = dep ? dep.toDateString() : arr ? arr.toDateString() : null;
+                      if (!dateKey) continue;
+                      
+                      const timeRange = `${dep ? dep.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB - ${arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB`;
+                      const item: ReportSchedule = {
+                          id: String(f.flight_id ?? Math.random()),
+                          timeRange,
+                          aircraft: f?.aircraft?.type ?? "-",
+                          registration: f?.aircraft?.registration_code ?? "-",
+                          destination: f?.route_to ?? "-",
+                          aircraftId: f?.aircraft?.aircraft_id,
+                          depISO: f?.sched_dep ?? null,
+                          arrISO: f?.sched_arr ?? null,
+                      };
+                      
+                      if (!byDate.has(dateKey)) byDate.set(dateKey, []);
+                      byDate.get(dateKey)!.push(item);
+                  }
+
+                  const filteredByDate = Array.from(byDate.entries()).filter(([key]) => {
+                      const sectionDate = new Date(key);
+                      const start = startDate ? new Date(startDate) : null;
+                      const end = endDate ? new Date(endDate) : null;
+                      if (start && sectionDate < start) return false;
+                      if (end && sectionDate > end) return false;
+                      return true;
+                  });
+
+                  const formatted: ReportSection[] = filteredByDate.map(([k, schedules]) => {
+                      const date = new Date(k);
+                      const title = date.toLocaleDateString("id-ID", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric"
+                      });
+                      return { id: date.toISOString().split("T")[0], title, schedules };
+                  }).sort((a, b) => (a.id < b.id ? 1 : -1));
+                  
+                  setSections(formatted);
+              }
+          } catch (error) {
+              console.error("Failed to load flights:", error);
+              if (!ignore) setSections([]);
+          } finally {
+              if (!ignore) setLoading(false);
           }
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
-          flights = data.flights;
-        }
-        
-        if (!ignore) {
-          const byDate = new Map<string, ReportSchedule[]>();
-          for (const f of flights) {
-            const dep = f?.sched_dep ? new Date(f.sched_dep) : null;
-            const arr = f?.sched_arr ? new Date(f.sched_arr) : null;
-            const dateKey = dep ? dep.toDateString() : arr ? arr.toDateString() : null;
-            if (!dateKey) continue;
-            
-            const timeRange = `${dep ? dep.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB - ${arr ? arr.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "--:--"} WIB`;
-            const item: ReportSchedule = {
-              id: String(f.flight_id ?? Math.random()),
-              timeRange,
-              aircraft: f?.aircraft?.type ?? "-",
-              registration: f?.aircraft?.registration_code ?? "-",
-              destination: f?.route_to ?? "-",
-              aircraftId: f?.aircraft?.aircraft_id,
-              depISO: f?.sched_dep ?? null,
-              arrISO: f?.sched_arr ?? null,
-            };
-            
-            if (!byDate.has(dateKey)) byDate.set(dateKey, []);
-            byDate.get(dateKey)!.push(item);
-          }
-          
-          const formatted: ReportSection[] = Array.from(byDate.entries()).map(([k, schedules]) => {
-            const date = new Date(k);
-            const title = date.toLocaleDateString("id-ID", { 
-              weekday: "long", 
-              year: "numeric", 
-              month: "long", 
-              day: "numeric" 
-            });
-            return { id: date.toISOString().split("T")[0], title, schedules };
-          }).sort((a, b) => (a.id < b.id ? 1 : -1));
-          
-          setSections(formatted);
-        }
-      } catch (error) {
-        console.error("Failed to load flights:", error);
-        if (!ignore) setSections([]);
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    load();
-    return () => { ignore = true; };
-  }, []);
+      };
+      load();
+      return () => { ignore = true; };
+  }, [startDate, endDate]);
 
   const toISODateTime = (d: Date, endOfDay = false) => {
     if (endOfDay) {
@@ -158,7 +167,10 @@ export default function WarehouseLaporanPage() {
       URL.revokeObjectURL(a.href);
     } catch (e) {
       console.error("Failed to download report", e);
-      alert("Gagal mengunduh laporan. Coba lagi.");
+      setNotification({
+        type: "error",
+        message: "Gagal mengunduh laporan. Coba lagi.",
+      });
     } finally {
       setDownloading(null);
     }
@@ -177,18 +189,20 @@ export default function WarehouseLaporanPage() {
                 Pilih tanggal laporan :
               </span>
               <div className="flex w-full md:w-auto items-center gap-3">
-                <Calendar
+                <input
                   id="warehouse-laporan-start-date"
+                  type="date"
                   value={startDate}
-                  onChange={setStartDate}
-                  placeholder="dd/mm/yyyy"
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                 />
                 <span className="text-lg font-semibold text-[#0D63F3]">-</span>
-                <Calendar
+                <input
                   id="warehouse-laporan-end-date"
+                  type="date"
                   value={endDate}
-                  onChange={setEndDate}
-                  placeholder="dd/mm/yyyy"
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                 />
               </div>
             </div>
@@ -217,31 +231,11 @@ export default function WarehouseLaporanPage() {
                   <h2 className="text-xl md:text-2xl font-semibold text-[#111827]">
                     {section.title}
                   </h2>
-                  <div>
-                    <button
-                      type="button"
-                      className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-60 md:hidden"
-                      aria-label="Unduh Laporan"
-                      onClick={() => handleDownloadSection(section)}
-                      disabled={downloading === section.id}
-                    >
-                      <Download className="h-5 w-5" strokeWidth={2} />
-                    </button>
-                    <button
-                      type="button"
-                      className="hidden md:inline-flex items-center gap-2 rounded-full bg-[#0D63F3] px-5 py-2 text-sm font-semibold text-white shadow-[0_10px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-60"
-                      onClick={() => handleDownloadSection(section)}
-                      disabled={downloading === section.id}
-                    >
-                      <Download className="h-4 w-4" strokeWidth={2} />
-                      {downloading === section.id ? "Mengunduh..." : "Unduh Laporan"}
-                    </button>
-                  </div>
+                  {/* Removed action buttons */}
                 </div>
 
-                <div className="flex items-center justify-between bg-[#EEF5FF] px-4 md:px-8 py-4 text-sm font-semibold text-[#111827]">
-                  <span>Jadwal</span>
-                  <span className="hidden sm:inline">Action</span>
+                <div className="flex items-center bg-[#EEF5FF] px-4 md:px-8 py-4 text-sm font-semibold text-[#111827]">
+                    <span>Jadwal</span>
                 </div>
               </div>
 
@@ -269,19 +263,7 @@ export default function WarehouseLaporanPage() {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      className="grid h-10 w-10 place-items-center rounded-full bg-[#0D63F3] text-white shadow-[0_12px_30px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-60"
-                      aria-label={`Lihat laporan ${schedule.registration}`}
-                      onClick={() => handleDownloadSection({ 
-                        id: schedule.id, 
-                        title: `${schedule.aircraft} ${schedule.registration}`, 
-                        schedules: [schedule] 
-                      })}
-                      disabled={downloading === schedule.id}
-                    >
-                      <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
-                    </button>
+                    {/* Removed individual action button */}
                   </div>
                 ))}
               </div>
@@ -289,6 +271,13 @@ export default function WarehouseLaporanPage() {
           ))}
         </div>
       </section>
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </PageLayout>
   );
 }

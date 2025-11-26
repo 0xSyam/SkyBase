@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -73,10 +74,9 @@ export default function SupervisorManajemenAkunPage() {
         type: 'success',
         message: `Akun ${selectedAccount.username} berhasil dihapus`
       });
+      setTimeout(() => setNotification(null), 3000);
       closeDeleteModal();
 
-      // Auto hide notification after 3 seconds
-      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
       console.error("Failed to delete user", error);
       const errorMsg = (error as { payload?: { message?: string } })?.payload?.message || "Gagal menghapus akun";
@@ -86,7 +86,6 @@ export default function SupervisorManajemenAkunPage() {
       });
       closeDeleteModal();
 
-      // Auto hide notification after 5 seconds
       setTimeout(() => setNotification(null), 5000);
     } finally {
       setDeleteLoading(false);
@@ -129,36 +128,11 @@ export default function SupervisorManajemenAkunPage() {
     <PageLayout sidebarRole="supervisor">
       <section className="w-full max-w-[1076px] space-y-6">
         {notification && (
-          <div
-            className={`fixed top-4 right-4 z-[1001] max-w-md rounded-xl p-4 shadow-lg backdrop-blur-sm transition-all duration-300 ${notification.type === 'success'
-              ? 'bg-green-500/95 text-white'
-              : 'bg-red-500/95 text-white'
-              }`}
-          >
-            <div className="flex items-start gap-3">
-              {notification.type === 'success' ? (
-                <svg className="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
-              <div className="flex-1">
-                <p className="font-semibold">{notification.type === 'success' ? 'Berhasil!' : 'Gagal!'}</p>
-                <p className="text-sm mt-1">{notification.message}</p>
-              </div>
-              <button
-                onClick={() => setNotification(null)}
-                className="flex-shrink-0 text-white/80 hover:text-white transition"
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
+          <Notification
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />
         )}
         <div className="flex flex-col items-center text-center gap-2 mt-2">
           <h1 className="text-3xl md:text-4xl font-semibold text-[#111827]">Manajemen Akun</h1>
@@ -197,7 +171,14 @@ export default function SupervisorManajemenAkunPage() {
             type="button"
             className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
             aria-label="Tambah Akun"
-            onClick={() => router.push('/supervisor/manajemen-akun/create')}
+            onClick={() => {
+              setNotification({
+                type: 'success',
+                message: 'Akun baru berhasil dibuat',
+              });
+              setTimeout(() => setNotification(null), 3000);
+              router.push('/supervisor/manajemen-akun/create');
+            }}
           >
             <Plus className="w-5 h-5" />
           </button>

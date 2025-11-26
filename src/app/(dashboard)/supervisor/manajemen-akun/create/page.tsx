@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Notification from "@/component/Notification";
 import { useRouter } from "next/navigation";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
@@ -34,14 +35,12 @@ export default function CreateUserPage() {
         name: createForm.name.trim(),
         email: createForm.email.trim(),
         phone: createForm.phone.trim() || null,
-        // API supports only 'warehouse' or 'groundcrew' for creation
         role: createForm.role === "supervisor" ? "warehouse" : createForm.role,
         password: createForm.password,
       };
 
       await skybase.auth.createUser(payload);
       setNotification({ type: "success", message: "Akun berhasil dibuat" });
-      // small delay so user sees notification then navigate back
       setTimeout(() => {
         router.push("/supervisor/manajemen-akun");
       }, 700);
@@ -66,9 +65,11 @@ export default function CreateUserPage() {
         </div>
 
         {notification && (
-          <div className={`rounded-xl p-3 text-sm ${notification.type === "success" ? "bg-green-500/90 text-white" : "bg-red-500/90 text-white"}`}>
-            {notification.message}
-          </div>
+          <Notification
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />
         )}
 
         <div className="grid gap-6 lg:grid-cols-[360px_1fr]">

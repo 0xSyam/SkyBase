@@ -180,6 +180,9 @@ export const flightApi = {
   reschedule(flightId: number, data: FlightRescheduleData) {
     return request<ApiResponse<Flight>>(`/flights/${flightId}/reschedule`, { method: "PUT", body: data });
   },
+  delete(flightId: number) {
+    return request<ApiResponse<{ message: string }>>(`/flights/${flightId}`, { method: "DELETE" });
+  },
 };
 
 // Items
@@ -276,22 +279,25 @@ export const inspectionApi = {
 
 // Notifications
 export const notificationApi = {
-  list() {
+  getAll() {
     return request<ApiListResponse<Notification>>("/notifications");
   },
-  recent() {
+  getById(id: string | number) {
+    return request<ApiResponse<Notification>>(`/notifications/${id}`);
+  },
+  getRecent() {
     return request<ApiListResponse<Notification>>("/notifications/recent");
   },
-  today() {
+  getToday() {
     return request<ApiListResponse<Notification>>("/notifications/today");
   },
-  stats() {
+  getStats() {
     return request<ApiResponse<NotificationStats>>("/notifications/stats");
   },
-  byType(type: string) {
+  getByType(type: string) {
     return request<ApiListResponse<Notification>>(`/notifications/type/${encodeURIComponent(type)}`);
   },
-  forItem(relatedType: string, relatedId: number | string) {
+  getForItem(relatedType: string, relatedId: number | string) {
     return request<ApiListResponse<Notification>>(`/notifications/item/${encodeURIComponent(relatedType)}/${relatedId}`);
   },
 };

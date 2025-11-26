@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
-import { Clock, Plus, ChevronDown, Filter, Pencil, Trash2 } from "lucide-react";
+import { Clock, Plus, ChevronDown, Filter, Pencil } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import skybase from "@/lib/api/skybase";
@@ -15,6 +16,7 @@ interface FlightRow {
   destinasi: string;
   arrival: string;
   takeOff: string;
+  flightDate: string; // Added new property for flight date
 }
 
 export default function SupervisorPenerbanganPage() {
@@ -26,8 +28,7 @@ export default function SupervisorPenerbanganPage() {
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FlightRow | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
-  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
 
   const loadFlights = useCallback(async () => {
@@ -57,12 +58,15 @@ export default function SupervisorPenerbanganPage() {
 
   const rows = useMemo(() => {
     const fmtTime = (d?: string | null) => {
-      if (!d) return "--:-- WIB";
+      if (!d) return "--:--";
       try {
         const dt = new Date(d);
-        return dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
+        const jakartaTime = new Date(
+          dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
+        );
+        return jakartaTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       } catch {
-        return "--:-- WIB";
+        return "--:--";
       }
     };
     return flights.map((f) => ({
@@ -71,6 +75,7 @@ export default function SupervisorPenerbanganPage() {
       destinasi: f?.route_to ?? "-",
       arrival: fmtTime(f?.sched_dep ?? null),
       takeOff: fmtTime(f?.sched_arr ?? null),
+      flightDate: f?.sched_dep ? new Date(f.sched_dep).toISOString().split("T")[0] : "-", // Add flightDate
     }));
   }, [flights]);
 
@@ -88,7 +93,6 @@ export default function SupervisorPenerbanganPage() {
       Object.values(row).some((value) => value.toLowerCase().includes(query)),
     );
   }, [rows, searchTerm]);
-  const pendingDeleteRow = pendingDeleteIndex !== null ? rows[pendingDeleteIndex] : null;
 
   const openEditDialog = useCallback((row: FlightRow, index: number) => {
     setEditingIndex(index);
@@ -105,22 +109,91 @@ export default function SupervisorPenerbanganPage() {
   };
 
   const handleEditChange = <Key extends keyof FlightRow>(key: Key, value: FlightRow[Key]) => {
-    if (!editForm) return;
-    setEditForm({ ...editForm, [key]: value });
+      if (!editForm) return;
+  
+      if ((key === "arrival" || key === "takeOff") && value) {
+          if (/^\d{1,4}$/.test(value)) {
+              const num = value.padStart(4, "0");
+              value = `${num.slice(0, 2)}:${num.slice(2)}`;
+          }
+
+          const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
+          if (!timeRegex.test(value)) {
+              setNotification({
+                  type: "error",
+                  message: "Format waktu tidak valid. Gunakan format HH:mm, contoh: 19:00 atau 08:00.",
+              });
+              return;
+          }
+      }
+  
+      setEditForm({ ...editForm, [key]: value });
   };
 
   const handleEditSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!editForm) return;
+    
+    const timeFields = ["arrival", "takeOff"];
+    for (const field of timeFields) {
+        const value = editForm[field as keyof FlightRow];
+        if (value) {
+            const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/; 
+            if (!timeRegex.test(value)) {
+                setNotification({
+                    type: "error",
+                    message: `Format waktu pada kolom ${field} tidak valid. Gunakan format HH:mm, contoh: 19:00 atau 08:00.`,
+                });
+                return;
+            }
+        }
+    }
 
     if (isCreateMode) {
       try {
-        // Parse time inputs to ISO strings
         const now = new Date();
-        const arrivalParts = editForm.arrival.replace(" WIB", "").split(':');
-        const takeOffParts = editForm.takeOff.replace(" WIB", "").split(':');
+        let sched_dep: string;
+        let sched_arr: string;
+        
+        sched_dep = now.toISOString();
+        sched_arr = new Date(now.getTime() + 3600000).toISOString(); 
+      
+        const parseTime = (timeString: string) => {
+          const parts = timeString.split(':');
+          if (parts.length === 2) {
+            const hours = parseInt(parts[0], 10);
+            const minutes = parseInt(parts[1], 10);
+            if (!isNaN(hours) && !isNaN(minutes)) {
+              now.setHours(hours, minutes, 0, 0);
+              return now.toISOString();
+            }
+          }
+          return null;
+        };
+      
+        const parsedSchedDep = parseTime(editForm.arrival);
+        if (parsedSchedDep) sched_dep = parsedSchedDep;
+      
+        const parsedSchedArr = parseTime(editForm.takeOff);
+        if (parsedSchedArr) sched_arr = parsedSchedArr;
+      
+        const isDuplicate = flights.some(
+          (flight) =>
+            flight.aircraft?.registration_code === editForm.idPesawat &&
+            flight.sched_dep === sched_dep
+        );
+      
+        if (isDuplicate) {
+          setNotification({
+            type: "error",
+            message: "Jadwal dengan ID pesawat dan waktu yang sama sudah ada.",
+          });
+          return;
+        }
+        const arrivalParts = editForm.arrival.split(':');
+        const takeOffParts = editForm.takeOff.split(':');
 
-        let sched_dep = now.toISOString();
+        sched_dep = now.toISOString();
         if (arrivalParts.length === 2) {
           const depHours = parseInt(arrivalParts[0], 10);
           const depMinutes = parseInt(arrivalParts[1], 10);
@@ -130,7 +203,7 @@ export default function SupervisorPenerbanganPage() {
           }
         }
 
-        let sched_arr = new Date(now.getTime() + 3600000).toISOString(); // 1 hour later
+        sched_arr = new Date(now.getTime() + 3600000).toISOString();
         if (takeOffParts.length === 2) {
           const arrHours = parseInt(takeOffParts[0], 10);
           const arrMinutes = parseInt(takeOffParts[1], 10);
@@ -140,7 +213,6 @@ export default function SupervisorPenerbanganPage() {
           }
         }
 
-        // Find aircraft_id by registration_code or create with registration_code
         const createData: FlightCreateData = {
           registration_code: editForm.idPesawat,
           route_to: editForm.destinasi,
@@ -149,12 +221,18 @@ export default function SupervisorPenerbanganPage() {
         };
 
         await skybase.flights.create(createData);
-        await loadFlights(); // Reload from server
+        setNotification({
+          type: "success",
+          message: "Jadwal penerbangan berhasil ditambahkan.",
+        });
+        await loadFlights(); 
         closeEditDialog();
       } catch (error) {
         console.error("Failed to create flight:", error);
-        alert("Gagal menyimpan ke server, tapi ditambahkan secara lokal");
-        // Fallback: add locally using calculated times
+        setNotification({
+          type: "error",
+          message: "Gagal menyimpan ke server, tapi ditambahkan secara lokal",
+        });
         const fallbackFlight: Flight = {
           flight_id: Date.now(),
           aircraft: {
@@ -184,7 +262,7 @@ export default function SupervisorPenerbanganPage() {
       try {
         const originalDepDate = flightToUpdate.sched_dep ? new Date(flightToUpdate.sched_dep) : new Date();
         let sched_dep = flightToUpdate.sched_dep;
-        const arrivalParts = editForm.arrival.replace(" WIB", "").split(':');
+        const arrivalParts = editForm.arrival.split(':');
         if (arrivalParts.length === 2) {
           const depHours = parseInt(arrivalParts[0], 10);
           const depMinutes = parseInt(arrivalParts[1], 10);
@@ -200,7 +278,7 @@ export default function SupervisorPenerbanganPage() {
 
         const originalArrDate = flightToUpdate.sched_arr ? new Date(flightToUpdate.sched_arr) : new Date();
         let sched_arr = flightToUpdate.sched_arr;
-        const takeOffParts = editForm.takeOff.replace(" WIB", "").split(':');
+        const takeOffParts = editForm.takeOff.split(':');
         if (takeOffParts.length === 2) {
           const arrHours = parseInt(takeOffParts[0], 10);
           const arrMinutes = parseInt(takeOffParts[1], 10);
@@ -219,31 +297,12 @@ export default function SupervisorPenerbanganPage() {
         await loadFlights();
       } catch (error) {
         console.error("Failed to reschedule flight", error);
-        // You might want to show an error message to the user
       }
     }
 
     closeEditDialog();
   };
 
-  const openDeleteConfirm = (index: number) => {
-    setPendingDeleteIndex(index);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  const closeDeleteConfirm = () => {
-    setIsDeleteConfirmOpen(false);
-    setPendingDeleteIndex(null);
-  };
-
-  const handleConfirmDelete = () => {
-    if (pendingDeleteIndex === null) {
-      return;
-    }
-
-    setFlights((prev) => prev.filter((_, index) => index !== pendingDeleteIndex));
-    closeDeleteConfirm();
-  };
 
   const openCreateDialog = () => {
     const defaultJenis = uniqueJenisPesawat[0] ?? "";
@@ -257,6 +316,7 @@ export default function SupervisorPenerbanganPage() {
       destinasi: "",
       arrival: "",
       takeOff: "",
+      flightDate: new Date().toISOString().split("T")[0], // Set default flight date to today
     });
     setIsEditOpen(true);
   };
@@ -355,17 +415,9 @@ export default function SupervisorPenerbanganPage() {
                       type="button"
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#FACC15] text-white active:scale-95 transition hover:brightness-95"
                       aria-label="Edit jadwal"
-                      onClick={() => openEditDialog(item, index)}
+                      onClick={() => openEditDialog({ ...item, flightDate: item.flightDate || new Date().toISOString().split("T")[0] }, index)} // Ensure flightDate is passed
                     >
                       <Pencil className="w-5 h-5" />
-                    </button>
-                    <button
-                      type="button"
-                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#EF4444] text-white active:scale-95 transition hover:bg-red-600"
-                      aria-label="Hapus jadwal"
-                      onClick={() => openDeleteConfirm(index)}
-                    >
-                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
@@ -449,15 +501,27 @@ export default function SupervisorPenerbanganPage() {
                 </div>
 
                 <div className="space-y-2">
+                  <label className="text-sm font-semibold text-[#0E1D3D]" htmlFor="edit-flight-date">
+                    Tanggal Penerbangan
+                  </label>
+                  <input
+                    id="edit-flight-date"
+                    type="date"
+                    value={editForm.flightDate || ""} // Ensure default value is an empty string
+                    min={new Date().toISOString().split("T")[0]}
+                    onChange={(event) => handleEditChange("flightDate", event.target.value)}
+                    className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                  />
+                </div>
+                <div className="space-y-2">
                   <p className="text-sm font-semibold text-[#0E1D3D]">Waktu Penerbangan</p>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
                     <div className="relative">
                       <Clock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                       <input
-                        type="text"
+                        type="time"
                         value={editForm.arrival}
                         onChange={(event) => handleEditChange("arrival", event.target.value)}
-                        placeholder="18:00 WIB"
                         className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                       />
                     </div>
@@ -465,10 +529,9 @@ export default function SupervisorPenerbanganPage() {
                     <div className="relative">
                       <Clock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                       <input
-                        type="text"
+                        type="time"
                         value={editForm.takeOff}
                         onChange={(event) => handleEditChange("takeOff", event.target.value)}
-                        placeholder="19:30 WIB"
                         className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                       />
                     </div>
@@ -496,39 +559,16 @@ export default function SupervisorPenerbanganPage() {
           document.body
         )}
 
-      {isMounted &&
-        isDeleteConfirmOpen &&
+
+      {notification &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
-            <div className="w-full max-w-sm rounded-[32px] bg-white p-6 sm:p-8 text-center shadow-[0px_18px_50px_rgba(7,34,82,0.20)] max-h-[85vh] overflow-y-auto">
-              <h2 className="text-2xl font-semibold text-[#11264D]">Hapus Jadwal?</h2>
-              {pendingDeleteRow && (
-                <p className="mt-3 text-sm text-[#5B5F6B]">
-                  Jadwal <span className="font-semibold text-[#0D63F3]">{pendingDeleteRow.destinasi}</span> akan dihapus
-                  dari daftar.
-                </p>
-              )}
-              <div className="mt-8 flex items-center justify-center gap-4">
-                <button
-                  type="button"
-                  className="w-32 rounded-full border border-[#FF3B30] px-6 py-2 text-sm font-semibold text-[#FF3B30] transition hover:bg-[#FF3B30]/10 active:scale-95"
-                  onClick={handleConfirmDelete}
-                >
-                  Hapus
-                </button>
-                <button
-                  type="button"
-                  className="w-32 rounded-full bg-[#0D63F3] px-6 py-2 text-sm font-semibold text-white transition hover:bg-[#0B53CF] active:scale-95"
-                  onClick={closeDeleteConfirm}
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>,
+          <Notification
+            type={notification.type}
+            message={notification.message}
+            onClose={() => setNotification(null)}
+          />,
           document.body
         )}
-
     </PageLayout>
   );
 }

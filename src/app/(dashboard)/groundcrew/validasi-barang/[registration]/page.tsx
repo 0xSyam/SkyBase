@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 
@@ -43,6 +44,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [documentGroups, setDocumentGroups] = useState<DocumentRow[][]>([]);
+  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,12 +70,18 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
       await skybase.inspections.submit(aircraftId, {});
 
-      alert("Inspection berhasil disubmit!");
+      setNotification({
+        type: "success",
+        message: "Inspection berhasil disubmit!",
+      });
       setIsDialogOpen(false);
       window.location.reload();
     } catch (error) {
       console.error('Submit failed:', error);
-      alert("Gagal submit inspection: " + (error as Error).message);
+      setNotification({
+        type: "error",
+        message: "Gagal submit inspection: " + (error as Error).message,
+      });
     } finally {
       setSubmitting(false);
     }
@@ -398,6 +406,13 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
           </div>,
           document.body
         )}
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
     </PageLayout>
   );
 };

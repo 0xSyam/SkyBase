@@ -12,7 +12,6 @@ import {
 	GcAseInventory,
 } from "@/types/api";
 
-// Helper untuk format tanggal sederhana (DD/MM/YYYY)
 const formatDate = (dateString: string | null | undefined) => {
 	if (!dateString) return "-";
 	try {
@@ -218,7 +217,6 @@ const WarehouseInventarisPage = () => {
 
   							} else {
 
-  								// ASE
 
   								const aseItem = item as GcAseInventory;
 
@@ -380,7 +378,6 @@ const WarehouseInventarisPage = () => {
       return;
     }
 
-    // Simulasi atau Panggil API Add
     setActiveDialog(null);
     setSelectedGroup(null);
     setAddData({
