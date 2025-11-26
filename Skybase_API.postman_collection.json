@@ -1,0 +1,1218 @@
+{
+    "info": {
+        "_postman_id": "skybase-api-2025",
+        "name": "Skybase Inventory Management API",
+        "description": "Complete API collection for Skybase - Aviation Inventory Management System",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+        "_exporter_id": ""
+    },
+    "item": [
+        {
+            "name": "1. Authentication",
+            "item": [
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has token\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.token).to.exist;",
+                                    "    pm.collectionVariables.set(\"auth_token\", jsonData.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"groundcrew@skybase.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/login",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login as Warehouse",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has token\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.token).to.exist;",
+                                    "    pm.collectionVariables.set(\"warehouse_token\", jsonData.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"warehouse@skybase.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/login",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Login as Supervisor",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has token\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.token).to.exist;",
+                                    "    pm.collectionVariables.set(\"supervisor_token\", jsonData.data.token);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"supervisor@skybase.com\",\n  \"password\": \"password123\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/login",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "login"]
+                        }
+                    }
+                },
+                {
+                    "name": "Logout",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/auth/logout",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["auth", "logout"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "2. Flight Management",
+            "item": [
+                {
+                    "name": "Get All Flights",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/flights",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["flights"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Flight Schedule",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"aircraft_id\": 1,\n  \"supervisor_id\": 1,\n  \"route_to\": \"CGK-DPS\",\n  \"sched_dep\": \"2025-12-25 09:00:00\",\n  \"sched_arr\": \"2025-12-25 12:00:00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/flights",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["flights"]
+                        }
+                    }
+                },
+                {
+                    "name": "Reschedule Flight",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"sched_dep\": \"2025-12-26 10:00:00\",\n  \"sched_arr\": \"2025-12-26 13:00:00\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/flights/{{flight_id}}/reschedule",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["flights", "{{flight_id}}", "reschedule"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "3. Groundcrew Inventory",
+            "item": [
+                {
+                    "name": "Get Shared Groundcrew Inventory",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has shared inventory\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.inventory_type).to.eql(\"shared\");",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "groundcrew"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Groundcrew Inventory (Warehouse)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/all-groundcrew",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "all-groundcrew"]
+                        }
+                    }
+                },
+                {
+                    "name": "Add DOC Item to Inventory",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"item_id\": 1,\n  \"quantity\": 5,\n  \"doc_number\": \"DOC-001\",\n  \"revision_no\": \"Rev-A\",\n  \"effective_date\": \"2025-01-01\",\n  \"condition\": \"Good\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/doc",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "groundcrew", "doc"]
+                        }
+                    }
+                },
+                {
+                    "name": "Add ASE Item to Inventory",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"item_id\": 12,\n  \"serial_number\": \"ASE001\",\n  \"seal_number\": \"SEAL001\",\n  \"expires_at\": \"2025-12-31\",\n  \"condition\": \"Good\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/ase",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "groundcrew", "ase"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update DOC Item",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quantity\": 10,\n  \"condition\": \"Excellent\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/doc/{{gc_doc_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "doc",
+                                "{{gc_doc_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Update ASE Item",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"condition\": \"Excellent\",\n  \"expires_at\": \"2026-12-31\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/ase/{{gc_ase_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "ase",
+                                "{{gc_ase_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete DOC Item",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/doc/{{gc_doc_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "doc",
+                                "{{gc_doc_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete ASE Item",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/ase/{{gc_ase_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "ase",
+                                "{{gc_ase_id}}"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Transfer to Aircraft",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"aircraft_id\": 1,\n  \"transfer_type\": \"doc\",\n  \"source_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/transfer-to-aircraft",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "transfer-to-aircraft"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "4. Aircraft Inventory",
+            "item": [
+                {
+                    "name": "Get Aircraft Inventory",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/aircraft/{{aircraft_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "aircraft", "{{aircraft_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Transfer DOC Item to Aircraft",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"doc\",\n  \"inventory_id\": 1,\n  \"aircraft_id\": 1,\n  \"quantity\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/transfer-to-aircraft",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "groundcrew", "transfer-to-aircraft"]
+                        },
+                        "description": "Transfer DOC item from groundcrew inventory to aircraft. Use inventory_id (gc_doc_id) and specify quantity."
+                    }
+                },
+                {
+                    "name": "Transfer ASE Item to Aircraft",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"type\": \"ase\",\n  \"inventory_id\": 1,\n  \"aircraft_id\": 1\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inventory/groundcrew/transfer-to-aircraft",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inventory", "groundcrew", "transfer-to-aircraft"]
+                        },
+                        "description": "Transfer ASE item from groundcrew inventory to aircraft. Use inventory_id (gc_ase_id). No quantity needed for ASE."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "5. Item Catalog",
+            "item": [
+                {
+                    "name": "Get All Items",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/items",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["items"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Item by ID",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/items/{{item_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["items", "{{item_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Item",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"NEW ITEM\",\n  \"category\": \"DOC\",\n  \"unit\": \"piece\",\n  \"requires_doc_number\": true,\n  \"requires_revision\": true,\n  \"requires_effective\": true\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/items",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["items"]
+                        }
+                    }
+                },
+                {
+                    "name": "Update Item",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"UPDATED ITEM\",\n  \"unit\": \"set\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/items/{{item_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["items", "{{item_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Delete Item",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/items/{{item_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["items", "{{item_id}}"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "6. Warehouse Requests",
+            "item": [
+                {
+                    "name": "Create Warehouse Request",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"item_id\": 12,\n  \"qty\": 3,\n  \"reason\": \"Need for upcoming flights\",\n  \"notes\": \"Request stok harian untuk inspection\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["warehouse-requests"]
+                        },
+                        "description": "UPDATED: Each request can only have ONE item_id. ASE items will be auto-expanded (qty=3 becomes 3 rows with qty=1 each). DOC items stay as single row. ASE max qty=10 per request."
+                    }
+                },
+                {
+                    "name": "Get My Requests (Groundcrew)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests/my-requests",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["warehouse-requests", "my-requests"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get All Requests (Warehouse)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["warehouse-requests"]
+                        }
+                    }
+                },
+                {
+                    "name": "Approve Request (Fill ASE Seal Numbers)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"items\": [\n    {\n      \"id\": 24,\n      \"seal_number\": \"YE-2025-001\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 25,\n      \"seal_number\": \"YE-2025-002\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 26,\n      \"seal_number\": \"YE-2025-003\",\n      \"expires_at\": \"2026-12-31\"\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests/{{request_id}}/approve",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "warehouse-requests",
+                                "{{request_id}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "UPDATED: For ASE items, use 'id' (wh_request_items.id) not item_id. Can approve ALL items at once or partial. Validates: duplicates in request, seal exists in gc_ase_inventory, seal exists in other wh_request_items. Status becomes APPROVED when all seal_numbers filled."
+                    }
+                },
+                {
+                    "name": "Fulfill Approved Request",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests/{{request_id}}/fulfill",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "warehouse-requests",
+                                "{{request_id}}",
+                                "fulfill"
+                            ]
+                        },
+                        "description": "Transfer items from warehouse to groundcrew inventory. ASE items create new records with seal_numbers. DOC items update quantity."
+                    }
+                },
+                {
+                    "name": "Reject Request",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"rejection_reason\": \"Items not available in warehouse\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests/{{request_id}}/reject",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "warehouse-requests",
+                                "{{request_id}}",
+                                "reject"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "7. Aircraft Management",
+            "item": [
+                {
+                    "name": "Get All Aircraft",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/aircraft",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["aircraft"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create Aircraft",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"registration_number\": \"PK-ABC\",\n  \"model\": \"Boeing 737-800\",\n  \"manufacturer\": \"Boeing\",\n  \"year_of_manufacture\": 2020,\n  \"status\": \"ACTIVE\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/aircraft",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["aircraft"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "8. Inspection Management",
+            "item": [
+                {
+                    "name": "Get Today's Flights Overview",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/today",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inspections", "today"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Flight Inspection (RECOMMENDED)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has inspection data\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.inspection_id).to.exist;",
+                                    "    pm.collectionVariables.set(\"inspection_id\", jsonData.data.inspection_id);",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/flight/{{flight_id}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["inspections", "flight", "{{flight_id}}"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Aircraft Validation (DEPRECATED)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test(\"Status code is 200\", function () {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test(\"Response has inspection data\", function () {",
+                                    "    var jsonData = pm.response.json();",
+                                    "    pm.expect(jsonData.data.inspection).to.exist;",
+                                    "    if (jsonData.data.inspection) {",
+                                    "        pm.collectionVariables.set(\"inspection_id\", jsonData.data.inspection.inspection_id);",
+                                    "    }",
+                                    "});"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/aircraft/{{aircraft_id}}/validation",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "aircraft",
+                                "{{aircraft_id}}",
+                                "validation"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Toggle Item Check Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/items/{{inspection_item_id}}/toggle",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "items",
+                                "{{inspection_item_id}}",
+                                "toggle"
+                            ]
+                        }
+                    }
+                },
+                {
+                    "name": "Submit/Complete Inspection",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status\": \"READY\",\n  \"notes\": \"All items validated and ready for flight\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/{{inspection_id}}/submit",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "{{inspection_id}}",
+                                "submit"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "9. Notification System",
+            "item": [
+                {
+                    "name": "Get My Notifications",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/notifications",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["notifications"]
+                        }
+                    }
+                },
+                {
+                    "name": "Get Notifications by Type",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/notifications/type/{{notification_type}}",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "notifications",
+                                "type",
+                                "{{notification_type}}"
+                            ]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "10. User Management",
+            "item": [
+                {
+                    "name": "Get All Users (Supervisor)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/users",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["users"]
+                        }
+                    }
+                },
+                {
+                    "name": "Create User",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"name\": \"New Groundcrew\",\n  \"email\": \"newgc@skybase.com\",\n  \"password\": \"password123\",\n  \"phone\": \"+6281234567899\",\n  \"role\": \"groundcrew\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/users",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["users"]
+                        }
+                    }
+                },
+                {
+                    "name": "Toggle User Status",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{supervisor_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/users/{{user_id}}/toggle-status",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["users", "{{user_id}}", "toggle-status"]
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "11. Reporting",
+            "item": [
+                {
+                    "name": "Get Aircraft Status Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{BASE_URL}}/reports/aircraft-status?aircraft_id={{aircraft_id}}&from_date=2025-11-01&to_date=2025-11-30&group_by=daily&type=ALL",
+                            "host": ["{{BASE_URL}}"],
+                            "path": ["reports", "aircraft-status"],
+                            "query": [
+                                {
+                                    "key": "aircraft_id",
+                                    "value": "{{aircraft_id}}",
+                                    "description": "Aircraft ID to report on"
+                                },
+                                {
+                                    "key": "from_date",
+                                    "value": "2025-11-01",
+                                    "description": "Start date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "to_date",
+                                    "value": "2025-11-30",
+                                    "description": "End date (YYYY-MM-DD)"
+                                },
+                                {
+                                    "key": "group_by",
+                                    "value": "daily",
+                                    "description": "Grouping: daily, weekly, monthly"
+                                },
+                                {
+                                    "key": "type",
+                                    "value": "ALL",
+                                    "description": "Filter: ALL, ASE, DOC"
+                                }
+                            ]
+                        }
+                    }
+                }
+            ]
+        }
+    ],
+    "variable": [
+        {
+            "key": "BASE_URL",
+            "value": "http://localhost:8080/api",
+            "type": "string"
+        },
+        {
+            "key": "auth_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "warehouse_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "supervisor_token",
+            "value": "",
+            "type": "string"
+        },
+        {
+            "key": "flight_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "aircraft_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "item_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "gc_doc_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "gc_ase_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "request_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "inspection_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "inspection_item_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "user_id",
+            "value": "1",
+            "type": "string"
+        },
+        {
+            "key": "notification_type",
+            "value": "WAREHOUSE_REQUEST",
+            "type": "string"
+        }
+    ]
+}

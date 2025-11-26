@@ -172,11 +172,6 @@ export default function SupervisorManajemenAkunPage() {
             className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
             aria-label="Tambah Akun"
             onClick={() => {
-              setNotification({
-                type: 'success',
-                message: 'Akun baru berhasil dibuat',
-              });
-              setTimeout(() => setNotification(null), 3000);
               router.push('/supervisor/manajemen-akun/create');
             }}
           >

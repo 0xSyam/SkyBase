@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, Menu, X } from "lucide-react";
+import { Bell, Menu, X, Loader2 } from "lucide-react";
 import GlassCard from "./Glasscard";
 import { type SidebarRole, navigationByRole } from "./Sidebar";
 import { getUser } from "@/lib/auth/storage";
@@ -25,30 +25,68 @@ export default function TopBar({
   const [dropdownHeight, setDropdownHeight] = useState(0);
   const [userName, setUserName] = useState(userNameProp || "User");
   const menuContentRef = useRef<HTMLDivElement | null>(null);
+  
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const user = getUser();
     if (user?.name) {
       setUserName(user.name);
     }
+    fetchUnreadCount();
   }, []);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+        setPopoverOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const parseNotificationData = (data: unknown): Notification[] => {
+    if (Array.isArray(data)) {
+      return data as Notification[];
+    } else if (data && typeof data === 'object' && 'items' in data) {
+      return (data as { items: Notification[] }).items;
+    } else if (data) {
+      return [data as Notification];
+    }
+    return [];
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const res = await notificationApi.getRecent();
+      const items = parseNotificationData(res.data);
+      setUnreadCount(items.length);
+    } catch (error) {
+      console.error("Gagal mengambil notifikasi", error);
+    }
+  };
+
   const handleNotificationClick = () => {
-    if (notifications.length > 0) {
-      setPopoverOpen((v) => !v);
-    } else {
-      notificationApi.getRecent().then((res) => {
-        if (Array.isArray(res.data)) {
-          setNotifications(res.data);
-        } else if ("items" in res.data) {
-          setNotifications(res.data.items);
-        } else {
-          setNotifications([res.data]);
-        }
-        setPopoverOpen(true);
-      });
+    const newState = !popoverOpen;
+    setPopoverOpen(newState);
+
+    if (newState) {
+      setIsLoading(true);
+      notificationApi.getRecent()
+        .then((res) => {
+          const items = parseNotificationData(res.data);
+          setNotifications(items);
+          setUnreadCount(0);
+        })
+        .catch((err) => console.error(err))
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
   };
 
@@ -76,56 +114,40 @@ export default function TopBar({
     .substring(0, 2)
     .toUpperCase();
 
-  const profileHref = sidebarRole ? "/profile" : "/profile";
+  const profileHref = sidebarRole ? `/${sidebarRole}/profile` : "/profile";
 
   const handleProfileClick = () => {
     if (!sidebarRole) return;
-    if (typeof window === "undefined") return;
-    try {
-      window.sessionStorage.setItem("activeRole", sidebarRole);
-    } catch (error) {
-      console.warn("Failed to persist active role", error);
+    if (typeof window !== "undefined") {
+       window.sessionStorage.setItem("activeRole", sidebarRole);
     }
   };
 
   return (
-    <GlassCard className="w-full rounded-[20px]">
-      <header
-        className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6"
-        role="banner"
-      >
+    // PERBAIKAN UTAMA: overflow-visible dan z-50
+    <GlassCard className="w-full rounded-[20px] overflow-visible z-50">
+      <header className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6" role="banner">
         <Link
           href={profileHref}
           className="inline-flex items-center gap-3 rounded-full px-1.5 md:px-2 py-1 transition hover:bg-white/40"
-          aria-label="Buka halaman profil"
           onClick={handleProfileClick}
         >
-          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+           <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
             {userAvatar ? (
-              <Image
-                fill
-                className="object-cover"
-                alt={`Profile picture of ${userName}`}
-                src={userAvatar}
-              />
+              <Image fill className="object-cover" alt={`Profile picture of ${userName}`} src={userAvatar} />
             ) : (
-              <span className="text-white font-semibold text-lg">
-                {initials}
-              </span>
+              <span className="text-white font-semibold text-lg">{initials}</span>
             )}
           </div>
-
           <h1 className="text-base md:text-lg font-medium text-gray-900 whitespace-nowrap">
             {userName}
           </h1>
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" ref={popoverRef}>
           <button
             onClick={() => setMenuOpen((v) => !v)}
             className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700 md:hidden"
-            aria-label={menuOpen ? "Tutup menu" : "Buka menu"}
-            type="button"
           >
             {menuOpen ? (
               <X className="w-5 h-5 text-white" strokeWidth={2.25} />
@@ -133,53 +155,71 @@ export default function TopBar({
               <Menu className="w-5 h-5 text-white" strokeWidth={2} />
             )}
           </button>
+
           <div className="relative">
             <button
               onClick={handleNotificationClick}
               className="hidden md:grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
-              aria-label="Notifications"
-              type="button"
             >
               <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center text-white border-2 border-white shadow-sm">
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </span>
+              )}
             </button>
+
             {popoverOpen && (
-              <div className="absolute top-12 right-0 w-80 bg-white rounded-lg shadow-lg z-10">
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg">Notifikasi</h3>
+              <div className="absolute top-12 right-0 w-80 bg-white rounded-2xl shadow-xl border border-gray-100 z-[100] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                  <h3 className="font-semibold text-[#111827]">Notifikasi</h3>
                 </div>
-                <div className="border-t border-gray-200">
-                  {notifications.length > 0 ? (
-                    notifications.map((notification) => (
+                
+                <div className="max-h-[320px] overflow-y-auto custom-scrollbar min-h-[100px]">
+                  {isLoading ? (
+                     <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2">
+                        <Loader2 className="w-6 h-6 animate-spin text-[#0D63F3]" />
+                        <span className="text-xs">Memuat...</span>
+                     </div>
+                  ) : notifications.length > 0 ? (
+                    notifications.map((notif) => (
                       <Link
-                        key={notification.notification_id}
-                        href={`/notifications/${notification.notification_id}`}
-                        className="block p-4 hover:bg-gray-100"
+                        key={notif.notification_id}
+                        href={`/notifications/${notif.notification_id}`}
+                        className="block p-4 hover:bg-blue-50/50 transition-colors border-b border-gray-50 last:border-0 group"
                         onClick={() => setPopoverOpen(false)}
                       >
-                        <p className="font-semibold">{notification.type}</p>
-                        <p className="text-sm text-gray-600">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-1">
-                          {new Date(
-                            notification.created_at
-                          ).toLocaleString()}
+                        <div className="flex justify-between items-start mb-1">
+                            <p className="text-[11px] font-bold text-[#0D63F3] uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded">
+                              {notif.type}
+                            </p>
+                            <span className="text-[10px] text-gray-400 group-hover:text-gray-500">{notif.time_ago}</span>
+                        </div>
+                        <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed mt-1">
+                          {notif.message}
                         </p>
                       </Link>
                     ))
                   ) : (
-                    <p className="p-4 text-center text-gray-500">
-                      Tidak ada notifikasi baru.
-                    </p>
+                    <div className="py-10 px-4 text-center flex flex-col items-center gap-3 text-gray-400">
+                        <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center">
+                           <Bell className="w-6 h-6 text-gray-300" />
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-gray-600">Tidak ada notifikasi</p>
+                          <p className="text-xs text-gray-400">Anda sudah melihat semua pembaruan.</p>
+                        </div>
+                    </div>
                   )}
                 </div>
-                <div className="p-2 border-t border-gray-200">
+                
+                <div className="p-3 bg-gray-50 border-t border-gray-100 text-center">
                   <Link
                     href="/notifications"
-                    className="block w-full text-center text-blue-600 font-semibold py-2 hover:bg-gray-100 rounded-b-lg"
+                    className="text-xs font-bold text-[#0D63F3] hover:text-blue-700 transition-colors uppercase tracking-wide"
                     onClick={() => setPopoverOpen(false)}
                   >
-                    Lihat Semua
+                    Lihat Semua Aktivitas
                   </Link>
                 </div>
               </div>
@@ -206,7 +246,7 @@ export default function TopBar({
                 <Link
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className="flex items-center gap-4 px-1.5 py-1 text-gray-900"
+                  className="flex items-center gap-4 px-1.5 py-1 text-gray-900 hover:text-[#0D63F3] transition-colors"
                 >
                   <item.icon className="w-6 h-6 text-gray-700" />
                   <span className="text-xl font-semibold">{item.label}</span>

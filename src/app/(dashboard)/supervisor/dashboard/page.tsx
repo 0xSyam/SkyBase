@@ -9,13 +9,12 @@ import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
-
 type ScheduleItem = {
-  start: string;
-  end: string;
   jenis: string;
   idPesawat: string;
-  destination: string;
+  destinasi: string;
+  arrival: string;
+  takeOff: string;
 };
 
 export default function SupervisorDashboardPage() {
@@ -23,6 +22,7 @@ export default function SupervisorDashboardPage() {
   const [welcome, setWelcome] = React.useState<string | null>(null);
   const [scheduleData, setScheduleData] = React.useState<ScheduleItem[]>([]);
   const [loadingFlights, setLoadingFlights] = React.useState(false);
+
   React.useEffect(() => {
     let ignore = false;
     const run = async () => {
@@ -36,6 +36,7 @@ export default function SupervisorDashboardPage() {
     run();
     return () => { ignore = true; };
   }, [router]);
+
   React.useEffect(() => {
     let ignore = false;
     const loadFlights = async () => {
@@ -53,6 +54,17 @@ export default function SupervisorDashboardPage() {
         }
 
         if (!ignore) {
+          // Helper untuk format waktu
+          const fmtTime = (d?: string | null) => {
+            if (!d) return "--:-- WIB";
+            try {
+              const dt = new Date(d);
+              return dt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
+            } catch {
+              return "--:-- WIB";
+            }
+          };
+
           const mapped: ScheduleItem[] = list
             .filter((f) => {
               const schedArr = f?.sched_arr;
@@ -60,18 +72,18 @@ export default function SupervisorDashboardPage() {
 
               const getDateOnly = (timeStr: string | null | undefined) => {
                 if (!timeStr) return null;
-                const dateMatch = timeStr.match(/^(\d{4}-\d{2}-\d{2})/);
-                if (!dateMatch) return null;
-                return new Date(dateMatch[1]);
+                // Coba parsing ISO string standard
+                const d = new Date(timeStr);
+                if (isNaN(d.getTime())) return null;
+                return d;
               };
 
               const arrDate = getDateOnly(schedArr);
               const depDate = getDateOnly(schedDep);
 
               const isToday = (date: Date | null) => {
-                if (!date || isNaN(date.getTime())) return false;
+                if (!date) return false;
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); 
                 return date.getFullYear() === now.getFullYear() &&
                   date.getMonth() === now.getMonth() &&
                   date.getDate() === now.getDate();
@@ -80,20 +92,12 @@ export default function SupervisorDashboardPage() {
               return isToday(arrDate) || isToday(depDate);
             })
             .map((f) => {
-              const arrRaw = f?.sched_arr || f?.sched_dep || null;
-              let time = "--:-- WIB";
-              if (arrRaw) {
-                const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
-                if (timeMatch) {
-                  time = `${timeMatch[1]}:${timeMatch[2]} WIB`;
-                }
-              }
               return {
-                start: time,
-                end: time,
                 jenis: f?.aircraft?.type ?? "-",
                 idPesawat: f?.aircraft?.registration_code ?? "-",
-                destination: f?.route_to ?? "-",
+                destinasi: f?.route_to ?? "-",
+                arrival: fmtTime(f?.sched_dep ?? null),
+                takeOff: fmtTime(f?.sched_arr ?? null),
               };
             });
           setScheduleData(mapped);
@@ -108,6 +112,7 @@ export default function SupervisorDashboardPage() {
     loadFlights();
     return () => { ignore = true; };
   }, [router]);
+
   const today = React.useMemo(() => {
     try {
       return new Date().toLocaleDateString("id-ID", {
@@ -120,6 +125,7 @@ export default function SupervisorDashboardPage() {
       return "";
     }
   }, []);
+
   return (
     <PageLayout sidebarRole="supervisor">
       {welcome && (
@@ -150,9 +156,11 @@ export default function SupervisorDashboardPage() {
 
           <GlassCard className="overflow-hidden">
             <div className="flex h-[60px] items-center bg-[#F4F8FB] text-sm font-semibold text-[#222222] px-4 rounded-t-xl text-center">
-              <div className="w-1/3">Jenis</div>
-              <div className="w-1/3">ID Pesawat</div>
-              <div className="w-1/3">Waktu</div>
+              <div className="flex-1">Jenis</div>
+              <div className="flex-1">ID Pesawat</div>
+              <div className="flex-1">Destinasi</div>
+              <div className="flex-1">Arrival</div>
+              <div className="flex-1">Take Off</div>
             </div>
 
             <div className="divide-y divide-[#E9EEF3]">
@@ -167,14 +175,20 @@ export default function SupervisorDashboardPage() {
               ) : (
                 scheduleData.map((item, idx) => (
                   <div key={idx} className="px-4 py-4 sm:py-5 flex items-center text-center">
-                    <div className="w-1/3 text-sm text-[#111827]">
+                    <div className="flex-1 text-sm text-[#111827]">
                       {item.jenis}
                     </div>
-                    <div className="w-1/3 text-sm text-[#111827]">
+                    <div className="flex-1 text-sm text-[#111827]">
                       {item.idPesawat}
                     </div>
-                    <div className="w-1/3 text-sm text-[#111827]">
-                      {item.end}
+                    <div className="flex-1 text-sm text-[#111827]">
+                      {item.destinasi}
+                    </div>
+                    <div className="flex-1 text-sm text-[#4B5563]">
+                      {item.arrival}
+                    </div>
+                    <div className="flex-1 text-sm text-[#4B5563]">
+                      {item.takeOff}
                     </div>
                   </div>
                 ))

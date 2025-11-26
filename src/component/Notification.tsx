@@ -10,7 +10,7 @@ interface NotificationProps {
 const Notification: React.FC<NotificationProps> = ({ type, message, onClose }) => {
   return createPortal(
     <div
-      className={`fixed bottom-4 right-4 z-[1001] max-w-md rounded-xl p-4 shadow-lg transition-all duration-300 ${
+      className={`fixed bottom-4 right-4 z-[10000] max-w-md rounded-xl p-4 shadow-lg transition-all duration-300 ${
         type === "success" ? "bg-green-500/95 text-white" : "bg-red-500/95 text-white"
       }`}
     >

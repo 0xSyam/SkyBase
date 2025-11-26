@@ -16,7 +16,7 @@ interface FlightRow {
   destinasi: string;
   arrival: string;
   takeOff: string;
-  flightDate: string; // Added new property for flight date
+  flightDate: string; 
 }
 
 export default function SupervisorPenerbanganPage() {

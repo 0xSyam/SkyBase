@@ -19,8 +19,6 @@ interface FlightSchedule {
   aircraftId?: number;
 }
 
-
-
 const ValidasiBarangPage = () => {
   const router = useRouter();
   const [flights, setFlights] = React.useState<FlightSchedule[]>([]);
@@ -127,38 +125,44 @@ const ValidasiBarangPage = () => {
     return () => { ignore = true; };
   }, []);
 
+  // KONFIGURASI KOLOM DIPERBAIKI: Menggunakan lebar tetap (w-...) untuk kolom pendek
   const columns: ColumnDef<FlightSchedule>[] = [
     {
       key: "registration",
       header: "Registrasi",
       align: "left",
-      className: "font-semibold min-w-[100px]"
+      className: "w-32 flex-none font-semibold" // Fixed width
     },
     {
       key: "aircraft",
       header: "Jenis Pesawat",
-      align: "left"
+      align: "left",
+      className: "w-40 flex-none" // Fixed width
     },
     {
       key: "destination",
       header: "Destinasi",
-      align: "left"
+      align: "left",
+      className: "flex-1 min-w-[120px]" // Flex-1 hanya disini agar mengisi sisa ruang
     },
     {
       key: "arrival",
       header: "Arrival",
-      align: "left"
+      align: "left",
+      className: "w-28 flex-none" // Fixed width
     },
     {
       key: "takeOff",
-      header: "Take Of",
-      align: "left"
+      header: "Take Off",
+      align: "left",
+      className: "w-28 flex-none" // Fixed width
     },
     {
       key: "aksi",
       header: "Aksi",
       align: "right",
-      className: "w-20 flex-shrink-0",
+      // className DIHAPUS agar mengikuti default internal GlassDataTable (w-44 di desktop)
+      // ini memastikan header dan body sejajar sempurna untuk kolom aksi
       render: (_, row) => (
         <button
           onClick={() =>

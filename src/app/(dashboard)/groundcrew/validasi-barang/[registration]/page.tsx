@@ -4,10 +4,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
-
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
-import { AlertCircle, ArrowLeftRight, Check, X, ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowLeftRight, Check, X, ArrowRight, Loader2, Minus, Plus } from "lucide-react";
 import skybase from "@/lib/api/skybase";
+import { useRouter } from "next/navigation";
+import type { GcDocInventory, GcAseInventory } from "@/types/api";
 
 type DocumentStatus = "approved" | "warning";
 
@@ -22,6 +23,16 @@ interface DocumentRow {
   effectiveStatus?: DocumentStatus;
   quantity: number;
   status: DocumentStatus;
+  category?: string;
+}
+
+interface StockTransferItem {
+  id: number;
+  name: string;
+  number: string; 
+  qty: number; // Stok tersedia
+  expiry: string; 
+  originalData: GcDocInventory | GcAseInventory;
 }
 
 interface DetailPageProps {
@@ -30,20 +41,34 @@ interface DetailPageProps {
 }
 
 const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchParams }) => {
+  const router = useRouter();
   const resolvedParams = React.use(params);
   const resolvedSearchParams = React.use(searchParams);
 
   const registration = decodeURIComponent(resolvedParams?.registration || "PK-GFD").toUpperCase();
-  const aircraft =
-    typeof resolvedSearchParams?.aircraft === "string"
-      ? decodeURIComponent(resolvedSearchParams.aircraft)
-      : "B738 NG";
+  const aircraft = typeof resolvedSearchParams?.aircraft === "string" ? decodeURIComponent(resolvedSearchParams.aircraft) : "B738 NG";
+  const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : "1";
+  const aircraftId = parseInt(aircraftIdParam);
 
+  // Main State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [documentGroups, setDocumentGroups] = useState<DocumentRow[][]>([]);
+  
+  // Data State
+  const [docItems, setDocItems] = useState<DocumentRow[]>([]);
+  const [aseItems, setAseItems] = useState<DocumentRow[]>([]);
+  const [inspectionId, setInspectionId] = useState<number | null>(null);
+  
+  // Transfer State
+  const [transferType, setTransferType] = useState<"DOC" | "ASE">("DOC");
+  const [stockList, setStockList] = useState<StockTransferItem[]>([]);
+  const [loadingStock, setLoadingStock] = useState(false);
+  const [transferingId, setTransferingId] = useState<number | null>(null);
+  const [transferQuantities, setTransferQuantities] = useState<Record<number, number>>({});
+
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,231 +76,230 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     setMounted(true);
   }, []);
 
-  const handleDialogSelection = async (status: "delay" | "ready") => {
-    if (status === "delay") {
-      console.log(`Konfirmasi status penerbangan: ${status}`);
-      setIsDialogOpen(false);
-      return;
-    }
-
-    // Submit inspection untuk "ready"
+  const loadInspection = async () => {
+    if (!aircraftId || Number.isNaN(aircraftId)) return;
+    setLoading(true);
+    setError(null);
     try {
-      setSubmitting(true);
-      const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
-      const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
+      const res = await skybase.inspections.aircraftValidation(aircraftId);
+      const resData = res?.data;
 
-      if (!aircraftId || Number.isNaN(aircraftId)) {
-        throw new Error("Aircraft ID tidak ditemukan");
+      if (resData && typeof resData === 'object' && 'inspection_id' in resData) {
+         setInspectionId((resData as { inspection_id: number }).inspection_id);
       }
+      
+      const items = (resData && typeof resData === 'object' && 'items' in resData && Array.isArray((resData as any).items)) 
+        ? (resData as any).items 
+        : [];
 
-      await skybase.inspections.submit(aircraftId, {});
+      const docs: DocumentRow[] = [];
+      const ases: DocumentRow[] = [];
 
-      setNotification({
-        type: "success",
-        message: "Inspection berhasil disubmit!",
+      items.forEach((it: any) => {
+        const rawCategory = it.category || it.item?.category;
+        const isASE = rawCategory === "ASE" || (!rawCategory && (it.serial_number || (it.nama_dokumen || "").includes("KIT")));
+        
+        const row: DocumentRow = {
+          id: it?.id || it?.inspection_item_id,
+          inspection_item_id: it?.inspection_item_id || it?.id,
+          is_checked: it?.is_checked ?? false,
+          name: it?.nama_dokumen || it?.name || it?.item_name || it?.item?.name || "-",
+          number: it?.nomor || it?.doc_number || it?.serial_number || "-",
+          revision: it?.revisi || it?.revision_no || "-",
+          effective: it?.efektif || "-",
+          effectiveStatus: undefined,
+          quantity: Number(it?.jumlah ?? 1) || 1,
+          status: "approved",
+          category: isASE ? "ASE" : "DOC"
+        };
+
+        if (isASE) ases.push(row);
+        else docs.push(row);
       });
-      setIsDialogOpen(false);
-      window.location.reload();
-    } catch (error) {
-      console.error('Submit failed:', error);
-      setNotification({
-        type: "error",
-        message: "Gagal submit inspection: " + (error as Error).message,
-      });
+
+      setDocItems(docs);
+      setAseItems(ases);
+    } catch (e) {
+      setError((e as Error)?.message || "Gagal memuat data validasi");
     } finally {
-      setSubmitting(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : Array.isArray(resolvedSearchParams?.aircraftId) ? resolvedSearchParams?.aircraftId[0] : undefined;
-    const aircraftId = aircraftIdParam ? Number(aircraftIdParam) : NaN;
-    if (!aircraftId || Number.isNaN(aircraftId)) {
-      // Fallback for demo/mock if no ID
-      const mockRows: DocumentRow[] = Array(5).fill(null).map(() => ({
-        id: `mock-${Math.random()}`,
-        inspection_item_id: `mock-${Math.random()}`,
-        is_checked: false,
-        name: "SIC",
-        number: "1334",
-        revision: "001",
-        effective: "17 Oktober 2025",
-        effectiveStatus: Math.random() > 0.7 ? "warning" : undefined,
-        quantity: 10,
-        status: "approved",
-      }));
-      setDocumentGroups([mockRows, mockRows]); // Two groups as in design
-      return;
-    }
-    let ignore = false;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await skybase.inspections.aircraftValidation(aircraftId);
-        const resData = res?.data;
-        // Fix parsing untuk response structure baru
-        interface InspectionItemResponse {
-          id?: string | number;
-          inspection_item_id?: string | number;
-          is_checked?: boolean | null;
-          nama_dokumen?: string;
-          name?: string;
-          item_name?: string;
-          item?: { name?: string };
-          nomor?: string;
-          doc_number?: string;
-          serial_number?: string;
-          revisi?: string;
-          revision_no?: string;
-          efektif?: string;
-          jumlah?: number;
-        }
-
-        let items: InspectionItemResponse[] = [];
-        if (resData && typeof resData === 'object' && 'items' in resData && Array.isArray((resData as { items: unknown[] }).items)) {
-          items = (resData as { items: InspectionItemResponse[] }).items;
-        } else if (Array.isArray(resData)) {
-          items = resData as InspectionItemResponse[];
-        } else if (resData && typeof resData === 'object') {
-          // Direct object dengan items array
-          items = ((resData as { items?: InspectionItemResponse[] }).items) || [];
-        }
-
-        const rows: DocumentRow[] = items.map((it) => {
-          // Gunakan field 'efektif' langsung dari backend
-          const effective = it?.efektif || "-";
-
-          return {
-            id: it?.id || it?.inspection_item_id,
-            inspection_item_id: it?.inspection_item_id || it?.id,
-            is_checked: it?.is_checked ?? false,
-            name: it?.nama_dokumen || it?.name || it?.item_name || it?.item?.name || "-",
-            number: it?.nomor || it?.doc_number || it?.serial_number || "-",
-            revision: it?.revisi || it?.revision_no || "-",
-            effective,
-            effectiveStatus: undefined,
-            quantity: Number(it?.jumlah ?? 1) || 1,
-            status: "approved" as DocumentStatus,
-          };
-        });
-        if (!ignore) setDocumentGroups([rows]);
-      } catch (e) {
-        if (!ignore) setError((e as Error)?.message || "Gagal memuat data validasi");
-      } finally {
-        if (!ignore) setLoading(false);
-      }
-    };
-    load();
-    return () => { ignore = true; };
+    loadInspection();
   }, [resolvedSearchParams]);
 
-  const [inspectionItems, setInspectionItems] = useState<DocumentRow[]>([]);
+  const openTransferModal = async (type: "DOC" | "ASE") => {
+    setTransferType(type);
+    setIsTransferOpen(true);
+    setLoadingStock(true);
+    setStockList([]);
+    setTransferQuantities({});
 
-  // Update rows after loading data
-  useEffect(() => {
-    if (documentGroups[0]) {
-      setInspectionItems(documentGroups[0]);
+    try {
+      const res = await skybase.inventory.groundcrewAll();
+      const data = res.data;
+      let mapped: StockTransferItem[] = [];
+
+      if (type === "DOC") {
+        mapped = (data.doc_inventory || []).map((d) => ({
+          id: d.gc_doc_id,
+          name: d.item?.name || "Unknown DOC",
+          number: d.doc_number || "-",
+          qty: d.quantity,
+          expiry: d.effective_date ? new Date(d.effective_date).toLocaleDateString('id-ID') : "-",
+          originalData: d
+        }));
+      } else {
+        mapped = (data.ase_inventory || []).map((a) => ({
+          id: a.gc_ase_id,
+          name: a.item?.name || "Unknown ASE",
+          number: a.serial_number || "-",
+          qty: 1,
+          expiry: a.expires_at ? new Date(a.expires_at).toLocaleDateString('id-ID') : "-",
+          originalData: a
+        }));
+      }
+      
+      const initialQuantities: Record<number, number> = {};
+      mapped.forEach(item => initialQuantities[item.id] = 1);
+      setTransferQuantities(initialQuantities);
+
+      setStockList(mapped);
+    } catch (e) {
+      setNotification({ type: "error", message: "Gagal memuat data stok" });
+    } finally {
+      setLoadingStock(false);
     }
-  }, [documentGroups]);
+  };
+
+  const updateQuantity = (itemId: number, delta: number, max: number) => {
+    setTransferQuantities(prev => {
+        const current = prev[itemId] || 1;
+        const next = Math.max(1, Math.min(max, current + delta));
+        return { ...prev, [itemId]: next };
+    });
+  };
+
+  // PERBAIKAN UTAMA: Menggunakan skybase.inventory.transferToAircraft
+  const handleTransfer = async (item: StockTransferItem) => {
+    if (!aircraftId) return;
+    setTransferingId(item.id);
+
+    const qtyToTransfer = transferQuantities[item.id] || 1;
+
+    try {
+      // Panggil endpoint transfer umum dengan payload yang sesuai
+      await skybase.inventory.transferToAircraft({
+        type: transferType === "DOC" ? "doc" : "ase",
+        inventory_id: item.id, // ID dari inventory groundcrew (gc_doc_id atau gc_ase_id)
+        aircraft_id: aircraftId,
+        quantity: transferType === "DOC" ? qtyToTransfer : undefined
+      });
+
+      setNotification({ type: "success", message: `Berhasil transfer ${item.name} ke pesawat` });
+      setIsTransferOpen(false);
+      loadInspection(); // Refresh data validasi
+    } catch (e) {
+      console.error("Transfer failed:", e);
+      setNotification({ type: "error", message: "Gagal melakukan transfer item" });
+    } finally {
+      setTransferingId(null);
+    }
+  };
+
+  const handleDialogSelection = async (status: "delay" | "ready") => {
+    if (!inspectionId) {
+        setNotification({ type: "error", message: "Inspection ID tidak valid. Coba refresh halaman." });
+        setIsDialogOpen(false);
+        return;
+    }
+
+    try {
+      setSubmitting(true);
+      
+      const payload = {
+        status: status === "ready" ? "READY" : "DELAY",
+        notes: status === "ready" 
+          ? "All items validated and ready for flight" 
+          : "Inspection reported with issues (Delay)"
+      } as const;
+
+      await skybase.inspections.submit(inspectionId, payload);
+
+      setNotification({ type: "success", message: `Inspection berhasil disubmit (${payload.status})!` });
+      setIsDialogOpen(false);
+      
+      // Redirect ke list validasi setelah sukses
+      setTimeout(() => {
+        router.push('/groundcrew/validasi-barang');
+      }, 1000);
+
+    } catch (error) {
+      console.error("Submit error:", error);
+      setNotification({ type: "error", message: "Gagal submit inspection" });
+      setSubmitting(false);
+    }
+  };
+
+  const handleToggleItem = async (row: DocumentRow, isChecked: boolean) => {
+    const itemId = row.inspection_item_id || row.id;
+    if (!itemId) return;
+    try {
+      await skybase.inspections.toggleItem(itemId);
+      const updateList = (list: DocumentRow[]) => list.map(i => 
+        (i.inspection_item_id === itemId || i.id === itemId) ? { ...i, is_checked: isChecked } : i
+      );
+      if (row.category === "ASE") setAseItems(prev => updateList(prev));
+      else setDocItems(prev => updateList(prev));
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   const columns = useMemo<ColumnDef<DocumentRow>[]>(() => [
-    {
-      key: "name",
-      header: "Nama Dokumen",
-      align: "left"
+    { key: "name", header: "Nama Item", align: "left" },
+    { key: "number", header: "Nomor / SN", align: "left", className: "w-32 flex-shrink-0" },
+    { 
+      key: "revision", header: "Revisi", align: "left", className: "w-24 flex-shrink-0",
+      render: (val) => (val === "-" || !val) ? <span className="text-gray-400">-</span> : val
     },
     {
-      key: "number",
-      header: "Nomor",
-      align: "left",
-      className: "w-32 flex-shrink-0"
-    },
-    {
-      key: "revision",
-      header: "Revisi",
-      align: "left",
-      className: "w-24 flex-shrink-0"
-    },
-    {
-      key: "effective",
-      header: "Efektif",
-      align: "left",
-      className: "w-48 flex-shrink-0",
+      key: "effective", header: "Efektif / Exp", align: "left", className: "w-48 flex-shrink-0",
       render: (value, row) => (
         <div className="flex items-center gap-2">
           <span>{value}</span>
-          {row.effectiveStatus === "warning" && (
-            <AlertCircle className="h-4 w-4 text-[#FF4D4F]" aria-hidden="true" />
-          )}
+          {row.effectiveStatus === "warning" && <AlertCircle className="h-4 w-4 text-[#FF4D4F]" />}
         </div>
       )
     },
-    {
-      key: "quantity",
-      header: "Jumlah",
-      align: "center",
-      className: "w-24 flex-shrink-0",
-      render: (value) => <span className="font-semibold">{value}</span>
+    { 
+      key: "quantity", header: "Qty", align: "center", className: "w-20 flex-shrink-0",
+      render: (value) => <span className="font-semibold">{value}</span> 
     },
     {
-      key: "action",
-      header: "Action",
-      align: "center",
-      className: "w-24 flex-shrink-0",
-      render: () => (
+      key: "action", header: "Action", align: "center", className: "w-20 flex-shrink-0",
+      render: (_, row) => (
         <button
           type="button"
+          onClick={() => openTransferModal(row.category === "ASE" ? "ASE" : "DOC")}
           className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
-          aria-label="Tukar item"
+          aria-label="Transfer item"
         >
           <ArrowLeftRight className="h-4 w-4" strokeWidth={2.5} />
         </button>
       )
     },
     {
-      key: "status",
-      header: "Status",
-      align: "center",
-      className: "w-24 flex-shrink-0",
+      key: "status", header: "Check", align: "center", className: "w-20 flex-shrink-0",
       render: (value, row) => (
         <div className="grid place-items-center">
           <div className="relative flex items-center">
             <input
               type="checkbox"
               checked={row.is_checked === true}
-              onChange={async (e) => {
-                const newChecked = e.target.checked;
-                const itemId = row.inspection_item_id || row.id;
-
-                if (!itemId) {
-                  console.error('Item ID not found');
-                  return;
-                }
-
-                try {
-                  await skybase.inspections.toggleItem(itemId);
-
-                  // Optimistically update local state
-                  setInspectionItems(prev =>
-                    prev.map(i =>
-                      (i.inspection_item_id === itemId || i.id === itemId)
-                        ? { ...i, is_checked: newChecked }
-                        : i
-                    )
-                  );
-                } catch (error) {
-                  console.error('Toggle failed:', error);
-                  // Revert optimistic update on error
-                  setInspectionItems(prev =>
-                    prev.map(i =>
-                      (i.inspection_item_id === itemId || i.id === itemId)
-                        ? { ...i, is_checked: null }
-                        : i
-                    )
-                  );
-                }
-              }}
+              onChange={(e) => handleToggleItem(row, e.target.checked)}
               className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-gray-400 bg-transparent transition-all checked:border-[#1FC16B] checked:bg-[#1FC16B]"
             />
             <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 transition-opacity peer-checked:opacity-100">
@@ -289,133 +313,168 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
 
   return (
     <PageLayout>
-      <section className="w-full max-w-[1076px] space-y-6">
-        {/* Custom Header Layout matching design */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* Avatar/User info is in PageLayout usually, but here we just need the title part if it's separate. 
-                 The design shows "Jenis Pesawat" and "Kode Pesawat" below the main header. 
-                 We'll assume PageHeader handles the top part, and we render the specific aircraft info here.
-             */}
-          </div>
-        </div>
-
+      <section className="w-full max-w-[1076px] space-y-8">
         <div className="flex flex-wrap items-end justify-between gap-6 px-1">
           <div>
-            <span className="text-sm font-medium text-[#525252]">
-              Jenis Pesawat
-            </span>
+            <span className="text-sm font-medium text-[#525252]">Jenis Pesawat</span>
             <h2 className="mt-1 text-3xl font-bold text-[#222222]">{aircraft}</h2>
           </div>
-
           <div className="text-left md:text-right">
-            <span className="text-sm font-medium text-[#525252]">
-              Kode Pesawat
-            </span>
+            <span className="text-sm font-medium text-[#525252]">Kode Pesawat</span>
             <h2 className="mt-1 text-3xl font-normal text-[#222222]">{registration}</h2>
           </div>
         </div>
 
-        <div className="mt-6 space-y-4">
-          {documentGroups.map((group, index) => (
-            <GlassDataTable
-              key={`document-group-${index}`}
-              columns={columns}
-              data={index === 0 ? inspectionItems : group}
-              emptyMessage="Tidak ada dokumen"
-            />
-          ))}
-          {loading && documentGroups.length === 0 && (
-            <div className="text-sm text-gray-500">Memuat data...</div>
-          )}
-          {error && (
-            <div className="text-sm text-red-600">{error}</div>
-          )}
-        </div>
+        {loading && <div className="text-center text-sm text-gray-500 py-10">Memuat data inspeksi...</div>}
+        {error && <div className="text-center text-sm text-red-600 py-10">{error}</div>}
 
-        <div className="mt-8">
+        {!loading && !error && (
+            <>
+                <div className="space-y-4">
+                    <div className="px-1">
+                        <h3 className="text-xl font-semibold text-[#111827]">Validasi Dokumen</h3>
+                        <p className="text-sm text-gray-500">Kelengkapan dokumen penerbangan</p>
+                    </div>
+                    <GlassDataTable columns={columns} data={docItems} emptyMessage="Tidak ada dokumen" />
+                </div>
+
+                <div className="space-y-4">
+                    <div className="px-1">
+                        <h3 className="text-xl font-semibold text-[#111827]">Validasi ASE</h3>
+                        <p className="text-sm text-gray-500">Kelengkapan peralatan pendukung</p>
+                    </div>
+                    <GlassDataTable columns={columns} data={aseItems} emptyMessage="Tidak ada peralatan ASE" />
+                </div>
+            </>
+        )}
+
+        <div className="mt-8 pt-4 border-t border-gray-200 flex justify-end">
           <button
             type="button"
             className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setIsDialogOpen(true)}
-            disabled={submitting}
+            disabled={submitting || loading}
           >
-            Submit
+            Selesai & Submit
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
       </section>
 
-      {mounted && isDialogOpen &&
-        createPortal(
+      {/* MODAL: SUBMIT CONFIRMATION */}
+      {mounted && isDialogOpen && createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="confirmation-title"
-              className="w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl border border-white/20"
-            >
-              {/* Close Button */}
-              <div className="relative p-8 pb-4">
-                <button
-                  type="button"
-                  aria-label="Tutup dialog"
-                  onClick={() => setIsDialogOpen(false)}
-                  className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-2xl bg-red-500 text-white shadow-lg hover:bg-red-600 active:scale-95 transition-all duration-200"
-                >
-                  <X className="h-5 w-5" strokeWidth={2.5} />
-                </button>
-
-                {/* Header */}
-                <div className="text-center mb-2">
-                  <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl grid place-items-center mb-4">
-                    <ArrowLeftRight className="h-8 w-8 text-blue-600" strokeWidth={2} />
-                  </div>
-                  <h2 id="confirmation-title" className="text-2xl font-bold text-gray-900 mb-2">
-                    Submit Inspection
-                  </h2>
-                  <p className="text-gray-600 leading-relaxed max-w-sm mx-auto">
-                    Apakah Anda yakin ingin menyelesaikan dan submit inspection ini?
-                  </p>
+            <div className="w-full max-w-md rounded-3xl bg-white p-8 shadow-2xl">
+              <div className="text-center mb-6">
+                <div className="mx-auto w-16 h-16 bg-blue-100 rounded-2xl grid place-items-center mb-4">
+                  <ArrowLeftRight className="h-8 w-8 text-blue-600" />
                 </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Submit Inspection</h2>
+                <p className="text-gray-600">Apakah Anda yakin ingin menyelesaikan proses inspeksi?</p>
               </div>
-
-              {/* Action Buttons */}
-              <div className="px-8 pb-8 space-y-3">
-                <button
-                  type="button"
-                  onClick={() => handleDialogSelection("delay")}
-                  disabled={submitting}
-                  className="w-full h-14 rounded-2xl border-2 border-red-400 bg-red-50 text-red-600 font-semibold text-lg shadow-sm hover:bg-red-100 hover:border-red-500 active:scale-[0.98] transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <AlertCircle className="h-5 w-5" />
-                  Delay
+              <div className="space-y-3">
+                <button onClick={() => handleDialogSelection("delay")} disabled={submitting} className="w-full h-14 rounded-2xl border-2 border-red-400 bg-red-50 text-red-600 font-semibold flex items-center justify-center gap-2 hover:bg-red-100 active:scale-95 transition-all">
+                  {submitting ? <Loader2 className="animate-spin h-5 w-5" /> : <AlertCircle className="h-5 w-5" />} Laporkan Masalah (Delay)
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleDialogSelection("ready")}
-                  disabled={submitting}
-                  className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold text-lg shadow-lg hover:shadow-xl hover:from-blue-700 hover:to-blue-800 active:scale-[0.98] active:shadow-lg transition-all duration-200 flex items-center justify-center gap-2"
-                >
-                  <Check className="h-5 w-5" />
-                  Ready
+                <button onClick={() => handleDialogSelection("ready")} disabled={submitting} className="w-full h-14 rounded-2xl bg-[#0D63F3] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#0B53D0] active:scale-95 transition-all">
+                  {submitting ? <Loader2 className="animate-spin h-5 w-5" /> : <Check className="h-5 w-5" />} Submit Ready
                 </button>
               </div>
+              <button onClick={() => setIsDialogOpen(false)} className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700">Batal</button>
             </div>
-          </div>,
-          document.body
-        )}
+          </div>, document.body
+      )}
+
+      {/* MODAL: TRANSFER ITEM */}
+      {mounted && isTransferOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-3xl rounded-3xl bg-white shadow-2xl flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-[#F4F8FB] rounded-t-3xl">
+               <div>
+                 <h2 className="text-xl font-bold text-[#111827]">Transfer {transferType} ke Pesawat</h2>
+                 <p className="text-sm text-[#6B7280]">Pilih item dari stok groundcrew untuk ditransfer</p>
+               </div>
+               <button onClick={() => setIsTransferOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition"><X className="w-5 h-5 text-[#6B7280]" /></button>
+            </div>
+            
+            <div className="p-0 overflow-y-auto flex-1">
+               {loadingStock ? (
+                  <div className="p-10 text-center text-gray-500 flex flex-col items-center gap-2">
+                     <Loader2 className="animate-spin w-8 h-8 text-[#0D63F3]" />
+                     Memuat stok...
+                  </div>
+               ) : stockList.length === 0 ? (
+                  <div className="p-10 text-center text-gray-500">Stok {transferType} kosong di inventory Anda.</div>
+               ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-white text-gray-600 font-semibold sticky top-0 shadow-sm z-10">
+                       <tr>
+                         <th className="px-6 py-4">Nama Item</th>
+                         <th className="px-6 py-4">Nomor / SN</th>
+                         <th className="px-6 py-4">Efektif / Exp</th>
+                         {transferType === "DOC" && <th className="px-6 py-4 text-center">Qty</th>}
+                         <th className="px-6 py-4 text-center">Action</th>
+                       </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                       {stockList.map((item) => (
+                          <tr key={item.id} className="hover:bg-[#F8FAFF] transition-colors">
+                             <td className="px-6 py-4 font-medium text-[#111827]">{item.name}</td>
+                             <td className="px-6 py-4 text-[#6B7280]">{item.number}</td>
+                             <td className="px-6 py-4 text-[#6B7280]">{item.expiry}</td>
+                             
+                             {transferType === "DOC" && (
+                               <td className="px-6 py-4">
+                                 <div className="flex items-center justify-center gap-2 border border-gray-200 rounded-lg w-fit mx-auto p-1">
+                                    <button 
+                                      onClick={() => updateQuantity(item.id, -1, item.qty)}
+                                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600 disabled:opacity-50"
+                                      disabled={(transferQuantities[item.id] || 1) <= 1}
+                                    >
+                                      <Minus className="w-3 h-3" />
+                                    </button>
+                                    <span className="w-8 text-center font-medium text-sm">{transferQuantities[item.id] || 1}</span>
+                                    <button 
+                                      onClick={() => updateQuantity(item.id, 1, item.qty)}
+                                      className="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-600 disabled:opacity-50"
+                                      disabled={(transferQuantities[item.id] || 1) >= item.qty}
+                                    >
+                                      <Plus className="w-3 h-3" />
+                                    </button>
+                                 </div>
+                                 <div className="text-center text-[10px] text-gray-400 mt-1">Max: {item.qty}</div>
+                               </td>
+                             )}
+
+                             <td className="px-6 py-4 text-center">
+                                <button 
+                                  onClick={() => handleTransfer(item)}
+                                  disabled={transferingId === item.id}
+                                  className="px-4 py-2 bg-[#0D63F3] text-white rounded-lg text-xs font-semibold hover:bg-[#0B53D0] disabled:opacity-50 transition flex items-center gap-2 mx-auto shadow-sm active:scale-95"
+                                >
+                                   {transferingId === item.id ? <Loader2 className="w-3 h-3 animate-spin"/> : <ArrowRight className="w-3 h-3"/>}
+                                   Transfer
+                                </button>
+                             </td>
+                          </tr>
+                       ))}
+                    </tbody>
+                  </table>
+               )}
+            </div>
+            
+            <div className="p-4 border-t border-gray-100 bg-gray-50 rounded-b-3xl text-right">
+               <button onClick={() => setIsTransferOpen(false)} className="px-6 py-2.5 text-sm font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition">Tutup</button>
+            </div>
+          </div>
+        </div>, document.body
+      )}
+
       {notification && (
-        <Notification
-          type={notification.type}
-          message={notification.message}
-          onClose={() => setNotification(null)}
-        />
+        <Notification type={notification.type} message={notification.message} onClose={() => setNotification(null)} />
       )}
     </PageLayout>
   );
 };
 
 export default DetailValidasiBarangPage;
-

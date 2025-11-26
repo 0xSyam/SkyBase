@@ -131,6 +131,19 @@ export const authApi = {
       body: params,
     });
   },
+  async updateProfile(data: {
+    name: string;
+    email: string;
+    phone?: string | null;
+    current_password?: string;
+    new_password?: string;
+    new_password_confirmation?: string;
+  }) {
+    return request<ApiResponse<{ user: StoredUser }>>("/auth/profile", {
+      method: "PUT",
+      body: data,
+    });
+  },
   async roles() {
     return request<ApiResponse<{ roles: Array<{ role_id: number; name: string }> }>>("/auth/roles");
   },
@@ -211,6 +224,9 @@ export const itemApi = {
 };
 
 // Inventory
+// ... imports
+
+// Inventory
 export const inventoryApi = {
   groundcrewAll() {
     return request<ApiResponse<GroundcrewInventoryResponse>>("/inventory/groundcrew");
@@ -221,9 +237,20 @@ export const inventoryApi = {
   groundcrewAse() {
     return request<ApiListResponse<unknown>>("/inventory/groundcrew/ase");
   },
-  transferToAircraft(data: { aircraft_id: number; items: Array<{ item_id: number; qty: number }>; notes?: string }) {
-    return request<ApiResponse<unknown>>("/inventory/groundcrew/transfer-to-aircraft", { method: "POST", body: data });
+  
+  // UPDATE: Menggunakan endpoint dan body baru
+  transferToAircraft(data: { 
+    type: "doc" | "ase"; 
+    inventory_id: number; 
+    aircraft_id: number; 
+    quantity?: number 
+  }) {
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/transfer-to-aircraft", { 
+      method: "POST", 
+      body: data 
+    });
   },
+
   aircraftInventory(aircraftId: number | string) {
     return request<ApiResponse<AircraftInventoryResponse>>(`/inventory/aircraft/${aircraftId}`);
   },
@@ -250,6 +277,8 @@ export const inventoryApi = {
   },
 };
 
+// ... sisa file
+
 export const inspectionApi = {
   today() {
     return request<ApiListResponse<Flight>>("/inspections/today");
@@ -263,13 +292,14 @@ export const inspectionApi = {
   aircraftValidation(aircraftId: number | string) {
     return request<ApiResponse<AircraftValidation>>(`/inspections/aircraft/${aircraftId}/validation`);
   },
+  
   toggleItem(inspectionItemId: number | string) {
     return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "PUT" });
   },
   replaceItem(inspectionItemId: number | string, data: { replacement_item_id: number; notes?: string }) {
     return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/replace`, { method: "POST", body: data });
   },
-  submit(inspectionId: number | string, data: { notes?: string }) {
+  submit(inspectionId: number | string, data: { status: "READY" | "DELAY"; notes?: string }) {
     return request<ApiResponse<unknown>>(`/inspections/${inspectionId}/submit`, { method: "PUT", body: data });
   },
   summary() {
@@ -326,10 +356,18 @@ export const warehouseRequestApi = {
   create(data: WarehouseRequestCreateData) {
     return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", { method: "POST", body: data });
   },
-  approve(id: number | string) {
-    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT" });
+  // UPDATE: Tambahkan seal_number dan expires_at pada tipe data items
+  approve(id: number | string, data?: { 
+    items: Array<{ 
+      item_id: number; 
+      qty: number;
+      seal_number?: string;
+      expires_at?: string;
+    }> 
+  }) {
+    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT", body: data });
   },
-  reject(id: number | string, data: { rejection_reason: string }) {
+  reject(id: number | string, data: { rejection_reason: string; items?: Array<{ item_id: number; qty: number }> }) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data });
   },
   fulfill(id: number | string) {

@@ -5,7 +5,7 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import { Calendar } from "lucide-react";
-import { skybase } from "@/lib/api/skybase";
+import skybase from "@/lib/api/skybase";
 
 import {
 	GcDocInventory,
@@ -58,12 +58,14 @@ interface StockAddFormData {
 
 type DialogMode = "add" | null;
 
+// PERBAIKAN: Menambahkan width (w-...) dan flex-none pada kolom agar sejajar
 const columns: ColumnDef<StockItem>[] = [
   {
     key: "namaDokumen",
     header: "Nama Item",
     align: "left",
-    className: "min-w-[200px]",
+    // Flex-1 agar mengisi sisa ruang kosong
+    className: "flex-1 min-w-[180px]", 
     render: (value, row) => (
         <div className="flex flex-col">
             <span className="font-medium text-[#111827]">{value}</span>
@@ -75,12 +77,15 @@ const columns: ColumnDef<StockItem>[] = [
     key: "nomor",
     header: "Nomor / SN",
     align: "left",
-    className: "hidden md:table-cell",
+    // Fixed width agar header tidak bertabrakan dengan kolom revisi
+    className: "hidden md:flex w-48 flex-none", 
   },
   {
     key: "revisi",
     header: "Revisi",
     align: "left",
+    // Fixed width
+    className: "hidden md:flex w-32 flex-none",
     render: (value) => (
         <span className={value === "-" || !value ? "text-gray-400" : ""}>{value || "-"}</span>
     )
@@ -89,6 +94,8 @@ const columns: ColumnDef<StockItem>[] = [
     key: "efektif",
     header: "Efektif / Exp",
     align: "left",
+    // Fixed width
+    className: "w-40 flex-none",
     render: (value, row) => (
       <div className="flex items-center gap-2">
         <span>{value}</span>
@@ -101,8 +108,8 @@ const columns: ColumnDef<StockItem>[] = [
   {
     key: "jumlah",
     header: "Qty",
-    align: "center",
-    className: "w-24",
+    align: "right", // Rata kanan untuk angka biasanya lebih rapi
+    className: "w-28 flex-none",
     render: (value, row) => (
         <span className="font-semibold text-[#0D63F3]">
             {value} {row.unit || ""}
@@ -129,198 +136,176 @@ const WarehouseInventarisPage = () => {
     jumlah: "",
   });
 
-  				const fetchInventoryData = useCallback(async () => {
+  const fetchInventoryData = useCallback(async () => {
 
-  					try {
+    try {
 
-  						setLoading(true);
+      setLoading(true);
 
-  			
+      const response = await skybase.inventory.groundcrewAll();
 
-  						const response = await skybase.inventory.groundcrewAll();
+      const data = response.data;
 
-  						const data = response.data;
+      const docs = Array.isArray(data?.doc_inventory)
 
-  			
+        ? data.doc_inventory
 
-  						const docs = Array.isArray(data?.doc_inventory)
+        : [];
 
-  							? data.doc_inventory
+      const ase = Array.isArray(data?.ase_inventory) ? data.ase_inventory : [];
 
-  							: [];
+      const categorizedItems: Record<string, StockItem[]> = {};
 
-  						const ase = Array.isArray(data?.ase_inventory) ? data.ase_inventory : [];
+      const mapItemToStock = (
 
-  			
+        item: GcDocInventory | GcAseInventory,
 
-  						const categorizedItems: Record<string, StockItem[]> = {};
+        type: "DOC" | "ASE",
 
-  			
+      ) => {
 
-  						const mapItemToStock = (
+        const categoryName =
 
-  							item: GcDocInventory | GcAseInventory,
+          item.item?.category ||
 
-  							type: "DOC" | "ASE",
+          (type === "DOC" ? "Documents" : "Safety Equipment");
 
-  						) => {
+        let isExpired = false;
 
-  							const categoryName =
+        let itemQuantity = 1;
 
-  								item.item?.category ||
+        let stockItem: StockItem;
 
-  								(type === "DOC" ? "Documents" : "Safety Equipment");
+        if (type === "DOC") {
 
-  			
+          const docItem = item as GcDocInventory;
 
-  							let isExpired = false;
+          itemQuantity = docItem.quantity || 1;
 
-  							let itemQuantity = 1;
+          stockItem = {
 
-  							let stockItem: StockItem;
+            id: `doc-${docItem.gc_doc_id}`,
 
-  			
+            item_id: docItem.item_id,
 
-  							if (type === "DOC") {
+            namaDokumen: docItem.item?.name || "Unknown Item",
 
-  								const docItem = item as GcDocInventory;
+            name: docItem.item?.name,
 
-  								itemQuantity = docItem.quantity || 1;
+            nomor: docItem.doc_number || "-",
 
-  								stockItem = {
+            revisi: docItem.revision_no || "-",
 
-  									id: `doc-${docItem.gc_doc_id}`,
+            efektif: formatDate(docItem.effective_date),
 
-  									item_id: docItem.item_id,
+            hasAlert: isExpired,
 
-  									namaDokumen: docItem.item?.name || "Unknown Item",
+            jumlah: itemQuantity,
 
-  									name: docItem.item?.name,
+            unit: docItem.item?.unit || "unit",
 
-  									nomor: docItem.doc_number || "-",
+            category: categoryName,
 
-  									revisi: docItem.revision_no || "-",
+            type: type,
 
-  									efektif: formatDate(docItem.effective_date),
+          };
 
-  									hasAlert: isExpired,
+        } else {
 
-  									jumlah: itemQuantity,
 
-  									unit: docItem.item?.unit || "unit",
+          const aseItem = item as GcAseInventory;
 
-  									category: categoryName,
+          if (aseItem.expires_at) {
 
-  									type: type,
+            const expiryDate = new Date(aseItem.expires_at);
 
-  								};
+            const today = new Date();
 
-  							} else {
+            if (expiryDate < today) isExpired = true;
 
+          }
 
-  								const aseItem = item as GcAseInventory;
+          itemQuantity = aseItem.quantity || 1;
 
-  								if (aseItem.expires_at) {
+          stockItem = {
 
-  									const expiryDate = new Date(aseItem.expires_at);
+            id: `ase-${aseItem.gc_ase_id}`,
 
-  									const today = new Date();
+            item_id: aseItem.item_id,
 
-  									if (expiryDate < today) isExpired = true;
+            namaDokumen: aseItem.item?.name || "Unknown Item",
 
-  								}
+            name: aseItem.item?.name,
 
-  								itemQuantity = aseItem.quantity || 1;
+            nomor: aseItem.serial_number || "-",
 
-  								stockItem = {
+            revisi: "-",
 
-  									id: `ase-${aseItem.gc_ase_id}`,
+            efektif: formatDate(aseItem.expires_at),
 
-  									item_id: aseItem.item_id,
+            hasAlert: isExpired,
 
-  									namaDokumen: aseItem.item?.name || "Unknown Item",
+            jumlah: itemQuantity,
 
-  									name: aseItem.item?.name,
+            unit: aseItem.item?.unit || "unit",
 
-  									nomor: aseItem.serial_number || "-",
+            category: categoryName,
 
-  									revisi: "-",
+            type: type,
 
-  									efektif: formatDate(aseItem.expires_at),
+          };
 
-  									hasAlert: isExpired,
+        }
 
-  									jumlah: itemQuantity,
+        if (!categorizedItems[categoryName]) {
 
-  									unit: aseItem.item?.unit || "unit",
+          categorizedItems[categoryName] = [];
 
-  									category: categoryName,
+        }
 
-  									type: type,
+        categorizedItems[categoryName].push(stockItem);
 
-  								};
+      };
 
-  							}
+      docs.forEach((d: GcDocInventory) => mapItemToStock(d, "DOC"));
 
-  			
+      ase.forEach((a: GcAseInventory) => mapItemToStock(a, "ASE"));
 
-  							if (!categorizedItems[categoryName]) {
+      const groups: StockGroup[] = Object.entries(categorizedItems).map(
 
-  								categorizedItems[categoryName] = [];
+        ([category, items]) => ({
 
-  							}
+          id: category.toLowerCase().replace(/\s+/g, "-"),
 
-  							categorizedItems[categoryName].push(stockItem);
+          title: category,
 
-  						};
+          items,
 
-  			
+        }),
 
-  						docs.forEach((d: GcDocInventory) => mapItemToStock(d, "DOC"));
+      );
 
-  						ase.forEach((a: GcAseInventory) => mapItemToStock(a, "ASE"));
+      setStockGroups(groups);
 
-  			
+      if (groups.length > 0 && !expandedGroupId) {
 
-  						const groups: StockGroup[] = Object.entries(categorizedItems).map(
+        setExpandedGroupId(groups[0].id);
 
-  							([category, items]) => ({
+      }
 
-  								id: category.toLowerCase().replace(/\s+/g, "-"),
+    } catch (error) {
 
-  								title: category,
+      console.error("Failed to fetch inventory data:", error);
 
-  								items,
+      setStockGroups([]);
 
-  							}),
+    } finally {
 
-  						);
+      setLoading(false);
 
-  			
+    }
 
-  						setStockGroups(groups);
-
-  			
-
-  						if (groups.length > 0 && !expandedGroupId) {
-
-  							setExpandedGroupId(groups[0].id);
-
-  						}
-
-  					} catch (error) {
-
-  						console.error("Failed to fetch inventory data:", error);
-
-  						setStockGroups([]);
-
-  					} finally {
-
-  						setLoading(false);
-
-  					}
-
-  				}, [expandedGroupId]);	useEffect(() => {
+  }, [expandedGroupId]);	useEffect(() => {
 		setMounted(true);
 		fetchInventoryData();
 	}, [fetchInventoryData]);

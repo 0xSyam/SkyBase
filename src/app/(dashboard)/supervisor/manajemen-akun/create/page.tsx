@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import skybase from "@/lib/api/skybase";
+import { Eye, EyeOff } from "lucide-react"; // Tambahkan import icon
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -13,13 +14,16 @@ export default function CreateUserPage() {
     name: "",
     email: "",
     phone: "",
-    role: "groundcrew" as "groundcrew" | "warehouse" | "supervisor",
+    role: "groundcrew" as "groundcrew" | "warehouse",
     password: "",
     password_confirmation: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  
+  // State untuk toggle password visibility
+  const [showPassword, setShowPassword] = useState(false); 
 
   const handleCancel = () => {
     router.push("/supervisor/manajemen-akun");
@@ -35,7 +39,7 @@ export default function CreateUserPage() {
         name: createForm.name.trim(),
         email: createForm.email.trim(),
         phone: createForm.phone.trim() || null,
-        role: createForm.role === "supervisor" ? "warehouse" : createForm.role,
+        role: createForm.role,
         password: createForm.password,
       };
 
@@ -89,7 +93,7 @@ export default function CreateUserPage() {
 
               <div className="flex flex-col items-center gap-1">
                 <h2 className="text-2xl font-semibold text-[#0F172A]">{createForm.name || "Nama Kosong"}</h2>
-                <span className="text-base text-[#6B7280]">{createForm.role === "supervisor" ? "Supervisor" : createForm.role === "warehouse" ? "Warehouse" : "Groundcrew"}</span>
+                <span className="text-base text-[#6B7280]">{createForm.role === "warehouse" ? "Warehouse" : "Groundcrew"}</span>
               </div>
 
               <div className="text-sm text-[#6B7280]">
@@ -137,25 +141,38 @@ export default function CreateUserPage() {
                   Role
                   <select
                     value={createForm.role}
-                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as "groundcrew" | "warehouse" | "supervisor" })}
+                    onChange={(e) => setCreateForm({ ...createForm, role: e.target.value as "groundcrew" | "warehouse" })}
                     className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                   >
                     <option value="groundcrew">groundcrew</option>
                     <option value="warehouse">warehouse</option>
-                    <option value="supervisor">supervisor</option>
                   </select>
                 </label>
 
                 <label className="flex flex-col gap-2 text-sm font-medium text-[#0F172A]">
                   Password
-                  <input
-                    type="password"
-                    value={createForm.password}
-                    onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                    className="rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                    required
-                    minLength={6}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"} // Toggle tipe input
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                      className="w-full rounded-xl border border-[#E5E7EB] bg-white px-4 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 pr-10"
+                      required
+                      minLength={6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
                 </label>
               </div>
 

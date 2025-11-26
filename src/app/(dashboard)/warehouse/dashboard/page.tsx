@@ -49,7 +49,7 @@ const RequestSummaryTable: React.FC<{ data: { documentName: string; quantity: nu
     </div>
 
     <WhiteCard className="overflow-hidden">
-      <div className="grid grid-cols-2 bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl">
+      <div className="grid grid-cols-[1fr_100px] bg-[#F4F8FB] px-4 py-3 text-sm font-medium text-[#222222] rounded-t-xl">
         <span>Nama Item</span>
         <span className="text-right">Jumlah Request</span>
       </div>
@@ -62,10 +62,10 @@ const RequestSummaryTable: React.FC<{ data: { documentName: string; quantity: nu
         {data.map((item, index) => (
           <div
             key={index}
-            className="grid grid-cols-2 px-4 h-[56px] items-center text-sm text-[#222222]"
+            className="grid grid-cols-[1fr_100px] px-4 h-[56px] items-center text-sm text-[#222222]"
           >
             <span className="truncate font-medium">{item.documentName}</span>
-            <span className="text-right">{item.quantity}</span>
+            <span className="text-right font-semibold">{item.quantity}</span>
           </div>
         ))}
       </div>
@@ -225,7 +225,8 @@ export default function WarehouseDashboardPage() {
             </div>
 
             <WhiteCard className="overflow-hidden">
-              <div className="grid grid-cols-[1fr_auto_auto] bg-[#F4F8FB] px-4 py-2 text-sm font-medium text-[#222222] rounded-t-xl gap-x-8">
+              {/* Menggunakan Grid dengan lebar kolom tetap agar sejajar antara header dan baris data */}
+              <div className="grid grid-cols-[1fr_70px_80px] bg-[#F4F8FB] px-4 py-3 text-sm font-medium text-[#222222] rounded-t-xl gap-x-2">
                 <span>Nama Item</span>
                 <span className="text-center">Status</span>
                 <span className="text-right">Jumlah</span>
@@ -239,11 +240,23 @@ export default function WarehouseDashboardPage() {
                 {historyTableData.map((row) => (
                   <div
                     key={`his-${row.id}`}
-                    className="grid grid-cols-[1fr_auto_auto] px-4 h-[56px] items-center text-sm text-[#222222] gap-x-8"
+                    className="grid grid-cols-[1fr_70px_80px] px-4 h-[56px] items-center text-sm text-[#222222] gap-x-2"
                   >
-                    <span className="truncate font-medium">{row.document}</span>
-                    <span className="text-center">{row.status}</span>
-                    <span className="text-right">{row.jumlah}</span>
+                    <span className="truncate font-medium" title={row.document}>{row.document}</span>
+                    <div className="flex justify-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                          row.status === "APPROVED"
+                            ? "bg-green-100 text-green-700"
+                            : row.status === "REJECTED"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                    </div>
+                    <span className="text-right font-semibold">{row.jumlah}</span>
                   </div>
                 ))}
               </div>
