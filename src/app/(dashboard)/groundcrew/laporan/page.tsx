@@ -7,7 +7,16 @@ import GlassCard from "@/component/Glasscard";
 import Notification from "@/component/Notification";
 import { Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
-import type { Flight } from "@/types/api";
+import { useRouter } from "next/navigation";
+import type { Flight, AircraftStatusReport } from "@/types/api";
+import { 
+  generateStatusReportPDF, 
+  generateRecapPDF, 
+  type PDFItem,
+  type RecapData,
+  type RecapFlight,
+  type RecapSection
+} from "@/lib/pdfGenerator";
 
 interface ReportSchedule {
   id: string;
@@ -17,19 +26,19 @@ interface ReportSchedule {
   destination: string;
   aircraftId?: number;
   depISO?: string | null;
-  arrISO?: string | null;
 }
 
-interface ReportSection {
+interface ReportSectionUI {
   id: string;
   title: string;
   schedules: ReportSchedule[];
 }
 
 export default function GroundcrewLaporanPage() {
+  const router = useRouter();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [sections, setSections] = useState<ReportSection[]>([]);
+  const [sections, setSections] = useState<ReportSectionUI[]>([]);
   const [loading, setLoading] = useState(false);
   
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -37,177 +46,211 @@ export default function GroundcrewLaporanPage() {
   const [downloadingRange, setDownloadingRange] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
- useEffect(() => {
-     let ignore = false;
-     const load = async () => {
-         setLoading(true);
-         try {
-             const res = await skybase.flights.list();
-             const data = res?.data;
-             let flights: Flight[] = [];
-             if (Array.isArray(data)) {
-                 if (data.length > 0 && 'flight_id' in data[0]) {
-                     flights = data as unknown as Flight[];
-                 }
-             } else if (data && 'flights' in data && Array.isArray(data.flights)) {
-                 flights = data.flights;
-             }
-             if (!ignore) {
-                 const byDate = new Map<string, ReportSection>();
-                 const fmtDate = (d: Date) => {
-                      try {
-                          return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
-                      } catch {
-                          return d.toDateString();
-                      }
-                  };
+  useEffect(() => {
+      let ignore = false;
+      const load = async () => {
+          setLoading(true);
+          try {
+              const res = await skybase.flights.list();
+              const data = res?.data;
+              let flights: Flight[] = [];
+              if (Array.isArray(data)) {
+                  if (data.length > 0 && 'flight_id' in data[0]) {
+                      flights = data as unknown as Flight[];
+                  }
+              } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+                  flights = data.flights;
+              }
+              if (!ignore) {
+                  const byDate = new Map<string, ReportSectionUI>();
+                  const fmtDate = (d: Date) => d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
                   const toTime = (s?: string | null) => {
                       if (!s) return "--:-- WIB";
                       try {
                           const d = new Date(s);
                           return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-                      } catch {
-                          return "--:-- WIB";
-                      }
+                      } catch { return "--:-- WIB"; }
                   };
-                 for (const f of flights) {
-                     const basis = f?.sched_dep || f?.created_at || f?.sched_arr || null;
+
+                  for (const f of flights) {
+                      const basis = f?.sched_dep || f?.created_at || null;
                       if (!basis) continue;
                       const dt = new Date(basis);
                       const id = dt.toISOString().slice(0, 10);
                       const title = fmtDate(dt);
                       const sec = byDate.get(id) ?? { id, title, schedules: [] };
+                      
+                      const schedule: ReportSchedule = {
+                          id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
+                          timeRange: `${toTime(f?.sched_dep)} - ${toTime(f?.sched_arr)}`,
+                          aircraft: f?.aircraft?.type ?? "-",
+                          registration: f?.aircraft?.registration_code ?? "-",
+                          destination: f?.route_to ?? "-",
+                          aircraftId: f?.aircraft?.aircraft_id,
+                          depISO: f?.sched_dep ?? null,
+                      };
+                      sec.schedules.push(schedule);
+                      byDate.set(id, sec);
+                  }
+                  const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
+                  setSections(sorted);
+              }
+          } catch {
+              if (!ignore) setSections([]);
+          } finally {
+              if (!ignore) setLoading(false);
+          }
+      };
+      load();
+      return () => { ignore = true; };
+  }, [router]);
 
-                     const item: ReportSchedule = {
-                         id: String(f.flight_id ?? Math.random()),
-                         timeRange: `${toTime(f?.sched_dep ?? null)} - ${toTime(f?.sched_arr ?? null)}`,
-                         aircraft: f?.aircraft?.type ?? "-",
-                         registration: f?.aircraft?.registration_code ?? "-",
-                         destination: f?.route_to ?? "-",
-                         aircraftId: f?.aircraft?.aircraft_id,
-                         depISO: f?.sched_dep ?? null,
-                         arrISO: f?.sched_arr ?? null,
-                     };
-                     sec.schedules.push(item);
-                     byDate.set(id, sec);
-                 }
-                 const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
-                 setSections(sorted);
-             }
-         } catch {
-             if (!ignore) setSections([]);
-         } finally {
-             if (!ignore) setLoading(false);
-         }
-     };
-     load();
-     return () => { ignore = true; };
- }, []);
-
- const filteredSections = useMemo(() => {
-    const tStart = startDate.trim() ? new Date(startDate) : null;
-    const tEnd = endDate.trim() ? new Date(endDate) : null;
-
+  const filteredSections = useMemo(() => {
+    const tStart = startDate ? new Date(startDate) : null;
+    const tEnd = endDate ? new Date(endDate) : null;
     if (!tStart && !tEnd) return sections;
 
     return sections.filter((sec) => {
         const secDate = new Date(sec.id);
         secDate.setHours(0, 0, 0, 0);
-        if (tStart) {
-            tStart.setHours(0,0,0,0);
-            if (secDate < tStart) return false;
-        }
-        if (tEnd) {
-            tEnd.setHours(0,0,0,0);
-            if (secDate > tEnd) return false;
-        }
+        if (tStart) { tStart.setHours(0,0,0,0); if (secDate < tStart) return false; }
+        if (tEnd) { tEnd.setHours(0,0,0,0); if (secDate > tEnd) return false; }
         return true;
     });
   }, [sections, startDate, endDate]);
 
+  // --- HELPER: Fetch Inventory Items ---
+  const fetchAndMapInventory = async (aircraftId: number): Promise<PDFItem[]> => {
+    try {
+      const res = await skybase.inventory.aircraftInventory(aircraftId);
+      const inv = res.data;
+      
+      const fmtDate = (d: string | null | undefined) => {
+         if(!d) return "-";
+         try {
+            return new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: '2-digit' });
+         } catch { return "-"; }
+      };
+
+      const docs: PDFItem[] = (inv.doc_inventory || []).map((d, idx) => ({
+        category: "A. General Operation Manuals", 
+        no: idx + 1,
+        name: d.item?.name || d.doc_number || "Document",
+        revisionNo: d.revision_no || "Original",
+        revisionDate: fmtDate(d.updated_at),
+        effectiveDate: fmtDate(d.effective_date)
+      }));
+
+      const ases: PDFItem[] = (inv.ase_inventory || []).map((a, idx) => ({
+        category: "B. Equipment & Charts",
+        no: idx + 1,
+        name: a.item?.name || "Equipment",
+        revisionNo: a.serial_number || "-",
+        revisionDate: "-",
+        effectiveDate: fmtDate(a.expires_at)
+      }));
+
+      return [...docs, ...ases];
+    } catch (error) {
+      console.error("Failed to fetch inventory:", error);
+      return [];
+    }
+  };
+
+  // --- DOWNLOAD REKAP (Range) ---
   const handleDownloadRange = async () => {
     setDownloadingRange(true);
     try {
-      const dataToExport = {
-        period: { start: startDate || "Semua", end: endDate || "Semua" },
-        generated_at: new Date().toISOString(),
-        total_days: filteredSections.length,
-        total_flights: filteredSections.reduce((acc, sec) => acc + sec.schedules.length, 0),
-        data: filteredSections
+      const pdfSections: RecapSection[] = [];
+
+      for (const section of filteredSections) {
+        const recapFlights: RecapFlight[] = [];
+
+        const flightPromises = section.schedules.map(async (sch) => {
+             let items: PDFItem[] = [];
+             if (sch.aircraftId) {
+                 items = await fetchAndMapInventory(sch.aircraftId);
+             }
+             
+             return {
+                 timeRange: sch.timeRange,
+                 aircraft: sch.aircraft,
+                 registration: sch.registration,
+                 destination: sch.destination,
+                 items: items
+             };
+        });
+
+        const resolvedFlights = await Promise.all(flightPromises);
+        if (resolvedFlights.length > 0) {
+            pdfSections.push({
+                title: section.title,
+                flights: resolvedFlights
+            });
+        }
+      }
+
+      if (pdfSections.length === 0) {
+        setNotification({ type: "error", message: "Tidak ada data penerbangan untuk direkap." });
+        return;
+      }
+
+      const recapData: RecapData = {
+          period: `${startDate || "Awal"} s/d ${endDate || "Akhir"}`,
+          sections: pdfSections
       };
       
-      const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `gc-rekap-laporan.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
+      generateRecapPDF(recapData, `GC-Rekap-Laporan-${startDate || "All"}-to-${endDate || "All"}.pdf`);
       setNotification({ type: "success", message: "Rekap laporan berhasil diunduh" });
-      setTimeout(() => setNotification(null), 3000);
     } catch (e) {
+      console.error(e);
       setNotification({ type: "error", message: "Gagal mengunduh rekap laporan" });
     } finally {
       setDownloadingRange(false);
     }
   };
 
-  const handleDownloadSection = async (section: ReportSection) => {
+  // --- DOWNLOAD PER HARI (Section) ---
+  const handleDownloadSection = async (section: ReportSectionUI) => {
     setDownloadingSectionId(section.id);
     try {
-      const dateObj = new Date(section.id);
-      const fromISO = new Date(dateObj.setHours(0, 0, 0, 0)).toISOString();
-      const toISO = new Date(dateObj.setHours(23, 59, 59, 999)).toISOString();
-
-      const promises = section.schedules
-        .filter(s => s.aircraftId)
-        .map(async (s) => {
-             const res = await skybase.reports.aircraftStatus({
-                aircraft_id: s.aircraftId!,
-                from_date: fromISO,
-                to_date: toISO,
-                group_by: "daily",
-                type: "ALL",
-             });
-             return {
-                 schedule: s,
-                 report: res.data
-             };
+        const flightPromises = section.schedules.map(async (sch) => {
+            let items: PDFItem[] = [];
+            if (sch.aircraftId) {
+                items = await fetchAndMapInventory(sch.aircraftId);
+            }
+            return {
+                timeRange: sch.timeRange,
+                aircraft: sch.aircraft,
+                registration: sch.registration,
+                destination: sch.destination,
+                items: items
+            };
         });
 
-      const results = await Promise.all(promises);
-      
-      const exportBlob = new Blob(
-        [JSON.stringify({ 
-            date: section.title, 
-            total_flights: results.length,
-            reports: results 
-        }, null, 2)], 
-        { type: "application/json" }
-      );
+        const flights = await Promise.all(flightPromises);
+        
+        const recapData: RecapData = {
+            period: section.title,
+            sections: [{
+                title: section.title,
+                flights: flights
+            }]
+        };
 
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(exportBlob);
-      a.download = `gc-laporan-harian-${section.id}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(a.href);
+        generateRecapPDF(recapData, `GC-Laporan-Harian-${section.id}.pdf`);
+        setNotification({ type: "success", message: `Laporan harian ${section.title} berhasil diunduh.` });
 
-      setNotification({ type: "success", message: `Laporan harian ${section.title} berhasil diunduh.` });
-      setTimeout(() => setNotification(null), 3000);
     } catch (error) {
-      console.error("Section download error:", error);
-      setNotification({ type: "error", message: "Gagal mengunduh laporan harian." });
+        console.error(error);
+        setNotification({ type: "error", message: "Gagal mengunduh laporan harian." });
     } finally {
-      setDownloadingSectionId(null);
+        setDownloadingSectionId(null);
     }
   };
 
- const handleDownloadItem = async (schedule: ReportSchedule, dateStr: string) => {
+  // --- DOWNLOAD SATUAN ---
+  const handleDownloadItem = async (schedule: ReportSchedule, dateStr: string) => {
     if (!schedule.aircraftId) {
       setNotification({ type: "error", message: "ID pesawat tidak valid" });
       return;
@@ -215,45 +258,34 @@ export default function GroundcrewLaporanPage() {
     
     setDownloadingId(schedule.id);
     try {
-      const dateObj = new Date(dateStr);
-      const fromISO = new Date(dateObj.setHours(0, 0, 0, 0)).toISOString();
-      const toISO = new Date(dateObj.setHours(23, 59, 59, 999)).toISOString();
+      const items = await fetchAndMapInventory(schedule.aircraftId);
 
-      const res = await skybase.reports.aircraftStatus({
-        aircraft_id: schedule.aircraftId,
-        from_date: fromISO,
-        to_date: toISO,
-        group_by: "daily",
-        type: "ALL",
-      });
-      
-      const exportBlob = new Blob(
-        [JSON.stringify(res.data, null, 2)], 
-        { type: "application/json" }
-      );
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(exportBlob);
-      a.download = `gc-laporan-${schedule.registration}-${dateStr}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
+      const reportDataMock = {
+         aircraft: {
+             registration_code: schedule.registration,
+             type: schedule.aircraft,
+             aircraft_id: schedule.aircraftId
+         },
+         period: { from: dateStr, to: dateStr, interval: 'daily' },
+         summary: { inventory_health: {} as any, inspection_performance: {} as any },
+         current_inventory: { by_category: {} as any } as any,
+         timeline: {}
+      };
+
+      // @ts-ignore 
+      generateStatusReportPDF(reportDataMock, `GC-Laporan-${schedule.registration}.pdf`, items);
 
       setNotification({ type: "success", message: "Laporan berhasil diunduh" });
-      setTimeout(() => setNotification(null), 3000);
     } catch (e) {
-      console.error("Failed to download report", e);
-      setNotification({
-        type: "error",
-        message: "Gagal mengunduh laporan. Coba lagi.",
-      });
+      console.error(e);
+      setNotification({ type: "error", message: "Gagal mengunduh laporan." });
     } finally {
       setDownloadingId(null);
     }
   };
 
   return (
-    <PageLayout>
+    <PageLayout sidebarRole="groundcrew">
       {notification && (
         <Notification
           type={notification.type}
@@ -318,6 +350,10 @@ export default function GroundcrewLaporanPage() {
           {(loading && filteredSections.length === 0) && (
             <div className="text-center text-sm text-gray-500">Memuat laporan...</div>
           )}
+          {!loading && filteredSections.length === 0 && (
+             <div className="text-center text-sm text-gray-500">Tidak ada data laporan.</div>
+          )}
+
           {filteredSections.map((section) => (
             <GlassCard
               key={section.id}
@@ -329,63 +365,70 @@ export default function GroundcrewLaporanPage() {
                 </h2>
                 
                 <button
-                    type="button"
-                    onClick={() => handleDownloadSection(section)}
-                    disabled={downloadingSectionId === section.id}
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {downloadingSectionId === section.id ? (
-                        <>
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                          <span>Mengunduh...</span>
-                        </>
-                    ) : (
-                        <>
-                          <Download className="h-4 w-4" />
-                          <span>Unduh Laporan</span>
-                        </>
-                    )}
-                  </button>
+                  type="button"
+                  onClick={() => handleDownloadSection(section)}
+                  disabled={downloadingSectionId === section.id}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {downloadingSectionId === section.id ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span>Mengunduh...</span>
+                      </>
+                  ) : (
+                      <>
+                        <Download className="h-4 w-4" />
+                        <span>Unduh Laporan</span>
+                      </>
+                  )}
+                </button>
               </div>
 
-              <div className="bg-white/90">
-                {section.schedules.map((schedule, index) => (
-                  <div
-                    key={schedule.id}
-                    className={`flex flex-wrap items-center justify-between gap-4 px-4 md:px-8 py-5 ${index === 0 ? "" : "border-t border-[#E4E9F2]"
-                      }`}
-                  >
-                    <div className="space-y-2">
-                      <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
-                        {schedule.timeRange}
-                      </p>
-                      <p className="text-base md:text-lg font-semibold text-[#111827]">
-                        {schedule.aircraft}{" "}
-                        <span className="font-semibold">{schedule.registration}</span>
-                      </p>
-                      <p className="text-sm text-[#667085]">
-                        Destination:{" "}
-                        <span className="font-semibold text-[#111827]">
-                          {schedule.destination}
-                        </span>
-                      </p>
-                    </div>
-
-                    <button
-                        type="button"
-                        onClick={() => handleDownloadItem(schedule, section.id)}
-                        disabled={downloadingId === schedule.id}
-                        className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_4px_12px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Unduh Detail"
-                      >
-                        {downloadingId === schedule.id ? (
-                          <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                        ) : (
-                          <Download className="h-5 w-5" strokeWidth={2} />
-                        )}
-                    </button>
+              <div className="px-4 md:px-6 pb-6">
+                <div className="overflow-hidden rounded-2xl bg-white/90 ring-1 ring-[#E4E9F2]">
+                  <div className="flex items-center justify-between bg-[#F4F8FB] px-5 py-4 text-sm font-semibold text-[#111827]">
+                    <span>Jadwal</span>
                   </div>
-                ))}
+
+                  {section.schedules.map((schedule, index) => (
+                    <div
+                      key={schedule.id}
+                      className={`flex flex-wrap items-center justify-between gap-4 px-5 py-5 ${
+                        index === 0 ? "" : "border-t border-[#E4E9F2]"
+                      }`}
+                    >
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
+                          {schedule.timeRange}
+                        </p>
+                        <p className="text-base md:text-lg font-semibold text-[#111827]">
+                          {schedule.aircraft}{" "}
+                          <span className="font-semibold">{schedule.registration}</span>
+                        </p>
+                        <p className="text-sm text-[#667085]">
+                          Destination:{" "}
+                          <span className="font-semibold text-[#111827]">
+                            {schedule.destination}
+                          </span>
+                        </p>
+                      </div>
+
+                      <button
+                          type="button"
+                          onClick={() => handleDownloadItem(schedule, section.id)}
+                          disabled={downloadingId === schedule.id}
+                          className="grid h-10 w-10 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_4px_12px_rgba(13,99,243,0.35)] transition hover:bg-[#0A4EC1] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Unduh Detail"
+                      >
+                          {downloadingId === schedule.id ? (
+                            <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          ) : (
+                            <Download className="h-5 w-5" strokeWidth={2} />
+                          )}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </GlassCard>
           ))}

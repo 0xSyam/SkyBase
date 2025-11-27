@@ -16,6 +16,7 @@ import type {
   WarehouseRequest,
   WarehouseRequestCreateData,
   AircraftStatusReport,
+  Aircraft, // Pastikan Aircraft diimport atau tambahkan di types/api.ts jika belum ada
 } from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://skybase.novarentech.web.id/api";
@@ -198,6 +199,13 @@ export const flightApi = {
   },
 };
 
+// Aircraft
+export const aircraftApi = {
+  list() {
+    return request<ApiResponse<Aircraft[]>>("/aircraft");
+  },
+};
+
 // Items
 export const itemApi = {
   list(params?: { page?: number; per_page?: number; search?: string }) {
@@ -224,9 +232,6 @@ export const itemApi = {
 };
 
 // Inventory
-// ... imports
-
-// Inventory
 export const inventoryApi = {
   groundcrewAll() {
     return request<ApiResponse<GroundcrewInventoryResponse>>("/inventory/groundcrew");
@@ -238,7 +243,6 @@ export const inventoryApi = {
     return request<ApiListResponse<unknown>>("/inventory/groundcrew/ase");
   },
   
-  // UPDATE: Menggunakan endpoint dan body baru
   transferToAircraft(data: { 
     type: "doc" | "ase"; 
     inventory_id: number; 
@@ -276,8 +280,6 @@ export const inventoryApi = {
     return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "DELETE" });
   },
 };
-
-// ... sisa file
 
 export const inspectionApi = {
   today() {
@@ -356,7 +358,6 @@ export const warehouseRequestApi = {
   create(data: WarehouseRequestCreateData) {
     return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", { method: "POST", body: data });
   },
-  // UPDATE: Tambahkan seal_number dan expires_at pada tipe data items
   approve(id: number | string, data?: { 
     items: Array<{ 
       item_id: number; 
@@ -381,6 +382,7 @@ export const skybase = {
   auth: authApi,
   dashboard: dashboardApi,
   flights: flightApi,
+  aircraft: aircraftApi, // Added aircraft
   items: itemApi,
   inventory: inventoryApi,
   inspections: inspectionApi,

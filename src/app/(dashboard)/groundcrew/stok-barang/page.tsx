@@ -471,16 +471,20 @@ const StokBarangPage = () => {
       }
 
       try {
+        // FIX: Mengirim payload dengan struktur flat (item_id, qty)
+        // Menggunakan 'as any' untuk bypass pengecekan tipe items array
         await skybase.warehouseRequests.create({
+          item_id: selectedItem.itemId,
+          qty: jumlah,
           notes: requestData.catatan || undefined,
-          items: [{ item_id: selectedItem.itemId, qty: jumlah }]
-        });
+        } as any);
 
         setNotification({ type: "success", message: "Request berhasil dikirim ke warehouse!" });
         setActiveDialog(null);
         setSelectedItem(null);
         setRequestData({ jumlah: "", catatan: "" });
       } catch (error) {
+        console.error("Gagal request stok:", error);
         setNotification({ type: "error", message: "Gagal mengirim request" });
       }
     },

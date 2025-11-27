@@ -124,12 +124,13 @@ export default function TopBar({
   };
 
   return (
-    // PERBAIKAN UTAMA: overflow-visible dan z-50
+    // FIX: overflow-visible agar dropdown tidak terpotong, rounded-[20px] visual card
     <GlassCard className="w-full rounded-[20px] overflow-visible z-50">
       <header className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6" role="banner">
+        {/* Bagian Profile bisa diklik (Link) */}
         <Link
           href={profileHref}
-          className="inline-flex items-center gap-3 rounded-full px-1.5 md:px-2 py-1 transition hover:bg-white/40"
+          className="inline-flex items-center gap-3 rounded-full pr-3 py-1 transition hover:bg-white/40 cursor-pointer"
           onClick={handleProfileClick}
         >
            <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">

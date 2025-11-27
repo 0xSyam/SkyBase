@@ -1,6 +1,7 @@
 "use client";
 
 import React, { PropsWithChildren, useId } from "react";
+import { cn } from "@/lib/utils";
 
 type GlassCardProps = PropsWithChildren<{
   className?: string;
@@ -12,7 +13,11 @@ export default function GlassCard({ children, className = "" }: GlassCardProps) 
 
   return (
     <div
-      className={`relative flex flex-col items-center overflow-hidden rounded-xl bg-transparent shadow-[2px_4px_25px_0_rgba(93,121,133,0.20)] transition-all ${className}`}
+      className={cn(
+        // Default rounded-xl (12px), tapi bisa ditimpa via className
+        "relative flex flex-col items-center overflow-hidden rounded-xl bg-transparent shadow-[2px_4px_25px_0_rgba(93,121,133,0.20)] transition-all",
+        className
+      )}
     >
       {/* BLUR layer */}
       <div
@@ -20,17 +25,21 @@ export default function GlassCard({ children, className = "" }: GlassCardProps) 
         style={{
           backdropFilter: "blur(4px)",
           filter: `url(#${filterId})`,
-          borderRadius: "inherit",
+          borderRadius: "inherit", // PENTING: Mewarisi radius dari parent
         }}
       />
       {/* TINT layer */}
-      <div className="absolute inset-0 z-[1] bg-white/50 rounded-inherit" />
+      <div 
+        className="absolute inset-0 z-[1] bg-white/50" 
+        style={{ borderRadius: "inherit" }} // FIX: Gunakan style, bukan class rounded-inherit
+      />
       {/* SHINE layer */}
       <div
-        className="absolute inset-0 z-[2] rounded-inherit"
+        className="absolute inset-0 z-[2]"
         style={{
           boxShadow:
             "inset 2px 2px 1px 0 rgba(255, 255, 255, 0.5), inset -1px -1px 1px 1px rgba(255, 255, 255, 0.5)",
+          borderRadius: "inherit", // FIX: Pastikan shine juga mengikuti radius
         }}
       />
       {/* CONTENT */}

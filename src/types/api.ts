@@ -58,6 +58,8 @@ export type Aircraft = {
   aircraft_id: number;
   registration_code: string | null;
   type: string | null;
+  type_code?: string | null; // Added to support /aircraft endpoint
+  notes?: string | null;
 };
 
 export type AircraftType = {
@@ -157,6 +159,7 @@ export type AircraftDocInventory = {
   condition: string | null;
   created_at: string | null;
   updated_at: string | null;
+  item?: ItemCatalog;
 };
 
 export type AircraftAseInventory = {
@@ -169,6 +172,7 @@ export type AircraftAseInventory = {
   condition: string | null;
   created_at: string | null;
   updated_at: string | null;
+  item?: ItemCatalog;
 };
 
 export type GroundcrewInventoryResponse = {
@@ -328,9 +332,21 @@ export type InspectionPerformance = {
   pass_rate: number;
 };
 
+export type TimelineEntry = {
+  inspections: unknown[];
+  count: number;
+  summary: {
+    total_inspections: number;
+    passed: number;
+    failed: number;
+    total_items_checked: number;
+    total_items_replaced: number;
+  };
+};
+
 export type AircraftStatusReport = {
   aircraft: {
-    aircraft_id: string;
+    aircraft_id: string | number;
     registration_code: string;
     type: string;
   };
@@ -359,7 +375,7 @@ export type AircraftStatusReport = {
     inventory_health: InventoryHealth;
     inspection_performance: InspectionPerformance;
   };
-  timeline: unknown[];
+  timeline: Record<string, TimelineEntry>;
 };
 
 // Dashboard Types

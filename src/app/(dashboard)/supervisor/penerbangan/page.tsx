@@ -8,7 +8,10 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
-import type { Flight, FlightRescheduleData, FlightCreateData } from "@/types/api";
+import type { Flight, FlightRescheduleData, FlightCreateData, Aircraft } from "@/types/api";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 interface FlightRow {
   jenisPesawat: string;
@@ -16,14 +19,30 @@ interface FlightRow {
   destinasi: string;
   arrival: string;
   takeOff: string;
-  flightDate: string; 
+  flightDate: string;
+  rawDate?: Date | null;
 }
+
+interface FilterConfig {
+  aircraftType: string;
+  sort: "time_earliest" | "time_latest" | "dest_asc" | "dest_desc";
+}
+
+const initialFilterConfig: FilterConfig = {
+  aircraftType: "all",
+  sort: "time_earliest",
+};
 
 export default function SupervisorPenerbanganPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [aircraftList, setAircraftList] = useState<Aircraft[]>([]);
   const [loading, setLoading] = useState(false);
+  
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<FlightRow | null>(null);
@@ -51,23 +70,31 @@ export default function SupervisorPenerbanganPage() {
     }
   }, [router]);
 
+  const loadAircraft = useCallback(async () => {
+    try {
+      const res = await skybase.aircraft.list();
+      const data = res?.data;
+      if (Array.isArray(data)) {
+        setAircraftList(data);
+      }
+    } catch (error) {
+      console.error("Failed to load aircraft list", error);
+    }
+  }, []);
+
   useEffect(() => {
     setIsMounted(true);
     loadFlights();
-  }, [loadFlights]);
+    loadAircraft();
+  }, [loadFlights, loadAircraft]);
 
   const rows = useMemo(() => {
     const fmtTime = (d?: string | null) => {
       if (!d) return "--:--";
       try {
         const dt = new Date(d);
-        const jakartaTime = new Date(
-          dt.toLocaleString("en-US", { timeZone: "Asia/Jakarta" })
-        );
-        return jakartaTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      } catch {
-        return "--:--";
-      }
+        return dt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+      } catch { return "--:--"; }
     };
     return flights.map((f) => ({
       jenisPesawat: f?.aircraft?.type ?? "-",
@@ -75,24 +102,55 @@ export default function SupervisorPenerbanganPage() {
       destinasi: f?.route_to ?? "-",
       arrival: fmtTime(f?.sched_dep ?? null),
       takeOff: fmtTime(f?.sched_arr ?? null),
-      flightDate: f?.sched_dep ? new Date(f.sched_dep).toISOString().split("T")[0] : "-", // Add flightDate
+      flightDate: f?.sched_dep ? new Date(f.sched_dep).toISOString().split("T")[0] : "-",
+      rawDate: f?.sched_dep ? new Date(f.sched_dep) : null,
+      flightId: f.flight_id
     }));
   }, [flights]);
 
-  const uniqueJenisPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.jenisPesawat))), [rows]);
-  const uniqueIdPesawat = useMemo(() => Array.from(new Set(rows.map((row) => row.idPesawat))), [rows]);
+  const availableAircraftTypes = useMemo(() => {
+    const types = new Set(aircraftList.map(a => a.type).filter(Boolean) as string[]);
+    return Array.from(types).sort();
+  }, [aircraftList]);
+
+  const availableRegistrations = useMemo(() => {
+    if (!editForm?.jenisPesawat) return [];
+    return aircraftList
+      .filter(a => a.type === editForm.jenisPesawat)
+      .map(a => a.registration_code)
+      .filter(Boolean) as string[];
+  }, [aircraftList, editForm?.jenisPesawat]);
 
   const filteredFlights = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+    let processed = [...rows];
 
-    if (!query) {
-      return rows;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      processed = processed.filter((row) =>
+        Object.values(row).some((value) => value && String(value).toLowerCase().includes(q))
+      );
     }
 
-    return rows.filter((row) =>
-      Object.values(row).some((value) => value.toLowerCase().includes(query)),
-    );
-  }, [rows, searchTerm]);
+    if (filterConfig.aircraftType !== 'all') {
+      processed = processed.filter(row => row.jenisPesawat === filterConfig.aircraftType);
+    }
+
+    processed.sort((a, b) => {
+      switch (filterConfig.sort) {
+        case 'time_earliest':
+          return (a.rawDate?.getTime() ?? 0) - (b.rawDate?.getTime() ?? 0);
+        case 'time_latest':
+          return (b.rawDate?.getTime() ?? 0) - (a.rawDate?.getTime() ?? 0);
+        case 'dest_asc':
+          return a.destinasi.localeCompare(b.destinasi);
+        case 'dest_desc':
+          return b.destinasi.localeCompare(a.destinasi);
+        default: return 0;
+      }
+    });
+
+    return processed;
+  }, [rows, searchTerm, filterConfig]);
 
   const openEditDialog = useCallback((row: FlightRow, index: number) => {
     setEditingIndex(index);
@@ -111,20 +169,21 @@ export default function SupervisorPenerbanganPage() {
   const handleEditChange = <Key extends keyof FlightRow>(key: Key, value: FlightRow[Key]) => {
       if (!editForm) return;
   
-      if ((key === "arrival" || key === "takeOff") && value) {
-          if (/^\d{1,4}$/.test(value)) {
-              const num = value.padStart(4, "0");
-              value = `${num.slice(0, 2)}:${num.slice(2)}`;
-          }
+      if (key === "jenisPesawat" && value !== editForm.jenisPesawat) {
+         setEditForm({ ...editForm, [key]: value, idPesawat: "" });
+         return;
+      }
 
-          const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/;
-          if (!timeRegex.test(value)) {
-              setNotification({
-                  type: "error",
-                  message: "Format waktu tidak valid. Gunakan format HH:mm, contoh: 19:00 atau 08:00.",
-              });
-              return;
+      if ((key === "arrival" || key === "takeOff") && typeof value === "string") {
+          let valStr = value;
+          if (/^\d{1,4}$/.test(valStr)) {
+              const num = valStr.padStart(4, "0");
+              valStr = `${num.slice(0, 2)}:${num.slice(2)}`;
           }
+          
+          // FIXED: Gunakan 'as any' untuk bypass pengecekan generic yang ketat
+          setEditForm(prev => prev ? ({ ...prev, [key]: valStr as any }) : null);
+          return;
       }
   
       setEditForm({ ...editForm, [key]: value });
@@ -137,12 +196,12 @@ export default function SupervisorPenerbanganPage() {
     const timeFields = ["arrival", "takeOff"];
     for (const field of timeFields) {
         const value = editForm[field as keyof FlightRow];
-        if (value) {
+        if (typeof value === 'string' && value) {
             const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/; 
             if (!timeRegex.test(value)) {
                 setNotification({
                     type: "error",
-                    message: `Format waktu pada kolom ${field} tidak valid. Gunakan format HH:mm, contoh: 19:00 atau 08:00.`,
+                    message: `Format waktu pada kolom ${field} tidak valid. Gunakan format HH:mm.`,
                 });
                 return;
             }
@@ -155,64 +214,37 @@ export default function SupervisorPenerbanganPage() {
         let sched_dep: string;
         let sched_arr: string;
         
-        sched_dep = now.toISOString();
-        sched_arr = new Date(now.getTime() + 3600000).toISOString(); 
-      
-        const parseTime = (timeString: string) => {
-          const parts = timeString.split(':');
-          if (parts.length === 2) {
-            const hours = parseInt(parts[0], 10);
-            const minutes = parseInt(parts[1], 10);
-            if (!isNaN(hours) && !isNaN(minutes)) {
-              now.setHours(hours, minutes, 0, 0);
-              return now.toISOString();
-            }
-          }
-          return null;
+        const parseTime = (timeString: string, dateString: string) => {
+           const d = new Date(dateString); 
+           const parts = timeString.split(':');
+           if (parts.length === 2) {
+               d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+               return d.toISOString();
+           }
+           return null;
         };
-      
-        const parsedSchedDep = parseTime(editForm.arrival);
-        if (parsedSchedDep) sched_dep = parsedSchedDep;
-      
-        const parsedSchedArr = parseTime(editForm.takeOff);
-        if (parsedSchedArr) sched_arr = parsedSchedArr;
-      
-        const isDuplicate = flights.some(
-          (flight) =>
-            flight.aircraft?.registration_code === editForm.idPesawat &&
-            flight.sched_dep === sched_dep
-        );
-      
-        if (isDuplicate) {
-          setNotification({
-            type: "error",
-            message: "Jadwal dengan ID pesawat dan waktu yang sama sudah ada.",
-          });
-          return;
-        }
-        const arrivalParts = editForm.arrival.split(':');
-        const takeOffParts = editForm.takeOff.split(':');
 
-        sched_dep = now.toISOString();
-        if (arrivalParts.length === 2) {
-          const depHours = parseInt(arrivalParts[0], 10);
-          const depMinutes = parseInt(arrivalParts[1], 10);
-          if (!isNaN(depHours) && !isNaN(depMinutes)) {
-            now.setHours(depHours, depMinutes, 0, 0);
-            sched_dep = now.toISOString();
-          }
+        const flightDate = editForm.flightDate || now.toISOString().split("T")[0];
+        const parsedSchedDep = parseTime(editForm.arrival, flightDate);
+        
+        if (parsedSchedDep) {
+           const conflict = flights.some(f => 
+              f.aircraft?.registration_code === editForm.idPesawat &&
+              f.sched_dep === parsedSchedDep
+           );
+           
+           if (conflict) {
+               setNotification({
+                   type: "error",
+                   message: "Aircraft is already scheduled for another flight at this time",
+               });
+               return;
+           }
         }
 
-        sched_arr = new Date(now.getTime() + 3600000).toISOString();
-        if (takeOffParts.length === 2) {
-          const arrHours = parseInt(takeOffParts[0], 10);
-          const arrMinutes = parseInt(takeOffParts[1], 10);
-          if (!isNaN(arrHours) && !isNaN(arrMinutes)) {
-            now.setHours(arrHours, arrMinutes, 0, 0);
-            sched_arr = now.toISOString();
-          }
-        }
-
+        sched_dep = parsedSchedDep || now.toISOString();
+        sched_arr = parseTime(editForm.takeOff, flightDate) || new Date(new Date(sched_dep).getTime() + 3 * 3600000).toISOString();
+      
         const createData: FlightCreateData = {
           registration_code: editForm.idPesawat,
           route_to: editForm.destinasi,
@@ -229,29 +261,13 @@ export default function SupervisorPenerbanganPage() {
         closeEditDialog();
       } catch (error) {
         console.error("Failed to create flight:", error);
+        const errorMsg = (error as any)?.payload?.message || "Gagal menyimpan jadwal ke server.";
+        
         setNotification({
           type: "error",
-          message: "Gagal menyimpan ke server, tapi ditambahkan secara lokal",
+          message: errorMsg,
         });
-        const fallbackFlight: Flight = {
-          flight_id: Date.now(),
-          aircraft: {
-            aircraft_id: Date.now(),
-            type: editForm.jenisPesawat,
-            registration_code: editForm.idPesawat
-          },
-          route_to: editForm.destinasi,
-          sched_dep: new Date().toISOString(),
-          sched_arr: new Date(Date.now() + 3600000).toISOString(),
-          status: "SCHEDULED",
-          rescheduled_at: null,
-          supervisor: undefined,
-          created_at: new Date().toISOString(),
-          has_inspection: false
-        };
-        setFlights((prev) => [...prev, fallbackFlight]);
       }
-      closeEditDialog();
       return;
     }
 
@@ -260,33 +276,19 @@ export default function SupervisorPenerbanganPage() {
       if (!flightToUpdate) return;
 
       try {
-        const originalDepDate = flightToUpdate.sched_dep ? new Date(flightToUpdate.sched_dep) : new Date();
-        let sched_dep = flightToUpdate.sched_dep;
-        const arrivalParts = editForm.arrival.split(':');
-        if (arrivalParts.length === 2) {
-          const depHours = parseInt(arrivalParts[0], 10);
-          const depMinutes = parseInt(arrivalParts[1], 10);
-          if (!isNaN(depHours) && !isNaN(depMinutes)) {
-            originalDepDate.setHours(depHours, depMinutes, 0, 0);
-            sched_dep = originalDepDate.toISOString();
-          }
-        }
+         const flightDate = editForm.flightDate || new Date().toISOString().split("T")[0];
+         const parseTime = (timeString: string, dateString: string) => {
+            const d = new Date(dateString); 
+            const parts = timeString.split(':');
+            if (parts.length === 2) {
+                d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+                return d.toISOString();
+            }
+            return null;
+         };
 
-        if (sched_dep === null) {
-          sched_dep = new Date().toISOString();
-        }
-
-        const originalArrDate = flightToUpdate.sched_arr ? new Date(flightToUpdate.sched_arr) : new Date();
-        let sched_arr = flightToUpdate.sched_arr;
-        const takeOffParts = editForm.takeOff.split(':');
-        if (takeOffParts.length === 2) {
-          const arrHours = parseInt(takeOffParts[0], 10);
-          const arrMinutes = parseInt(takeOffParts[1], 10);
-          if (!isNaN(arrHours) && !isNaN(arrMinutes)) {
-            originalArrDate.setHours(arrHours, arrMinutes, 0, 0);
-            sched_arr = originalArrDate.toISOString();
-          }
-        }
+        const sched_dep = parseTime(editForm.arrival, flightDate) || new Date().toISOString();
+        const sched_arr = parseTime(editForm.takeOff, flightDate) || new Date().toISOString();
 
         const data: FlightRescheduleData = {
           sched_dep: sched_dep,
@@ -295,32 +297,33 @@ export default function SupervisorPenerbanganPage() {
 
         await skybase.flights.reschedule(flightToUpdate.flight_id, data);
         await loadFlights();
+        setNotification({ type: "success", message: "Jadwal berhasil diperbarui" });
       } catch (error) {
         console.error("Failed to reschedule flight", error);
+        setNotification({ type: "error", message: "Gagal memperbarui jadwal" });
       }
     }
 
     closeEditDialog();
   };
 
-
   const openCreateDialog = () => {
-    const defaultJenis = uniqueJenisPesawat[0] ?? "";
-    const defaultId = uniqueIdPesawat[0] ?? "";
-
     setIsCreateMode(true);
     setEditingIndex(null);
+    
+    const defaultType = availableAircraftTypes[0] || "";
+    const defaultReg = aircraftList.find(a => a.type === defaultType)?.registration_code || "";
+
     setEditForm({
-      jenisPesawat: defaultJenis,
-      idPesawat: defaultId,
+      jenisPesawat: defaultType,
+      idPesawat: defaultReg,
       destinasi: "",
       arrival: "",
       takeOff: "",
-      flightDate: new Date().toISOString().split("T")[0], // Set default flight date to today
+      flightDate: new Date().toISOString().split("T")[0],
     });
     setIsEditOpen(true);
   };
-
 
   return (
     <PageLayout sidebarRole="supervisor">
@@ -336,32 +339,82 @@ export default function SupervisorPenerbanganPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari Jenis, id, destinasi, dll"
+              placeholder="Cari Jenis, ID, destinasi..."
               className="w-full h-12 pl-12 pr-4 rounded-xl border-2 border-[#0D63F3] bg-white text-[#0D63F3] placeholder:text-[#0D63F3] font-medium focus:outline-none"
             />
-            <svg
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0D63F3]"
-              width="22"
-              height="22"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
+            <svg className="absolute left-4 top-1/2 -translate-y-1/2 text-[#0D63F3]" width="22" height="22" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" />
               <path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
             </svg>
           </div>
+
+          <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+            <PopoverTrigger asChild>
+              <button className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700">
+                <Filter className="w-5 h-5" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4 bg-white rounded-2xl shadow-xl" align="end">
+               <div className="space-y-5">
+                  <div className="flex items-center justify-between">
+                     <h4 className="font-semibold text-[#111827]">Filter Penerbangan</h4>
+                     <button onClick={() => setFilterConfig(initialFilterConfig)} className="text-xs text-[#0D63F3] hover:underline">Reset</button>
+                  </div>
+
+                  <div className="space-y-3">
+                     <Label className="text-xs font-medium text-gray-500">Jenis Pesawat</Label>
+                     <select 
+                        value={filterConfig.aircraftType}
+                        onChange={(e) => setFilterConfig(p => ({ ...p, aircraftType: e.target.value }))}
+                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
+                     >
+                        <option value="all">Semua Jenis</option>
+                        {availableAircraftTypes.map(type => (
+                           <option key={type} value={type}>{type}</option>
+                        ))}
+                     </select>
+                  </div>
+
+                  <div className="space-y-3">
+                     <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
+                     <div className="grid grid-cols-2 gap-2">
+                        <button
+                           onClick={() => setFilterConfig(p => ({ ...p, sort: 'time_earliest' }))}
+                           className={`px-2 py-2 rounded-lg text-xs font-medium border ${filterConfig.sort === 'time_earliest' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-100 hover:bg-gray-50'}`}
+                        >
+                           Waktu Terawal
+                        </button>
+                        <button
+                           onClick={() => setFilterConfig(p => ({ ...p, sort: 'time_latest' }))}
+                           className={`px-2 py-2 rounded-lg text-xs font-medium border ${filterConfig.sort === 'time_latest' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-100 hover:bg-gray-50'}`}
+                        >
+                           Waktu Terakhir
+                        </button>
+                        <button
+                           onClick={() => setFilterConfig(p => ({ ...p, sort: 'dest_asc' }))}
+                           className={`px-2 py-2 rounded-lg text-xs font-medium border ${filterConfig.sort === 'dest_asc' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-100 hover:bg-gray-50'}`}
+                        >
+                           Destinasi A-Z
+                        </button>
+                        <button
+                           onClick={() => setFilterConfig(p => ({ ...p, sort: 'dest_desc' }))}
+                           className={`px-2 py-2 rounded-lg text-xs font-medium border ${filterConfig.sort === 'dest_desc' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'border-gray-100 hover:bg-gray-50'}`}
+                        >
+                           Destinasi Z-A
+                        </button>
+                     </div>
+                  </div>
+
+                  <Button onClick={() => setIsFilterOpen(false)} className="w-full bg-[#0D63F3] hover:bg-[#0B53D0] rounded-xl">
+                      Terapkan
+                  </Button>
+               </div>
+            </PopoverContent>
+          </Popover>
+
           <button
             type="button"
             className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
-            aria-label="Filter"
-          >
-            <Filter className="w-5 h-5" />
-          </button>
-          <button
-            type="button"
-            className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
-            aria-label="Tambah Jadwal"
             onClick={openCreateDialog}
           >
             <Plus className="w-5 h-5" />
@@ -378,44 +431,21 @@ export default function SupervisorPenerbanganPage() {
             <div className="w-28 sm:w-44 text-right">Action</div>
           </div>
           <div className="divide-y divide-[#E9EEF3]">
-            {loading && filteredFlights.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">Memuat penerbangan...</div>
-            ) : filteredFlights.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">Belum ada jadwal penerbangan</div>
+            {filteredFlights.length === 0 ? (
+              <div className="px-4 py-8 text-center text-sm text-gray-500">Tidak ada penerbangan yang cocok.</div>
             ) : (
               filteredFlights.map((item, index) => (
-                <div key={index} className="px-4 py-4 sm:py-5 flex items-start">
-                  <div className="flex-1 pr-4">
-                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
-                      {item.jenisPesawat}
-                    </div>
-                  </div>
-                  <div className="flex-1 pr-4">
-                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
-                      {item.idPesawat}
-                    </div>
-                  </div>
-                  <div className="flex-1 pr-4">
-                    <div className="text-[18px] sm:text-lg font-bold tracking-tight text-[#111827]">
-                      {item.destinasi}
-                    </div>
-                  </div>
-                  <div className="flex-1 pr-4">
-                    <div className="text-[13px] sm:text-sm text-[#4B5563]">
-                      {item.arrival}
-                    </div>
-                  </div>
-                  <div className="flex-1 pr-4">
-                    <div className="text-[13px] sm:text-sm text-[#4B5563]">
-                      {item.takeOff}
-                    </div>
-                  </div>
+                <div key={index} className="px-4 py-4 sm:py-5 flex items-start hover:bg-gray-50/50 transition">
+                  <div className="flex-1 pr-4 text-[18px] sm:text-lg font-bold text-[#111827]">{item.jenisPesawat}</div>
+                  <div className="flex-1 pr-4 text-[18px] sm:text-lg font-bold text-[#111827]">{item.idPesawat}</div>
+                  <div className="flex-1 pr-4 text-[18px] sm:text-lg font-bold text-[#111827]">{item.destinasi}</div>
+                  <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">{item.arrival}</div>
+                  <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">{item.takeOff}</div>
                   <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">
                     <button
                       type="button"
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#FACC15] text-white active:scale-95 transition hover:brightness-95"
-                      aria-label="Edit jadwal"
-                      onClick={() => openEditDialog({ ...item, flightDate: item.flightDate || new Date().toISOString().split("T")[0] }, index)} // Ensure flightDate is passed
+                      onClick={() => openEditDialog({ ...item, flightDate: item.flightDate || new Date().toISOString().split("T")[0] }, index)}
                     >
                       <Pencil className="w-5 h-5" />
                     </button>
@@ -448,11 +478,10 @@ export default function SupervisorPenerbanganPage() {
                       value={editForm.jenisPesawat}
                       onChange={(event) => handleEditChange("jenisPesawat", event.target.value)}
                       className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      disabled={!isCreateMode}
                     >
-                      {uniqueJenisPesawat.length === 0 && (
-                        <option value="">Pilih jenis pesawat</option>
-                      )}
-                      {uniqueJenisPesawat.map((option) => (
+                      <option value="" disabled>Pilih jenis pesawat</option>
+                      {availableAircraftTypes.map((option) => (
                         <option key={option} value={option}>
                           {option}
                         </option>
@@ -464,7 +493,7 @@ export default function SupervisorPenerbanganPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-[#0E1D3D]" htmlFor="edit-id-pesawat">
-                    ID Pesawat
+                    ID Pesawat (Registrasi)
                   </label>
                   <div className="relative">
                     <select
@@ -472,11 +501,10 @@ export default function SupervisorPenerbanganPage() {
                       value={editForm.idPesawat}
                       onChange={(event) => handleEditChange("idPesawat", event.target.value)}
                       className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      disabled={!editForm.jenisPesawat || !isCreateMode}
                     >
-                      {uniqueIdPesawat.length === 0 && (
-                        <option value="">Pilih ID pesawat</option>
-                      )}
-                      {uniqueIdPesawat.map((option) => (
+                      <option value="" disabled>Pilih ID pesawat</option>
+                      {availableRegistrations.map((option) => (
                         <option key={option} value={option}>
                           {option}
                         </option>
@@ -507,8 +535,7 @@ export default function SupervisorPenerbanganPage() {
                   <input
                     id="edit-flight-date"
                     type="date"
-                    value={editForm.flightDate || ""} // Ensure default value is an empty string
-                    min={new Date().toISOString().split("T")[0]}
+                    value={editForm.flightDate || ""} 
                     onChange={(event) => handleEditChange("flightDate", event.target.value)}
                     className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                   />
