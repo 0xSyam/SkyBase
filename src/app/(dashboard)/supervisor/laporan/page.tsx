@@ -14,7 +14,6 @@ import {
   generateStatusReportPDF, 
   type PDFItem, 
   type RecapData,
-  type RecapFlight,
   type RecapSection
 } from "@/lib/pdfGenerator";
 
