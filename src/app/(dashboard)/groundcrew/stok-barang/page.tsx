@@ -524,10 +524,9 @@ const StokBarangPage = () => {
 
         if (!newItem.data.item_id) throw new Error("Failed to create item");
         
-        // Ambil jumlah dari form, pastikan number
-        const quantity = Number(addData.jumlah);
-
         if (addData.jenisDokumen === 'doc') {
+          // Ambil jumlah dari form, pastikan number
+          const quantity = Number(addData.jumlah);
           await skybase.inventory.addDoc({
             item_id: newItem.data.item_id,
             doc_number: addData.nomor,
@@ -537,14 +536,12 @@ const StokBarangPage = () => {
             condition: "Good",
           });
         } else {
-          // Fix: Sekarang mengirim quantity ke endpoint ASE juga
           await skybase.inventory.addAse({
             item_id: newItem.data.item_id,
             serial_number: addData.nomor,
             seal_number: addData.seal_number,
             expires_at: effectiveDate,
             condition: "Good",
-            quantity: quantity
           });
         }
 
@@ -1331,23 +1328,25 @@ const StokBarangPage = () => {
                         </div>
                       </div>
 
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="add-jumlah"
-                          className="text-sm font-semibold text-[#0E1D3D]"
-                        >
-                          Jumlah
-                        </label>
-                        <input
-                          id="add-jumlah"
-                          type="number"
-                          min="0"
-                          placeholder="Masukan jumlah"
-                          value={addData.jumlah}
-                          onChange={handleAddInputChange("jumlah")}
-                          className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                        />
-                      </div>
+                      {addData.jenisDokumen === 'doc' && (
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="add-jumlah"
+                            className="text-sm font-semibold text-[#0E1D3D]"
+                          >
+                            Jumlah
+                          </label>
+                          <input
+                            id="add-jumlah"
+                            type="number"
+                            min="0"
+                            placeholder="Masukan jumlah"
+                            value={addData.jumlah}
+                            onChange={handleAddInputChange("jumlah")}
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                          />
+                        </div>
+                      )}
                     </div>
 
                     <div className="mt-2 flex gap-3">
