@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
@@ -30,7 +30,7 @@ interface StockTransferItem {
   id: number;
   name: string;
   number: string; 
-  qty: number; // Stok tersedia
+  qty: number; 
   expiry: string; 
   originalData: GcDocInventory | GcAseInventory;
 }
@@ -50,19 +50,16 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
   const aircraftIdParam = typeof resolvedSearchParams?.aircraftId === "string" ? resolvedSearchParams.aircraftId : "1";
   const aircraftId = parseInt(aircraftIdParam);
 
-  // Main State
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   
-  // Data State
   const [docItems, setDocItems] = useState<DocumentRow[]>([]);
   const [aseItems, setAseItems] = useState<DocumentRow[]>([]);
   const [inspectionId, setInspectionId] = useState<number | null>(null);
   
-  // Transfer State
   const [transferType, setTransferType] = useState<"DOC" | "ASE">("DOC");
   const [stockList, setStockList] = useState<StockTransferItem[]>([]);
   const [loadingStock, setLoadingStock] = useState(false);
@@ -76,7 +73,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     setMounted(true);
   }, []);
 
-  const loadInspection = async () => {
+  const loadInspection = useCallback(async () => {
     if (!aircraftId || Number.isNaN(aircraftId)) return;
     setLoading(true);
     setError(null);
@@ -88,14 +85,32 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
          setInspectionId((resData as { inspection_id: number }).inspection_id);
       }
       
-      const items = (resData && typeof resData === 'object' && 'items' in resData && Array.isArray((resData as any).items)) 
-        ? (resData as any).items 
+      const items = (resData && typeof resData === 'object' && 'items' in resData && Array.isArray((resData as { items: unknown[] }).items)) 
+        ? (resData as { items: unknown[] }).items 
         : [];
 
       const docs: DocumentRow[] = [];
       const ases: DocumentRow[] = [];
 
-      items.forEach((it: any) => {
+      items.forEach((itemUnknown) => {
+        const it = itemUnknown as {
+            category?: string;
+            item?: { category?: string; name?: string };
+            serial_number?: string;
+            nama_dokumen?: string;
+            id?: string | number;
+            inspection_item_id?: string | number;
+            is_checked?: boolean;
+            name?: string;
+            item_name?: string;
+            nomor?: string;
+            doc_number?: string;
+            revisi?: string;
+            revision_no?: string;
+            efektif?: string;
+            jumlah?: string | number;
+        };
+
         const rawCategory = it.category || it.item?.category;
         const isASE = rawCategory === "ASE" || (!rawCategory && (it.serial_number || (it.nama_dokumen || "").includes("KIT")));
         
@@ -124,11 +139,11 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     } finally {
       setLoading(false);
     }
-  };
+  }, [aircraftId]);
 
   useEffect(() => {
     loadInspection();
-  }, [resolvedSearchParams]);
+  }, [loadInspection]);
 
   const openTransferModal = async (type: "DOC" | "ASE") => {
     setTransferType(type);
@@ -167,7 +182,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       setTransferQuantities(initialQuantities);
 
       setStockList(mapped);
-    } catch (e) {
+    } catch {
       setNotification({ type: "error", message: "Gagal memuat data stok" });
     } finally {
       setLoadingStock(false);
@@ -182,7 +197,6 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     });
   };
 
-  // PERBAIKAN UTAMA: Menggunakan skybase.inventory.transferToAircraft
   const handleTransfer = async (item: StockTransferItem) => {
     if (!aircraftId) return;
     setTransferingId(item.id);
@@ -190,17 +204,16 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     const qtyToTransfer = transferQuantities[item.id] || 1;
 
     try {
-      // Panggil endpoint transfer umum dengan payload yang sesuai
       await skybase.inventory.transferToAircraft({
         type: transferType === "DOC" ? "doc" : "ase",
-        inventory_id: item.id, // ID dari inventory groundcrew (gc_doc_id atau gc_ase_id)
+        inventory_id: item.id, 
         aircraft_id: aircraftId,
         quantity: transferType === "DOC" ? qtyToTransfer : undefined
       });
 
       setNotification({ type: "success", message: `Berhasil transfer ${item.name} ke pesawat` });
       setIsTransferOpen(false);
-      loadInspection(); // Refresh data validasi
+      loadInspection(); 
     } catch (e) {
       console.error("Transfer failed:", e);
       setNotification({ type: "error", message: "Gagal melakukan transfer item" });
@@ -231,19 +244,18 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       setNotification({ type: "success", message: `Inspection berhasil disubmit (${payload.status})!` });
       setIsDialogOpen(false);
       
-      // Redirect ke list validasi setelah sukses
       setTimeout(() => {
         router.push('/groundcrew/validasi-barang');
       }, 1000);
 
-    } catch (error) {
-      console.error("Submit error:", error);
+    } catch (err) {
+      console.error("Submit error:", err);
       setNotification({ type: "error", message: "Gagal submit inspection" });
       setSubmitting(false);
     }
   };
 
-  const handleToggleItem = async (row: DocumentRow, isChecked: boolean) => {
+  const handleToggleItem = useCallback(async (row: DocumentRow, isChecked: boolean) => {
     const itemId = row.inspection_item_id || row.id;
     if (!itemId) return;
     try {
@@ -253,10 +265,10 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
       );
       if (row.category === "ASE") setAseItems(prev => updateList(prev));
       else setDocItems(prev => updateList(prev));
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error(err);
     }
-  };
+  }, []);
 
   const columns = useMemo<ColumnDef<DocumentRow>[]>(() => [
     { key: "name", header: "Nama Item", align: "left" },
@@ -293,7 +305,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
     },
     {
       key: "status", header: "Check", align: "center", className: "w-20 flex-shrink-0",
-      render: (value, row) => (
+      render: (_, row) => (
         <div className="grid place-items-center">
           <div className="relative flex items-center">
             <input
@@ -309,7 +321,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
         </div>
       )
     }
-  ], []);
+  ], [handleToggleItem]);
 
   return (
     <PageLayout>

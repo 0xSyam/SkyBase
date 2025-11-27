@@ -1,19 +1,19 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import Notification from "@/component/Notification";
 import PageLayout from "@/component/PageLayout";
-import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
+import PageHeader from "@/component/PageHeader";
+import Notification from "@/component/Notification";
+import { Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
+import { useRouter } from "next/navigation";
 import type { Flight } from "@/types/api";
-import { Download } from "lucide-react"; 
 import { 
-  generateStatusReportPDF, 
   generateRecapPDF, 
-  type PDFItem,
+  generateStatusReportPDF, 
+  type PDFItem, 
   type RecapData,
-  type RecapFlight,
   type RecapSection
 } from "@/lib/pdfGenerator";
 
@@ -33,16 +33,19 @@ interface ReportSectionUI {
   schedules: ReportSchedule[];
 }
 
-export default function WarehouseLaporanPage() {
+export default function SupervisorLaporanPage() {
+  const router = useRouter();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [sections, setSections] = useState<ReportSectionUI[]>([]);
   const [loading, setLoading] = useState(false);
+  
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadingSectionId, setDownloadingSectionId] = useState<string | null>(null);
   const [downloadingRange, setDownloadingRange] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // 1. Load Flights
   useEffect(() => {
       let ignore = false;
       const load = async () => {
@@ -58,7 +61,7 @@ export default function WarehouseLaporanPage() {
               } else if (data && 'flights' in data && Array.isArray(data.flights)) {
                   list = data.flights;
               }
-              
+
               if (!ignore) {
                   const byDate = new Map<string, ReportSectionUI>();
                   const fmtDate = (d: Date) => d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
@@ -90,12 +93,11 @@ export default function WarehouseLaporanPage() {
                       sec.schedules.push(schedule);
                       byDate.set(id, sec);
                   }
-
                   const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
                   setSections(sorted);
               }
-          } catch (error) {
-              console.error("Failed to load flights:", error);
+          } catch (e) {
+              if ((e as { status?: number })?.status === 401) router.replace("/");
               if (!ignore) setSections([]);
           } finally {
               if (!ignore) setLoading(false);
@@ -103,7 +105,7 @@ export default function WarehouseLaporanPage() {
       };
       load();
       return () => { ignore = true; };
-  }, []);
+  }, [router]);
 
   const filteredSections = useMemo(() => {
     const tStart = startDate ? new Date(startDate) : null;
@@ -119,7 +121,6 @@ export default function WarehouseLaporanPage() {
     });
   }, [sections, startDate, endDate]);
 
-  // --- HELPER: Fetch Inventory Items ---
   const fetchAndMapInventory = async (aircraftId: number): Promise<PDFItem[]> => {
     try {
       const res = await skybase.inventory.aircraftInventory(aircraftId);
@@ -157,15 +158,13 @@ export default function WarehouseLaporanPage() {
     }
   };
 
-  // --- DOWNLOAD REKAP (Range) ---
+  // --- DOWNLOAD REKAP (FIXED STRUCTURE) ---
   const handleDownloadRange = async () => {
     setDownloadingRange(true);
     try {
       const pdfSections: RecapSection[] = [];
 
       for (const section of filteredSections) {
-        const recapFlights: RecapFlight[] = [];
-
         const flightPromises = section.schedules.map(async (sch) => {
              let items: PDFItem[] = [];
              if (sch.aircraftId) {
@@ -200,7 +199,8 @@ export default function WarehouseLaporanPage() {
           sections: pdfSections
       };
       
-      generateRecapPDF(recapData, `WH-Rekap-Laporan-${startDate || "All"}-to-${endDate || "All"}.pdf`);
+      generateRecapPDF(recapData, `Rekap-Laporan-${startDate || "All"}-to-${endDate || "All"}.pdf`);
+      
       setNotification({ type: "success", message: "Rekap laporan berhasil diunduh" });
     } catch (e) {
       console.error(e);
@@ -238,7 +238,7 @@ export default function WarehouseLaporanPage() {
             }]
         };
 
-        generateRecapPDF(recapData, `WH-Laporan-Harian-${section.id}.pdf`);
+        generateRecapPDF(recapData, `Laporan-Harian-${section.id}.pdf`);
         setNotification({ type: "success", message: `Laporan harian ${section.title} berhasil diunduh.` });
 
     } catch (error) {
@@ -267,13 +267,16 @@ export default function WarehouseLaporanPage() {
              aircraft_id: schedule.aircraftId
          },
          period: { from: dateStr, to: dateStr, interval: 'daily' },
-         summary: { inventory_health: {} as any, inspection_performance: {} as any },
-         current_inventory: { by_category: {} as any } as any,
+         summary: { 
+             inventory_health: { total_items: 0, valid_items: 0, expired_items: 0, expiring_soon: 0, health_percentage: 0 }, 
+             inspection_performance: { total_inspections: 0, passed_inspections: 0, failed_inspections: 0, pass_rate: 0 } 
+         },
+         current_inventory: { by_category: { ASE: { total: 0, valid: 0, expired: 0, expiring_soon: 0 }, DOC: { total: 0, valid: 0, expired: 0, expiring_soon: 0 } } },
          timeline: {}
       };
 
-      // @ts-ignore 
-      generateStatusReportPDF(reportDataMock, `WH-Laporan-${schedule.registration}.pdf`, items);
+      // @ts-expect-error - partial mock
+      generateStatusReportPDF(reportDataMock, `Laporan-${schedule.registration}.pdf`, items);
 
       setNotification({ type: "success", message: "Laporan berhasil diunduh" });
     } catch (e) {
@@ -285,7 +288,14 @@ export default function WarehouseLaporanPage() {
   };
 
   return (
-    <PageLayout sidebarRole="warehouse">
+    <PageLayout sidebarRole="supervisor">
+      {notification && (
+        <Notification
+          type={notification.type}
+          message={notification.message}
+          onClose={() => setNotification(null)}
+        />
+      )}
       <section className="w-full max-w-[1076px] space-y-8">
         <PageHeader
           title="Laporan"
@@ -299,15 +309,15 @@ export default function WarehouseLaporanPage() {
                 </span>
                 <div className="flex w-full md:w-auto items-center gap-3">
                     <input
-                    id="warehouse-laporan-start-date"
+                    id="laporan-start-date"
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
                     className="w-full rounded-xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                     />
-                    <span className="text-lg font-semibold text-[#0D63F3]">-</span>
+                    <span className="text-lg font-semibold text-[#94A3B8]">-</span>
                     <input
-                    id="warehouse-laporan-end-date"
+                    id="laporan-end-date"
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
@@ -315,7 +325,7 @@ export default function WarehouseLaporanPage() {
                     />
                 </div>
               </div>
-              
+
               <button
                 type="button"
                 onClick={handleDownloadRange}
@@ -343,7 +353,6 @@ export default function WarehouseLaporanPage() {
           {loading && filteredSections.length === 0 && (
             <div className="text-center text-sm text-gray-500">Memuat laporan...</div>
           )}
-          
           {!loading && filteredSections.length === 0 && (
             <GlassCard className="p-8 text-center text-gray-500">
               Tidak ada jadwal penerbangan untuk laporan
@@ -355,7 +364,7 @@ export default function WarehouseLaporanPage() {
               key={section.id}
               className="overflow-hidden rounded-[32px] border border-white/40"
             >
-              <div className="flex flex-wrap items-center justify-between gap-4 px-6 md:px-8 py-6 bg-white/80">
+              <div className="flex flex-wrap items-center justify-between gap-4 px-6 md:px-8 py-5 md:py-6 bg-white/80">
                 <h2 className="text-xl md:text-2xl font-semibold text-[#111827]">
                   {section.title}
                 </h2>
@@ -430,13 +439,6 @@ export default function WarehouseLaporanPage() {
           ))}
         </div>
       </section>
-      {notification && (
-        <Notification
-          type={notification.type}
-          message={notification.message}
-          onClose={() => setNotification(null)}
-        />
-      )}
     </PageLayout>
   );
 }

@@ -38,7 +38,6 @@ export default function SupervisorPenerbanganPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [flights, setFlights] = useState<Flight[]>([]);
   const [aircraftList, setAircraftList] = useState<Aircraft[]>([]);
-  const [loading, setLoading] = useState(false);
   
   const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -51,7 +50,6 @@ export default function SupervisorPenerbanganPage() {
   const [isCreateMode, setIsCreateMode] = useState(false);
 
   const loadFlights = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await skybase.flights.list();
       const data = res?.data;
@@ -65,8 +63,6 @@ export default function SupervisorPenerbanganPage() {
     } catch (e) {
       if ((e as { status?: number })?.status === 401) router.replace("/");
       setFlights([]);
-    } finally {
-      setLoading(false);
     }
   }, [router]);
 
@@ -181,8 +177,7 @@ export default function SupervisorPenerbanganPage() {
               valStr = `${num.slice(0, 2)}:${num.slice(2)}`;
           }
           
-          // FIXED: Gunakan 'as any' untuk bypass pengecekan generic yang ketat
-          setEditForm(prev => prev ? ({ ...prev, [key]: valStr as any }) : null);
+          setEditForm(prev => prev ? ({ ...prev, [key]: valStr as string }) : null);
           return;
       }
   
@@ -211,9 +206,6 @@ export default function SupervisorPenerbanganPage() {
     if (isCreateMode) {
       try {
         const now = new Date();
-        let sched_dep: string;
-        let sched_arr: string;
-        
         const parseTime = (timeString: string, dateString: string) => {
            const d = new Date(dateString); 
            const parts = timeString.split(':');
@@ -242,8 +234,8 @@ export default function SupervisorPenerbanganPage() {
            }
         }
 
-        sched_dep = parsedSchedDep || now.toISOString();
-        sched_arr = parseTime(editForm.takeOff, flightDate) || new Date(new Date(sched_dep).getTime() + 3 * 3600000).toISOString();
+        const sched_dep = parsedSchedDep || now.toISOString();
+        const sched_arr = parseTime(editForm.takeOff, flightDate) || new Date(new Date(sched_dep).getTime() + 3 * 3600000).toISOString();
       
         const createData: FlightCreateData = {
           registration_code: editForm.idPesawat,
@@ -261,7 +253,7 @@ export default function SupervisorPenerbanganPage() {
         closeEditDialog();
       } catch (error) {
         console.error("Failed to create flight:", error);
-        const errorMsg = (error as any)?.payload?.message || "Gagal menyimpan jadwal ke server.";
+        const errorMsg = (error as { payload?: { message?: string }; message?: string })?.payload?.message || (error as Error).message || "Gagal menyimpan jadwal ke server.";
         
         setNotification({
           type: "error",

@@ -7,11 +7,11 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import skybase from "@/lib/api/skybase";
-import { Filter, X, Check, Plus, Minus } from "lucide-react";
+import { Filter, Plus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import type { ItemCatalog } from "@/types/api"; // Added Import
+import type { ItemCatalog } from "@/types/api";
 
 // --- HELPER & COMPONENTS ---
 
@@ -115,7 +115,7 @@ interface StockAddFormData {
   jumlah: string;
   jenisDokumen: "doc" | "ase";
   seal_number: string;
-  itemId: string; // Added itemId
+  itemId: string;
 }
 
 interface FilterConfig {
@@ -142,9 +142,8 @@ const StokBarangPage = () => {
   
   const [docGroups, setDocGroups] = useState<StockGroup[]>([]);
   const [aseGroups, setAseGroups] = useState<StockGroup[]>([]);
-  const [catalogItems, setCatalogItems] = useState<ItemCatalog[]>([]); // New State for Catalog Items
+  const [catalogItems, setCatalogItems] = useState<ItemCatalog[]>([]);
   
-  // Filter State
   const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -173,7 +172,7 @@ const StokBarangPage = () => {
     jumlah: "",
     jenisDokumen: "doc",
     seal_number: "",
-    itemId: "", // Initialize
+    itemId: "",
   });
 
   useEffect(() => {
@@ -189,16 +188,15 @@ const StokBarangPage = () => {
           skybase.inventory.groundcrewAll(),
           skybase.inventory.itemsByCategory("DOC"),
           skybase.inventory.itemsByCategory("ASE"),
-          skybase.items.list(), // Fetch ALL items for dropdown
+          skybase.items.list(),
         ]);
 
-        // Process Catalog Items for Dropdown
         if (allItemsRes?.data) {
             const itemsData = allItemsRes.data;
             if (Array.isArray(itemsData)) {
                 setCatalogItems(itemsData);
-            } else if (itemsData && typeof itemsData === 'object' && 'items' in itemsData && Array.isArray((itemsData as any).items)) {
-                setCatalogItems((itemsData as any).items);
+            } else if (itemsData && typeof itemsData === 'object' && 'items' in itemsData && Array.isArray((itemsData as { items: ItemCatalog[] }).items)) {
+                setCatalogItems((itemsData as { items: ItemCatalog[] }).items);
             }
         }
 
@@ -208,17 +206,16 @@ const StokBarangPage = () => {
         const docCatalogData = docCatalogRes?.data;
         const aseCatalogData = aseCatalogRes?.data;
 
-        // Normalize catalog items
-        const docCatalogItems = Array.isArray(docCatalogData)
+        const docCatalogItems: ItemCatalog[] = Array.isArray(docCatalogData)
           ? docCatalogData
-          : (docCatalogData && typeof docCatalogData === 'object' && 'items' in docCatalogData && Array.isArray((docCatalogData as any).items))
-            ? (docCatalogData as any).items
+          : (docCatalogData && typeof docCatalogData === 'object' && 'items' in docCatalogData && Array.isArray((docCatalogData as { items: ItemCatalog[] }).items))
+            ? (docCatalogData as { items: ItemCatalog[] }).items
             : [];
         
-        const aseCatalogItems = Array.isArray(aseCatalogData)
+        const aseCatalogItems: ItemCatalog[] = Array.isArray(aseCatalogData)
           ? aseCatalogData
-          : (aseCatalogData && typeof aseCatalogData === 'object' && 'items' in aseCatalogData && Array.isArray((aseCatalogData as any).items))
-            ? (aseCatalogData as any).items
+          : (aseCatalogData && typeof aseCatalogData === 'object' && 'items' in aseCatalogData && Array.isArray((aseCatalogData as { items: ItemCatalog[] }).items))
+            ? (aseCatalogData as { items: ItemCatalog[] }).items
             : [];
 
         const catalog: Record<number, { item_id?: number; name?: string }> = {};
@@ -240,7 +237,6 @@ const StokBarangPage = () => {
           return name || "ASE Lainnya";
         };
 
-        // Helper to calc days remaining
         const getDaysRemaining = (targetDate: Date | null) => {
             if (!targetDate) return 999; 
             const today = new Date();
@@ -251,7 +247,6 @@ const StokBarangPage = () => {
             return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         };
 
-        // Process Documents
         for (const d of docs) {
           const cat = catalog[Number(d?.item_id)] || {};
           const title = titleFor(cat?.name, 'doc');
@@ -279,7 +274,6 @@ const StokBarangPage = () => {
           docBucket.get(title)!.push(item);
         }
         
-        // Process ASE
         for (const a of ases) {
           const cat = catalog[Number(a?.item_id)] || {};
           const title = titleFor(cat?.name, 'ase');
@@ -408,7 +402,7 @@ const StokBarangPage = () => {
       jumlah: "1",
       jenisDokumen: "doc",
       seal_number: "",
-      itemId: "", // Reset item ID
+      itemId: "",
     });
     setActiveDialog("add");
   };
@@ -490,11 +484,15 @@ const StokBarangPage = () => {
         return;
       }
       try {
-        await skybase.warehouseRequests.create({
-          item_id: selectedItem.itemId,
-          qty: jumlah,
-          notes: requestData.catatan || undefined,
-        } as any);
+          await skybase.warehouseRequests.create({
+            items: [
+              {
+                item_id: selectedItem.itemId,
+                qty: jumlah,
+              },
+            ],
+            notes: requestData.catatan || undefined,
+          });
         setNotification({ type: "success", message: "Request berhasil dikirim ke warehouse!" });
         setActiveDialog(null);
         setSelectedItem(null);
@@ -535,7 +533,6 @@ const StokBarangPage = () => {
         const itemId = Number(addData.itemId);
         
         if (addData.jenisDokumen === 'doc') {
-          // Ambil jumlah dari form, pastikan number
           const quantity = Number(addData.jumlah);
           await skybase.inventory.addDoc({
             item_id: itemId,
@@ -557,7 +554,7 @@ const StokBarangPage = () => {
 
         setNotification({ type: "success", message: `Berhasil menambah stok!` });
         window.location.reload();
-      } catch (error) {
+      } catch {
         setNotification({ type: "error", message: "Gagal menambah stok" });
       }
       setActiveDialog(null);
@@ -587,7 +584,7 @@ const StokBarangPage = () => {
           });
         } else {
           await skybase.inventory.updateAse(selectedItem.gcId!, {
-            serial_number: formData.revisi, // Note: reusing revisi field as serial in edit form
+            serial_number: formData.revisi,
             seal_number: formData.seal_number || '',
             expires_at: effectiveDate,
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
@@ -595,7 +592,7 @@ const StokBarangPage = () => {
         }
         setNotification({ type: "success", message: "Berhasil mengupdate stok barang!" });
         window.location.reload();
-      } catch (error) {
+      } catch {
         setNotification({ type: "error", message: "Gagal mengupdate stok barang" });
       } finally {
         setEditLoading(false);
@@ -628,7 +625,6 @@ const StokBarangPage = () => {
         render: (value, row) => (
           <div className="flex items-center gap-2">
             <span>{String(value)}</span>
-            {/* Render Badge Expiry secara kondisional */}
             {row.daysRemaining !== undefined && <ExpiryBadge days={row.daysRemaining} />}
           </div>
         ),
@@ -804,7 +800,7 @@ const StokBarangPage = () => {
                          {['all', 'doc', 'ase'].map((cat) => (
                             <button
                               key={cat}
-                              onClick={() => setFilterConfig(p => ({ ...p, category: cat as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, category: cat as "all" | "doc" | "ase" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.category === cat ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {cat === 'all' ? 'Semua' : cat === 'doc' ? 'Dokumen' : 'ASE'}
@@ -819,7 +815,7 @@ const StokBarangPage = () => {
                          {['all', 'valid', 'alert'].map((st) => (
                             <button
                               key={st}
-                              onClick={() => setFilterConfig(p => ({ ...p, status: st as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, status: st as "all" | "valid" | "alert" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.status === st ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {st === 'all' ? 'Semua' : st === 'valid' ? 'Valid' : 'Expired / Warning'}
@@ -839,7 +835,7 @@ const StokBarangPage = () => {
                          ].map((opt) => (
                             <button
                               key={opt.k}
-                              onClick={() => setFilterConfig(p => ({ ...p, stock: opt.k as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, stock: opt.k as "all" | "available" | "low" | "empty" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.stock === opt.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {opt.l}
@@ -852,7 +848,7 @@ const StokBarangPage = () => {
                       <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
                       <select 
                         value={filterConfig.sort}
-                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as any }))}
+                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as FilterConfig["sort"] }))}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
                       >
                         <option value="name_asc">Nama (A-Z)</option>
@@ -1242,7 +1238,7 @@ const StokBarangPage = () => {
                             id="add-jenis-dokumen"
                             value={addData.jenisDokumen}
                             onChange={(e) => {
-                                setAddData(prev => ({ ...prev, jenisDokumen: e.target.value as any, itemId: "" }));
+                                setAddData(prev => ({ ...prev, jenisDokumen: e.target.value as "doc" | "ase", itemId: "" }));
                             }}
                             className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           >

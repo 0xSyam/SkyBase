@@ -8,13 +8,12 @@ import Notification from "@/component/Notification";
 import { Download } from "lucide-react";
 import skybase from "@/lib/api/skybase";
 import { useRouter } from "next/navigation";
-import type { Flight, AircraftStatusReport } from "@/types/api";
+import type { Flight } from "@/types/api";
 import { 
   generateStatusReportPDF, 
   generateRecapPDF, 
   type PDFItem,
   type RecapData,
-  type RecapFlight,
   type RecapSection
 } from "@/lib/pdfGenerator";
 
@@ -164,8 +163,6 @@ export default function GroundcrewLaporanPage() {
       const pdfSections: RecapSection[] = [];
 
       for (const section of filteredSections) {
-        const recapFlights: RecapFlight[] = [];
-
         const flightPromises = section.schedules.map(async (sch) => {
              let items: PDFItem[] = [];
              if (sch.aircraftId) {
@@ -267,12 +264,15 @@ export default function GroundcrewLaporanPage() {
              aircraft_id: schedule.aircraftId
          },
          period: { from: dateStr, to: dateStr, interval: 'daily' },
-         summary: { inventory_health: {} as any, inspection_performance: {} as any },
-         current_inventory: { by_category: {} as any } as any,
+         summary: { 
+             inventory_health: { total_items: 0, valid_items: 0, expired_items: 0, expiring_soon: 0, health_percentage: 0 }, 
+             inspection_performance: { total_inspections: 0, passed_inspections: 0, failed_inspections: 0, pass_rate: 0 } 
+         },
+         current_inventory: { by_category: { ASE: { total: 0, valid: 0, expired: 0, expiring_soon: 0 }, DOC: { total: 0, valid: 0, expired: 0, expiring_soon: 0 } } },
          timeline: {}
       };
 
-      // @ts-ignore 
+      // @ts-expect-error - reportDataMock is a partial mock for PDF generation
       generateStatusReportPDF(reportDataMock, `GC-Laporan-${schedule.registration}.pdf`, items);
 
       setNotification({ type: "success", message: "Laporan berhasil diunduh" });

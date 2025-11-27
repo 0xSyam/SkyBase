@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
-import { Calendar, Filter } from "lucide-react"; 
+import { Filter } from "lucide-react"; 
 import skybase from "@/lib/api/skybase";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Nama Item",
     align: "left",
     className: "flex-1 min-w-[180px]", 
-    render: (value: any, row) => (
+    render: (value: string, row: StockItem) => (
         <div className="flex flex-col">
             <span className="font-medium text-[#111827]">{value}</span>
             <span className="text-xs text-gray-500 md:hidden">{row.nomor}</span>
@@ -100,7 +100,7 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Revisi",
     align: "left",
     className: "hidden md:flex w-32 flex-none",
-    render: (value: any) => (
+    render: (value: string) => (
         <span className={value === "-" || !value ? "text-gray-400" : ""}>{value || "-"}</span>
     )
   },
@@ -109,7 +109,7 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Efektif / Exp",
     align: "left",
     className: "w-40 flex-none",
-    render: (value: any, row) => (
+    render: (value: string, row: StockItem) => (
       <div className="flex items-center gap-2">
         <span>{value}</span>
         {row.hasAlert && (
@@ -123,7 +123,7 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Qty",
     align: "right", 
     className: "w-28 flex-none",
-    render: (value: any, row) => (
+    render: (value: number, row: StockItem) => (
         <span className="font-semibold text-[#0D63F3]">
             {value} {row.unit || ""}
         </span>
@@ -146,13 +146,6 @@ const WarehouseInventarisPage = () => {
   const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   
-  const [addData, setAddData] = useState<StockAddFormData>({
-    nomor: "",
-    nomorSeal: "",
-    efektif: "",
-    jumlah: "",
-  });
-
   const fetchInventoryData = useCallback(async () => {
     try {
       setLoading(true);
@@ -329,29 +322,6 @@ const WarehouseInventarisPage = () => {
     );
   };
 
-  const handleDialogClose = () => {
-    setActiveDialog(null);
-    setSelectedGroup(null);
-  };
-
-  const handleAddInputChange =
-    (field: keyof StockAddFormData) =>
-    (event: React.ChangeEvent<HTMLInputElement>) => {
-      setAddData((previous) => ({
-        ...previous,
-        [field]: event.target.value,
-      }));
-    };
-
-  const handleAddSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (activeDialog !== "add" || !selectedGroup) return;
-    setActiveDialog(null);
-    setSelectedGroup(null);
-    setAddData({ nomor: "", nomorSeal: "", efektif: "", jumlah: "" });
-    fetchInventoryData();
-  };
-
   if (loading) {
     return (
       <PageLayout sidebarRole="warehouse">
@@ -415,7 +385,7 @@ const WarehouseInventarisPage = () => {
                             <button
                               type="button"
                               key={cat}
-                              onClick={() => setFilterConfig(p => ({ ...p, category: cat as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, category: cat as "all" | "DOC" | "ASE" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.category === cat ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {cat === 'all' ? 'Semua' : cat}
@@ -433,7 +403,7 @@ const WarehouseInventarisPage = () => {
                             <button
                               type="button"
                               key={st.k}
-                              onClick={() => setFilterConfig(p => ({ ...p, stockStatus: st.k as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, stockStatus: st.k as "all" | "available" | "low" | "empty" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.stockStatus === st.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {st.l}
@@ -449,7 +419,7 @@ const WarehouseInventarisPage = () => {
                             <button
                               type="button"
                               key={val.k}
-                              onClick={() => setFilterConfig(p => ({ ...p, validity: val.k as any }))}
+                              onClick={() => setFilterConfig(p => ({ ...p, validity: val.k as "all" | "valid" | "warning" }))}
                               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.validity === val.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                               {val.l}
@@ -462,7 +432,7 @@ const WarehouseInventarisPage = () => {
                       <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
                       <select 
                         value={filterConfig.sort}
-                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as any }))}
+                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as FilterConfig["sort"] }))}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
                       >
                         <option value="name_asc">Nama (A-Z)</option>

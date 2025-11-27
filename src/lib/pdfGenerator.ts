@@ -43,7 +43,8 @@ const drawManifestTable = (doc: jsPDF, items: PDFItem[], startY: number) => {
     grouped[cat].push(item);
   });
 
-  const tableBody: any[] = [];
+
+  const tableBody: (string | number | { content: string; colSpan?: number; styles?: object; })[][] = [];
   const categories = Object.keys(grouped).sort();
 
   categories.forEach((cat) => {
@@ -107,7 +108,7 @@ const drawManifestTable = (doc: jsPDF, items: PDFItem[], startY: number) => {
     pageBreak: 'auto',
   });
 
-  // @ts-ignore
+  // @ts-expect-error - jspdf-autotable dynamically adds lastAutoTable property
   return doc.lastAutoTable.finalY;
 };
 
@@ -217,7 +218,7 @@ export const generateStatusReportPDF = (
   doc.save(fileName);
 };
 
-export const generatePDF = (data: any, fileName: string) => {
+export const generatePDF = (data: unknown, fileName: string) => {
   const doc = new jsPDF();
   doc.text("Legacy Report", 14, 20);
   doc.save(fileName);

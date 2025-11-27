@@ -3,7 +3,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Plus, Filter } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
@@ -33,6 +32,24 @@ const initialFilterConfig: FilterConfig = {
   status: "all",
   sort: "name_asc",
 };
+
+function isApiErrorWithPayload(
+  error: unknown
+): error is { payload: { message?: string } } {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "payload" in error
+  ) {
+    const payload = (error as { payload: unknown }).payload;
+    return (
+      typeof payload === "object" &&
+      payload !== null &&
+      "message" in payload
+    );
+  }
+  return false;
+}
 
 export default function SupervisorManajemenAkunPage() {
   const router = useRouter();
@@ -95,7 +112,10 @@ export default function SupervisorManajemenAkunPage() {
       setNotification({ type: 'success', message: `Akun ${selectedAccount.username} berhasil dihapus` });
       closeDeleteModal();
     } catch (error) {
-      const errorMsg = (error as any)?.payload?.message || "Gagal menghapus akun";
+      let errorMsg = "Gagal menghapus akun";
+      if (isApiErrorWithPayload(error)) {
+        errorMsg = error.payload.message || errorMsg;
+      }
       setNotification({ type: 'error', message: errorMsg });
       closeDeleteModal();
     } finally {
@@ -114,7 +134,10 @@ export default function SupervisorManajemenAkunPage() {
       setIsResetConfirmOpen(false);
       setSelectedAccount(null);
     } catch (error) {
-      const errorMsg = (error as any)?.payload?.message || "Gagal mereset password";
+      let errorMsg = "Gagal mereset password";
+      if (isApiErrorWithPayload(error)) {
+        errorMsg = error.payload.message || errorMsg;
+      }
       setNotification({ type: 'error', message: errorMsg });
     } finally {
       setResetLoading(false);
@@ -206,7 +229,7 @@ export default function SupervisorManajemenAkunPage() {
                       {['all', 'supervisor', 'warehouse', 'groundcrew'].map((r) => (
                          <button
                            key={r}
-                           onClick={() => setFilterConfig(p => ({ ...p, role: r as any }))}
+                           onClick={() => setFilterConfig(p => ({ ...p, role: r as "all" | "supervisor" | "warehouse" | "groundcrew" }))}
                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.role === r ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                          >
                            {r === 'all' ? 'Semua' : r.charAt(0).toUpperCase() + r.slice(1)}
@@ -221,7 +244,7 @@ export default function SupervisorManajemenAkunPage() {
                       {['all', 'active', 'inactive'].map((s) => (
                          <button
                            key={s}
-                           onClick={() => setFilterConfig(p => ({ ...p, status: s as any }))}
+                           onClick={() => setFilterConfig(p => ({ ...p, status: s as "all" | "active" | "inactive" }))}
                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.status === s ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                          >
                            {s === 'all' ? 'Semua' : s === 'active' ? 'Aktif' : 'Non-Aktif'}
@@ -234,7 +257,7 @@ export default function SupervisorManajemenAkunPage() {
                    <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
                    <select 
                      value={filterConfig.sort}
-                     onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as any }))}
+                     onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as FilterConfig["sort"] }))}
                      className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
                    >
                      <option value="name_asc">Nama (A-Z)</option>

@@ -32,13 +32,34 @@ export default function TopBar({
   const [unreadCount, setUnreadCount] = useState(0);
   const popoverRef = useRef<HTMLDivElement>(null);
 
+  const parseNotificationData = React.useCallback((data: unknown): Notification[] => {
+    if (Array.isArray(data)) {
+      return data as Notification[];
+    } else if (data && typeof data === 'object' && 'items' in data) {
+      return (data as { items: Notification[] }).items;
+    } else if (data) {
+      return [data as Notification];
+    }
+    return [];
+  }, []);
+
+  const fetchUnreadCount = React.useCallback(async () => {
+    try {
+      const res = await notificationApi.getRecent();
+      const items = parseNotificationData(res.data);
+      setUnreadCount(items.length);
+    } catch (error) {
+      console.error("Gagal mengambil notifikasi", error);
+    }
+  }, [parseNotificationData]);
+
   useEffect(() => {
     const user = getUser();
     if (user?.name) {
       setUserName(user.name);
     }
     fetchUnreadCount();
-  }, []);
+  }, [fetchUnreadCount]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -49,27 +70,6 @@ export default function TopBar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const parseNotificationData = (data: unknown): Notification[] => {
-    if (Array.isArray(data)) {
-      return data as Notification[];
-    } else if (data && typeof data === 'object' && 'items' in data) {
-      return (data as { items: Notification[] }).items;
-    } else if (data) {
-      return [data as Notification];
-    }
-    return [];
-  };
-
-  const fetchUnreadCount = async () => {
-    try {
-      const res = await notificationApi.getRecent();
-      const items = parseNotificationData(res.data);
-      setUnreadCount(items.length);
-    } catch (error) {
-      console.error("Gagal mengambil notifikasi", error);
-    }
-  };
 
   const handleNotificationClick = () => {
     const newState = !popoverOpen;

@@ -117,9 +117,18 @@ const ProfilePage = () => {
     setSaving(true);
     setNotification(null);
 
+    type UpdateProfilePayload = {
+      name: string;
+      email: string;
+      phone?: string | null;
+      current_password?: string;
+      new_password?: string;
+      new_password_confirmation?: string;
+    };
+
     try {
       // Filter empty password fields if not changing password
-      const payload: any = {
+      const payload: UpdateProfilePayload = {
         name: formData.name,
         email: formData.email,
         phone: formData.phone || null,
@@ -150,8 +159,15 @@ const ProfilePage = () => {
       setShowConfirmPassword(false);
 
       setNotification({ type: "success", message: "Profil berhasil diperbarui!" });
-    } catch (err: any) {
-      const msg = err?.payload?.message || err?.message || "Gagal memperbarui profil.";
+    } catch (err: unknown) {
+      let msg = "Gagal memperbarui profil.";
+      if (typeof err === 'object' && err !== null) {
+          if ('payload' in err && typeof (err as {payload: unknown}).payload === 'object' && (err as {payload: unknown}).payload !== null && 'message' in (err as {payload: {message: string}}).payload) {
+              msg = (err as { payload: { message: string } }).payload.message;
+          } else if ('message' in err) {
+              msg = (err as { message: string }).message;
+          }
+      }
       setNotification({ type: "error", message: msg });
     } finally {
       setSaving(false);

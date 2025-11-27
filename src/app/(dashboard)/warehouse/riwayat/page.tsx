@@ -261,7 +261,7 @@ export default function RiwayatPage() {
                         ].map((s) => (
                             <button
                                 key={s.k}
-                                onClick={() => setFilterConfig(p => ({ ...p, status: s.k as any }))}
+                                onClick={() => setFilterConfig(p => ({ ...p, status: s.k as "all" | "APPROVED" | "REJECTED" | "PENDING" }))}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.status === s.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                                 {s.l}
@@ -276,7 +276,7 @@ export default function RiwayatPage() {
                         {['all', 'DOC', 'ASE'].map((t) => (
                             <button
                                 key={t}
-                                onClick={() => setFilterConfig(p => ({ ...p, type: t as any }))}
+                                onClick={() => setFilterConfig(p => ({ ...p, type: t as "all" | "DOC" | "ASE" }))}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.type === t ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                             >
                                 {t === 'all' ? 'Semua' : t}
@@ -289,7 +289,7 @@ export default function RiwayatPage() {
                     <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
                     <select 
                         value={filterConfig.sort}
-                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as any }))}
+                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as "newest" | "oldest" | "qty_high" | "qty_low" }))}
                         className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
                     >
                         <option value="newest">Terbaru</option>
