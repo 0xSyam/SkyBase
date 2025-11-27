@@ -303,11 +303,9 @@ export type WarehouseRequest = {
 export type WarehouseRequestCreateData = {
   flight_id?: number;
   notes?: string;
-  items: Array<{
-    item_id: number;
-    qty: number;
-    reason?: string | null;
-  }>;
+  item_id: number;
+  qty: number;
+  reason?: string | null;
 };
 
 // Report Types

@@ -21,6 +21,7 @@ interface FlightRow {
   takeOff: string;
   flightDate: string;
   rawDate?: Date | null;
+  flightId?: number;
 }
 
 interface FilterConfig {
@@ -54,10 +55,16 @@ export default function SupervisorPenerbanganPage() {
       const res = await skybase.flights.list();
       const data = res?.data;
       let list: Flight[] = [];
+      
+      // Robust handling for flight list response
       if (Array.isArray(data)) {
         list = data;
-      } else if (data && typeof data === 'object' && 'flights' in data && Array.isArray(data.flights)) {
-        list = data.flights;
+      } else if (data && typeof data === 'object') {
+         if ('flights' in data && Array.isArray((data as { flights: Flight[] }).flights)) {
+             list = (data as { flights: Flight[] }).flights;
+         } else if ('data' in data && Array.isArray((data as { data: Flight[] }).data)) {
+             list = (data as { data: Flight[] }).data;
+         }
       }
       setFlights(list);
     } catch (e) {
@@ -70,11 +77,29 @@ export default function SupervisorPenerbanganPage() {
     try {
       const res = await skybase.aircraft.list();
       const data = res?.data;
+      let list: Aircraft[] = [];
+
+      // PERBAIKAN: Handle berbagai kemungkinan struktur response API untuk aircraft
+      // Menghapus penggunaan 'any' dan menggantinya dengan type assertion yang spesifik
       if (Array.isArray(data)) {
-        setAircraftList(data);
+        list = data;
+      } else if (data && typeof data === 'object') {
+        // Definisikan shape yang mungkin dari response wrapper
+        const responseData = data as { aircraft?: Aircraft[]; items?: Aircraft[]; data?: Aircraft[] };
+        
+        if (Array.isArray(responseData.aircraft)) {
+            list = responseData.aircraft;
+        } else if (Array.isArray(responseData.items)) {
+            list = responseData.items;
+        } else if (Array.isArray(responseData.data)) {
+            list = responseData.data;
+        }
       }
+      
+      setAircraftList(list);
     } catch (error) {
       console.error("Failed to load aircraft list", error);
+      setAircraftList([]);
     }
   }, []);
 
@@ -220,6 +245,7 @@ export default function SupervisorPenerbanganPage() {
         const parsedSchedDep = parseTime(editForm.arrival, flightDate);
         
         if (parsedSchedDep) {
+           // Conflict check can be added here
            const conflict = flights.some(f => 
               f.aircraft?.registration_code === editForm.idPesawat &&
               f.sched_dep === parsedSchedDep
@@ -303,12 +329,12 @@ export default function SupervisorPenerbanganPage() {
     setIsCreateMode(true);
     setEditingIndex(null);
     
-    const defaultType = availableAircraftTypes[0] || "";
-    const defaultReg = aircraftList.find(a => a.type === defaultType)?.registration_code || "";
-
+    // Reset form for new entry
+    const defaultType = availableAircraftTypes.length > 0 ? availableAircraftTypes[0] : "";
+    
     setEditForm({
       jenisPesawat: defaultType,
-      idPesawat: defaultReg,
+      idPesawat: "", // User must select
       destinasi: "",
       arrival: "",
       takeOff: "",
@@ -469,7 +495,7 @@ export default function SupervisorPenerbanganPage() {
                       id="edit-jenis-pesawat"
                       value={editForm.jenisPesawat}
                       onChange={(event) => handleEditChange("jenisPesawat", event.target.value)}
-                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 disabled:bg-gray-100 disabled:text-gray-500"
                       disabled={!isCreateMode}
                     >
                       <option value="" disabled>Pilih jenis pesawat</option>
@@ -492,7 +518,8 @@ export default function SupervisorPenerbanganPage() {
                       id="edit-id-pesawat"
                       value={editForm.idPesawat}
                       onChange={(event) => handleEditChange("idPesawat", event.target.value)}
-                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 disabled:bg-gray-100 disabled:text-gray-500"
+                      // Only disabled if creating and type is not selected OR if editing (since backend doesn't support swap)
                       disabled={!editForm.jenisPesawat || !isCreateMode}
                     >
                       <option value="" disabled>Pilih ID pesawat</option>
@@ -516,7 +543,8 @@ export default function SupervisorPenerbanganPage() {
                     value={editForm.destinasi}
                     onChange={(event) => handleEditChange("destinasi", event.target.value)}
                     placeholder="Masukkan destinasi"
-                    className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                    className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 disabled:bg-gray-100 disabled:text-gray-500"
+                    disabled={!isCreateMode} 
                   />
                 </div>
 
