@@ -56,7 +56,6 @@ export default function SupervisorPenerbanganPage() {
       const data = res?.data;
       let list: Flight[] = [];
       
-      // Robust handling for flight list response
       if (Array.isArray(data)) {
         list = data;
       } else if (data && typeof data === 'object') {
@@ -79,14 +78,10 @@ export default function SupervisorPenerbanganPage() {
       const data = res?.data;
       let list: Aircraft[] = [];
 
-      // PERBAIKAN: Handle berbagai kemungkinan struktur response API untuk aircraft
-      // Menghapus penggunaan 'any' dan menggantinya dengan type assertion yang spesifik
       if (Array.isArray(data)) {
         list = data;
       } else if (data && typeof data === 'object') {
-        // Definisikan shape yang mungkin dari response wrapper
         const responseData = data as { aircraft?: Aircraft[]; items?: Aircraft[]; data?: Aircraft[] };
-        
         if (Array.isArray(responseData.aircraft)) {
             list = responseData.aircraft;
         } else if (Array.isArray(responseData.items)) {
@@ -95,8 +90,15 @@ export default function SupervisorPenerbanganPage() {
             list = responseData.data;
         }
       }
+
+      // PERBAIKAN PENTING: Normalisasi data type vs type_code
+      // Pastikan field 'type' selalu terisi, ambil dari 'type_code' jika 'type' kosong
+      const normalizedList = list.map(ac => ({
+        ...ac,
+        type: ac.type || ac.type_code || "Unknown"
+      }));
       
-      setAircraftList(list);
+      setAircraftList(normalizedList);
     } catch (error) {
       console.error("Failed to load aircraft list", error);
       setAircraftList([]);
@@ -118,7 +120,7 @@ export default function SupervisorPenerbanganPage() {
       } catch { return "--:--"; }
     };
     return flights.map((f) => ({
-      jenisPesawat: f?.aircraft?.type ?? "-",
+      jenisPesawat: f?.aircraft?.type || f?.aircraft?.type_code || "-",
       idPesawat: f?.aircraft?.registration_code ?? "-",
       destinasi: f?.route_to ?? "-",
       arrival: fmtTime(f?.sched_dep ?? null),
@@ -130,6 +132,7 @@ export default function SupervisorPenerbanganPage() {
   }, [flights]);
 
   const availableAircraftTypes = useMemo(() => {
+    // Filter jenis pesawat yang unik
     const types = new Set(aircraftList.map(a => a.type).filter(Boolean) as string[]);
     return Array.from(types).sort();
   }, [aircraftList]);
@@ -191,6 +194,7 @@ export default function SupervisorPenerbanganPage() {
       if (!editForm) return;
   
       if (key === "jenisPesawat" && value !== editForm.jenisPesawat) {
+         // Reset ID Pesawat jika Jenis Pesawat berubah
          setEditForm({ ...editForm, [key]: value, idPesawat: "" });
          return;
       }
@@ -245,7 +249,6 @@ export default function SupervisorPenerbanganPage() {
         const parsedSchedDep = parseTime(editForm.arrival, flightDate);
         
         if (parsedSchedDep) {
-           // Conflict check can be added here
            const conflict = flights.some(f => 
               f.aircraft?.registration_code === editForm.idPesawat &&
               f.sched_dep === parsedSchedDep
@@ -519,7 +522,6 @@ export default function SupervisorPenerbanganPage() {
                       value={editForm.idPesawat}
                       onChange={(event) => handleEditChange("idPesawat", event.target.value)}
                       className="w-full appearance-none rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30 disabled:bg-gray-100 disabled:text-gray-500"
-                      // Only disabled if creating and type is not selected OR if editing (since backend doesn't support swap)
                       disabled={!editForm.jenisPesawat || !isCreateMode}
                     >
                       <option value="" disabled>Pilih ID pesawat</option>
