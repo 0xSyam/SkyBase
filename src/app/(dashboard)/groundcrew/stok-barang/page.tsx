@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -12,6 +11,7 @@ import { Filter, X, Check, Plus, Minus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import type { ItemCatalog } from "@/types/api"; // Added Import
 
 // --- HELPER & COMPONENTS ---
 
@@ -52,9 +52,8 @@ const formatDateForApi = (dateStr: string): string | undefined => {
   return dateStr;
 };
 
-// --- COMPONENT BADGE EXPIRED (DIPERBAIKI) ---
+// --- COMPONENT BADGE EXPIRED ---
 const ExpiryBadge = ({ days }: { days: number }) => {
-  // Badge hanya muncul jika sisa hari <= 3
   if (days > 3) return null;
 
   const isExpired = days < 0;
@@ -62,14 +61,10 @@ const ExpiryBadge = ({ days }: { days: number }) => {
 
   return (
     <div className="group flex items-center h-6 bg-[#DC2626] rounded-full text-white shadow-sm cursor-help w-fit transition-all duration-300 ease-in-out">
-      {/* Icon Circle */}
       <div className="flex-none w-6 h-6 flex items-center justify-center font-bold text-xs">
         !
       </div>
-      
-      {/* Text Container (Expandable) */}
       <div className="max-w-0 opacity-0 group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-500 ease-out overflow-hidden flex items-center">
-        {/* Text dengan padding bawah sedikit agar pas di tengah secara visual */}
         <span className="whitespace-nowrap text-[11px] font-medium pr-3 pl-0.5 pb-[2px]">
           {label}
         </span>
@@ -86,7 +81,7 @@ interface StockItem {
   revisi: string;
   efektif: string;
   hasAlert?: boolean;
-  daysRemaining?: number; // Added for badge logic
+  daysRemaining?: number;
   jumlah: number;
   itemId: number;
   gcId?: number;
@@ -120,6 +115,7 @@ interface StockAddFormData {
   jumlah: string;
   jenisDokumen: "doc" | "ase";
   seal_number: string;
+  itemId: string; // Added itemId
 }
 
 interface FilterConfig {
@@ -146,6 +142,7 @@ const StokBarangPage = () => {
   
   const [docGroups, setDocGroups] = useState<StockGroup[]>([]);
   const [aseGroups, setAseGroups] = useState<StockGroup[]>([]);
+  const [catalogItems, setCatalogItems] = useState<ItemCatalog[]>([]); // New State for Catalog Items
   
   // Filter State
   const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
@@ -176,6 +173,7 @@ const StokBarangPage = () => {
     jumlah: "",
     jenisDokumen: "doc",
     seal_number: "",
+    itemId: "", // Initialize
   });
 
   useEffect(() => {
@@ -187,11 +185,22 @@ const StokBarangPage = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const [invRes, docCatalogRes, aseCatalogRes] = await Promise.all([
+        const [invRes, docCatalogRes, aseCatalogRes, allItemsRes] = await Promise.all([
           skybase.inventory.groundcrewAll(),
           skybase.inventory.itemsByCategory("DOC"),
           skybase.inventory.itemsByCategory("ASE"),
+          skybase.items.list(), // Fetch ALL items for dropdown
         ]);
+
+        // Process Catalog Items for Dropdown
+        if (allItemsRes?.data) {
+            const itemsData = allItemsRes.data;
+            if (Array.isArray(itemsData)) {
+                setCatalogItems(itemsData);
+            } else if (itemsData && typeof itemsData === 'object' && 'items' in itemsData && Array.isArray((itemsData as any).items)) {
+                setCatalogItems((itemsData as any).items);
+            }
+        }
 
         const docs = invRes?.data?.doc_inventory ?? [];
         const ases = invRes?.data?.ase_inventory ?? [];
@@ -202,14 +211,14 @@ const StokBarangPage = () => {
         // Normalize catalog items
         const docCatalogItems = Array.isArray(docCatalogData)
           ? docCatalogData
-          : (docCatalogData && 'items' in docCatalogData && Array.isArray(docCatalogData.items))
-            ? docCatalogData.items
+          : (docCatalogData && typeof docCatalogData === 'object' && 'items' in docCatalogData && Array.isArray((docCatalogData as any).items))
+            ? (docCatalogData as any).items
             : [];
         
         const aseCatalogItems = Array.isArray(aseCatalogData)
           ? aseCatalogData
-          : (aseCatalogData && 'items' in aseCatalogData && Array.isArray(aseCatalogData.items))
-            ? aseCatalogData.items
+          : (aseCatalogData && typeof aseCatalogData === 'object' && 'items' in aseCatalogData && Array.isArray((aseCatalogData as any).items))
+            ? (aseCatalogData as any).items
             : [];
 
         const catalog: Record<number, { item_id?: number; name?: string }> = {};
@@ -233,7 +242,7 @@ const StokBarangPage = () => {
 
         // Helper to calc days remaining
         const getDaysRemaining = (targetDate: Date | null) => {
-            if (!targetDate) return 999; // No expiry
+            if (!targetDate) return 999; 
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const target = new Date(targetDate);
@@ -249,7 +258,6 @@ const StokBarangPage = () => {
           const effectiveDate = d?.effective_date ? new Date(d.effective_date) : null;
           const daysRemaining = getDaysRemaining(effectiveDate);
           
-          // Alert logic for filtering (<= 30 days)
           const hasAlert = daysRemaining <= 30;
 
           const item: StockItem = {
@@ -400,6 +408,7 @@ const StokBarangPage = () => {
       jumlah: "1",
       jenisDokumen: "doc",
       seal_number: "",
+      itemId: "", // Reset item ID
     });
     setActiveDialog("add");
   };
@@ -430,6 +439,7 @@ const StokBarangPage = () => {
       jumlah: "",
       jenisDokumen: "doc",
       seal_number: "",
+      itemId: "",
     });
   }, []);
 
@@ -516,19 +526,19 @@ const StokBarangPage = () => {
         return;
       }
 
-      try {
-        const newItem = await skybase.items.create({
-          name: addData.nomor, 
-          category: addData.jenisDokumen.toUpperCase(),
-        });
+      if (!addData.itemId) {
+        setNotification({ type: "error", message: "Silakan pilih nama item." });
+        return;
+      }
 
-        if (!newItem.data.item_id) throw new Error("Failed to create item");
+      try {
+        const itemId = Number(addData.itemId);
         
         if (addData.jenisDokumen === 'doc') {
           // Ambil jumlah dari form, pastikan number
           const quantity = Number(addData.jumlah);
           await skybase.inventory.addDoc({
-            item_id: newItem.data.item_id,
+            item_id: itemId,
             doc_number: addData.nomor,
             revision_no: addData.revisi,
             effective_date: effectiveDate,
@@ -537,7 +547,7 @@ const StokBarangPage = () => {
           });
         } else {
           await skybase.inventory.addAse({
-            item_id: newItem.data.item_id,
+            item_id: itemId,
             serial_number: addData.nomor,
             seal_number: addData.seal_number,
             expires_at: effectiveDate,
@@ -577,7 +587,7 @@ const StokBarangPage = () => {
           });
         } else {
           await skybase.inventory.updateAse(selectedItem.gcId!, {
-            serial_number: formData.revisi,
+            serial_number: formData.revisi, // Note: reusing revisi field as serial in edit form
             seal_number: formData.seal_number || '',
             expires_at: effectiveDate,
             quantity: Number(formData.jumlah) || selectedItem.jumlah,
@@ -1215,7 +1225,7 @@ const StokBarangPage = () => {
                         id="add-stock-title"
                         className="text-2xl font-semibold text-[#0E1D3D]"
                       >
-                        Tambah Dokumen
+                        Tambah Dokumen/Barang
                       </h2>
                     </div>
 
@@ -1231,7 +1241,9 @@ const StokBarangPage = () => {
                           <select
                             id="add-jenis-dokumen"
                             value={addData.jenisDokumen}
-                            onChange={handleAddInputChange("jenisDokumen")}
+                            onChange={(e) => {
+                                setAddData(prev => ({ ...prev, jenisDokumen: e.target.value as any, itemId: "" }));
+                            }}
                             className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           >
                             <option value="doc">DOC</option>
@@ -1257,17 +1269,50 @@ const StokBarangPage = () => {
                         </div>
                       </div>
 
+                      {/* DROPDOWN NAMA ITEM (BARU) */}
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="add-item-id"
+                          className="text-sm font-semibold text-[#0E1D3D]"
+                        >
+                          Nama Item
+                        </label>
+                        <div className="relative">
+                             <select
+                                id="add-item-id"
+                                value={addData.itemId}
+                                onChange={(e) => setAddData(prev => ({ ...prev, itemId: e.target.value }))}
+                                className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                             >
+                                <option value="" disabled>Pilih Item</option>
+                                {catalogItems
+                                  .filter(item => item.category === addData.jenisDokumen.toUpperCase())
+                                  .sort((a, b) => a.name.localeCompare(b.name))
+                                  .map((item) => (
+                                    <option key={item.item_id} value={item.item_id}>
+                                      {item.name} {item.unit ? `(${item.unit})` : ''}
+                                    </option>
+                                ))}
+                             </select>
+                             <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#9CA3AF]">
+                              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                            </div>
+                        </div>
+                      </div>
+
                       <div className="space-y-2">
                         <label
                           htmlFor="add-nomor"
                           className="text-sm font-semibold text-[#0E1D3D]"
                         >
-                          Nomor
+                          {addData.jenisDokumen === 'doc' ? 'Nomor Dokumen' : 'Serial Number'}
                         </label>
                         <input
                           id="add-nomor"
                           type="text"
-                          placeholder="Masukan nomor"
+                          placeholder={addData.jenisDokumen === 'doc' ? "Masukan nomor dokumen" : "Masukan serial number"}
                           value={addData.nomor}
                           onChange={handleAddInputChange("nomor")}
                           className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
@@ -1284,7 +1329,7 @@ const StokBarangPage = () => {
                         <input
                           id="add-revisi"
                           type="text"
-                          placeholder="Masukan nomor revisi"
+                          placeholder="Masukan nomor revisi (opsional)"
                           value={addData.revisi}
                           onChange={handleAddInputChange("revisi")}
                           className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
@@ -1315,7 +1360,7 @@ const StokBarangPage = () => {
                           htmlFor="add-efektif"
                           className="text-sm font-semibold text-[#0E1D3D]"
                         >
-                          Waktu efektif
+                          {addData.jenisDokumen === 'doc' ? 'Tanggal Efektif' : 'Tanggal Expired'}
                         </label>
                         <div className="relative">
                           <input
