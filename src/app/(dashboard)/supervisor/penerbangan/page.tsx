@@ -171,13 +171,13 @@ export default function SupervisorPenerbanganPage() {
       }
 
       if ((key === "arrival" || key === "takeOff") && typeof value === "string") {
-          let valStr = value;
+          let valStr: string = value;
           if (/^\d{1,4}$/.test(valStr)) {
               const num = valStr.padStart(4, "0");
               valStr = `${num.slice(0, 2)}:${num.slice(2)}`;
           }
           
-          setEditForm(prev => prev ? ({ ...prev, [key]: valStr as string }) : null);
+          setEditForm(prev => prev ? ({ ...prev, [key]: valStr }) : null);
           return;
       }
   
