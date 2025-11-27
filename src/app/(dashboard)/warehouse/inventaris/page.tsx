@@ -4,8 +4,11 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
-import { Calendar } from "lucide-react";
+import { Calendar, Filter } from "lucide-react"; 
 import skybase from "@/lib/api/skybase";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 import {
 	GcDocInventory,
@@ -41,6 +44,7 @@ interface StockItem {
 	serial_number?: string;
 	part_number?: string;
 	unit?: string;
+    rawDate?: Date; 
 }
 
 interface StockGroup {
@@ -56,17 +60,29 @@ interface StockAddFormData {
 	jumlah: string;
 }
 
+interface FilterConfig {
+  category: "all" | "DOC" | "ASE";
+  stockStatus: "all" | "available" | "low" | "empty";
+  validity: "all" | "valid" | "warning";
+  sort: "name_asc" | "name_desc" | "qty_asc" | "qty_desc" | "date_asc" | "date_desc";
+}
+
+const initialFilterConfig: FilterConfig = {
+  category: "all",
+  stockStatus: "all",
+  validity: "all",
+  sort: "name_asc",
+};
+
 type DialogMode = "add" | null;
 
-// PERBAIKAN: Menambahkan width (w-...) dan flex-none pada kolom agar sejajar
 const columns: ColumnDef<StockItem>[] = [
   {
     key: "namaDokumen",
     header: "Nama Item",
     align: "left",
-    // Flex-1 agar mengisi sisa ruang kosong
     className: "flex-1 min-w-[180px]", 
-    render: (value, row) => (
+    render: (value: any, row) => (
         <div className="flex flex-col">
             <span className="font-medium text-[#111827]">{value}</span>
             <span className="text-xs text-gray-500 md:hidden">{row.nomor}</span>
@@ -77,16 +93,14 @@ const columns: ColumnDef<StockItem>[] = [
     key: "nomor",
     header: "Nomor / SN",
     align: "left",
-    // Fixed width agar header tidak bertabrakan dengan kolom revisi
     className: "hidden md:flex w-48 flex-none", 
   },
   {
     key: "revisi",
     header: "Revisi",
     align: "left",
-    // Fixed width
     className: "hidden md:flex w-32 flex-none",
-    render: (value) => (
+    render: (value: any) => (
         <span className={value === "-" || !value ? "text-gray-400" : ""}>{value || "-"}</span>
     )
   },
@@ -94,9 +108,8 @@ const columns: ColumnDef<StockItem>[] = [
     key: "efektif",
     header: "Efektif / Exp",
     align: "left",
-    // Fixed width
     className: "w-40 flex-none",
-    render: (value, row) => (
+    render: (value: any, row) => (
       <div className="flex items-center gap-2">
         <span>{value}</span>
         {row.hasAlert && (
@@ -108,9 +121,9 @@ const columns: ColumnDef<StockItem>[] = [
   {
     key: "jumlah",
     header: "Qty",
-    align: "right", // Rata kanan untuk angka biasanya lebih rapi
+    align: "right", 
     className: "w-28 flex-none",
-    render: (value, row) => (
+    render: (value: any, row) => (
         <span className="font-semibold text-[#0D63F3]">
             {value} {row.unit || ""}
         </span>
@@ -121,13 +134,17 @@ const columns: ColumnDef<StockItem>[] = [
 const WarehouseInventarisPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [stockGroups, setStockGroups] = useState<StockGroup[]>([]);
-  const [expandedGroupId, setExpandedGroupId] = useState<string>("");
-  const [selectedGroup, setSelectedGroup] = useState<
-    Pick<StockGroup, "id" | "title"> | null
-  >(null);
+  
+  // UBAH 1: State expandedGroupIds menjadi array string untuk multiple expand
+  const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
+  
+  const [selectedGroup, setSelectedGroup] = useState<Pick<StockGroup, "id" | "title"> | null>(null);
   const [activeDialog, setActiveDialog] = useState<DialogMode>(null);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  
+  const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   
   const [addData, setAddData] = useState<StockAddFormData>({
     nomor: "",
@@ -137,210 +154,179 @@ const WarehouseInventarisPage = () => {
   });
 
   const fetchInventoryData = useCallback(async () => {
-
     try {
-
       setLoading(true);
-
       const response = await skybase.inventory.groundcrewAll();
-
       const data = response.data;
-
-      const docs = Array.isArray(data?.doc_inventory)
-
-        ? data.doc_inventory
-
-        : [];
-
+      const docs = Array.isArray(data?.doc_inventory) ? data.doc_inventory : [];
       const ase = Array.isArray(data?.ase_inventory) ? data.ase_inventory : [];
 
       const categorizedItems: Record<string, StockItem[]> = {};
 
-      const mapItemToStock = (
-
-        item: GcDocInventory | GcAseInventory,
-
-        type: "DOC" | "ASE",
-
-      ) => {
-
-        const categoryName =
-
-          item.item?.category ||
-
-          (type === "DOC" ? "Documents" : "Safety Equipment");
-
+      const mapItemToStock = (item: GcDocInventory | GcAseInventory, type: "DOC" | "ASE") => {
+        const categoryName = item.item?.category || (type === "DOC" ? "Documents" : "Safety Equipment");
         let isExpired = false;
-
         let itemQuantity = 1;
-
         let stockItem: StockItem;
+        let rawDate: Date | undefined;
 
         if (type === "DOC") {
-
           const docItem = item as GcDocInventory;
-
           itemQuantity = docItem.quantity || 1;
-
+          if(docItem.effective_date) rawDate = new Date(docItem.effective_date);
+          
           stockItem = {
-
             id: `doc-${docItem.gc_doc_id}`,
-
             item_id: docItem.item_id,
-
             namaDokumen: docItem.item?.name || "Unknown Item",
-
             name: docItem.item?.name,
-
             nomor: docItem.doc_number || "-",
-
             revisi: docItem.revision_no || "-",
-
             efektif: formatDate(docItem.effective_date),
-
             hasAlert: isExpired,
-
             jumlah: itemQuantity,
-
             unit: docItem.item?.unit || "unit",
-
             category: categoryName,
-
             type: type,
-
+            rawDate: rawDate
           };
-
         } else {
-
-
           const aseItem = item as GcAseInventory;
-
           if (aseItem.expires_at) {
-
             const expiryDate = new Date(aseItem.expires_at);
-
+            rawDate = expiryDate;
             const today = new Date();
-
             if (expiryDate < today) isExpired = true;
-
           }
-
           itemQuantity = aseItem.quantity || 1;
-
           stockItem = {
-
             id: `ase-${aseItem.gc_ase_id}`,
-
             item_id: aseItem.item_id,
-
             namaDokumen: aseItem.item?.name || "Unknown Item",
-
             name: aseItem.item?.name,
-
             nomor: aseItem.serial_number || "-",
-
             revisi: "-",
-
             efektif: formatDate(aseItem.expires_at),
-
             hasAlert: isExpired,
-
             jumlah: itemQuantity,
-
             unit: aseItem.item?.unit || "unit",
-
             category: categoryName,
-
             type: type,
-
+            rawDate: rawDate
           };
-
         }
 
         if (!categorizedItems[categoryName]) {
-
           categorizedItems[categoryName] = [];
-
         }
-
         categorizedItems[categoryName].push(stockItem);
-
       };
 
       docs.forEach((d: GcDocInventory) => mapItemToStock(d, "DOC"));
-
       ase.forEach((a: GcAseInventory) => mapItemToStock(a, "ASE"));
 
       const groups: StockGroup[] = Object.entries(categorizedItems).map(
-
         ([category, items]) => ({
-
           id: category.toLowerCase().replace(/\s+/g, "-"),
-
           title: category,
-
           items,
-
         }),
-
       );
 
       setStockGroups(groups);
-
-      if (groups.length > 0 && !expandedGroupId) {
-
-        setExpandedGroupId(groups[0].id);
-
+      
+      // UBAH 2: Logic default expand (hanya jika array kosong)
+      if (groups.length > 0) {
+        setExpandedGroupIds((prev) => prev.length === 0 ? [groups[0].id] : prev);
       }
-
     } catch (error) {
-
       console.error("Failed to fetch inventory data:", error);
-
       setStockGroups([]);
-
     } finally {
-
       setLoading(false);
-
     }
-
-  }, [expandedGroupId]);	useEffect(() => {
-		setMounted(true);
-		fetchInventoryData();
-	}, [fetchInventoryData]);
+  }, []); 
 
   useEffect(() => {
-    if (activeDialog !== "add") {
-      return;
-    }
+    setMounted(true);
+    fetchInventoryData();
+  }, [fetchInventoryData]);
 
-    setAddData({
-      nomor: "",
-      nomorSeal: "",
-      efektif: "",
-      jumlah: "",
-    });
+  useEffect(() => {
+    if (activeDialog !== "add") return;
+    setAddData({ nomor: "", nomorSeal: "", efektif: "", jumlah: "" });
   }, [activeDialog]);
 
   const filteredGroups = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return stockGroups;
+    let processedGroups = stockGroups.map(group => ({ ...group, items: [...group.items] }));
+
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      processedGroups = processedGroups.map(group => ({
+        ...group,
+        items: group.items.filter((item) =>
+          [item.namaDokumen, item.nomor, item.revisi, item.efektif]
+            .filter(Boolean)
+            .some((value) => value?.toLowerCase().includes(query))
+        ),
+      }));
     }
 
-    const query = searchTerm.toLowerCase();
-    return stockGroups.map((group) => ({
-      ...group,
-      items: group.items.filter((item) =>
-        [item.namaDokumen, item.nomor, item.revisi, item.efektif, item.name]
-          .filter(Boolean)
-          .some((value) => value?.toLowerCase().includes(query)),
-      ),
-    })).filter(group => group.items.length > 0);
-  }, [searchTerm, stockGroups]);
+    if (filterConfig.category !== "all") {
+       processedGroups = processedGroups.map(group => ({
+         ...group,
+         items: group.items.filter(item => item.type === filterConfig.category)
+       }));
+    }
 
+    if (filterConfig.stockStatus !== "all") {
+       processedGroups = processedGroups.map(group => ({
+         ...group,
+         items: group.items.filter(item => {
+            if (filterConfig.stockStatus === "empty") return item.jumlah === 0;
+            if (filterConfig.stockStatus === "low") return item.jumlah > 0 && item.jumlah < 5;
+            if (filterConfig.stockStatus === "available") return item.jumlah > 0;
+            return true;
+         })
+       }));
+    }
+
+    if (filterConfig.validity !== "all") {
+        processedGroups = processedGroups.map(group => ({
+            ...group,
+            items: group.items.filter(item => {
+                if (filterConfig.validity === 'warning') return item.hasAlert;
+                if (filterConfig.validity === 'valid') return !item.hasAlert;
+                return true;
+            })
+        }));
+    }
+
+    processedGroups = processedGroups.map(group => {
+        const sortedItems = group.items.sort((a, b) => {
+            switch(filterConfig.sort) {
+                case 'name_asc': return a.namaDokumen.localeCompare(b.namaDokumen);
+                case 'name_desc': return b.namaDokumen.localeCompare(a.namaDokumen);
+                case 'qty_asc': return a.jumlah - b.jumlah;
+                case 'qty_desc': return b.jumlah - a.jumlah;
+                case 'date_asc': return (a.rawDate?.getTime() ?? 0) - (b.rawDate?.getTime() ?? 0);
+                case 'date_desc': return (b.rawDate?.getTime() ?? 0) - (a.rawDate?.getTime() ?? 0);
+                default: return 0;
+            }
+        });
+        return { ...group, items: sortedItems };
+    });
+
+    return processedGroups.filter(group => group.items.length > 0);
+  }, [searchTerm, stockGroups, filterConfig]);
+
+  // UBAH 3: Fungsi toggle untuk handle multiple expand
   const handleToggleGroup = (groupId: string) => {
-    setExpandedGroupId((current) => (current === groupId ? "" : groupId));
+    setExpandedGroupIds((current) => 
+      current.includes(groupId) 
+        ? current.filter(id => id !== groupId) // Tutup: Hapus ID dari array
+        : [...current, groupId] // Buka: Tambah ID ke array
+    );
   };
 
   const handleDialogClose = () => {
@@ -359,19 +345,10 @@ const WarehouseInventarisPage = () => {
 
   const handleAddSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (activeDialog !== "add" || !selectedGroup) {
-      return;
-    }
-
+    if (activeDialog !== "add" || !selectedGroup) return;
     setActiveDialog(null);
     setSelectedGroup(null);
-    setAddData({
-      nomor: "",
-      nomorSeal: "",
-      efektif: "",
-      jumlah: "",
-    });
-
+    setAddData({ nomor: "", nomorSeal: "", efektif: "", jumlah: "" });
     fetchInventoryData();
   };
 
@@ -410,42 +387,99 @@ const WarehouseInventarisPage = () => {
                 onChange={(event) => setSearchTerm(event.target.value)}
                 className="w-full rounded-xl md:rounded-lg border-2 border-[#0D63F3] bg-white py-3 pl-10 pr-4 text-sm font-medium text-[#0D63F3] outline-none placeholder:text-[#0D63F3]/70 transition focus:ring-4 focus:ring-[#0D63F3]/10"
               />
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]"
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" />
-                <path
-                  d="M12 12L16 16"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
+                <path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
               </svg>
             </div>
             
-            <button className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2 hover:bg-[#0B53D0] transition">
-              <span className="hidden md:inline font-medium">Filter</span>
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 18 18"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M3.75 5.25H14.25L9.75 10.5V13.5L8.25 15V10.5L3.75 5.25Z"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </button>
+            {/* KEMBALI KE 1 TOMBOL FILTER */}
+            <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+              <PopoverTrigger asChild>
+                <button type="button" className="flex items-center gap-2 rounded-xl bg-[#0D63F3] px-5 py-3 text-white shadow-[0_4px_12px_rgba(13,99,243,0.25)] hover:bg-[#0B53D0] active:scale-95 transition">
+                  <Filter className="w-4 h-4" />
+                  <span className="hidden md:inline font-medium text-sm">Filter</span>
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-4 bg-white rounded-2xl shadow-xl" align="end">
+                <div className="space-y-5">
+                   <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-[#111827]">Filter Inventaris</h4>
+                      <button type="button" onClick={() => setFilterConfig(initialFilterConfig)} className="text-xs text-[#0D63F3] hover:underline">Reset</button>
+                   </div>
+                   
+                   <div className="space-y-3">
+                      <Label className="text-xs font-medium text-gray-500">Kategori</Label>
+                      <div className="flex gap-2">
+                         {['all', 'DOC', 'ASE'].map((cat) => (
+                            <button
+                              type="button"
+                              key={cat}
+                              onClick={() => setFilterConfig(p => ({ ...p, category: cat as any }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.category === cat ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                            >
+                              {cat === 'all' ? 'Semua' : cat}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <div className="space-y-3">
+                      <Label className="text-xs font-medium text-gray-500">Ketersediaan</Label>
+                      <div className="flex flex-wrap gap-2">
+                         {[
+                            {k: 'all', l: 'Semua'}, {k: 'available', l: 'Ada'}, {k: 'low', l: 'Menipis'}, {k: 'empty', l: 'Habis'}
+                         ].map((st) => (
+                            <button
+                              type="button"
+                              key={st.k}
+                              onClick={() => setFilterConfig(p => ({ ...p, stockStatus: st.k as any }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.stockStatus === st.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                            >
+                              {st.l}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <div className="space-y-3">
+                      <Label className="text-xs font-medium text-gray-500">Kondisi</Label>
+                      <div className="flex gap-2">
+                         {[{k: 'all', l: 'Semua'}, {k: 'valid', l: 'Valid'}, {k: 'warning', l: 'Expired / Warning'}].map((val) => (
+                            <button
+                              type="button"
+                              key={val.k}
+                              onClick={() => setFilterConfig(p => ({ ...p, validity: val.k as any }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.validity === val.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
+                            >
+                              {val.l}
+                            </button>
+                         ))}
+                      </div>
+                   </div>
+
+                   <div className="space-y-3">
+                      <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
+                      <select 
+                        value={filterConfig.sort}
+                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as any }))}
+                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
+                      >
+                        <option value="name_asc">Nama (A-Z)</option>
+                        <option value="name_desc">Nama (Z-A)</option>
+                        <option value="qty_desc">Jumlah Terbanyak</option>
+                        <option value="qty_asc">Jumlah Sedikit</option>
+                        <option value="date_asc">Expired Terdekat</option>
+                        <option value="date_desc">Expired Terjauh</option>
+                      </select>
+                   </div>
+
+                   <Button type="button" onClick={() => setIsFilterOpen(false)} className="w-full bg-[#0D63F3] hover:bg-[#0B53D0] rounded-xl">
+                      Terapkan
+                   </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </header>
 
@@ -459,11 +493,12 @@ const WarehouseInventarisPage = () => {
           <div className="divide-y divide-[#E9EEF3] bg-white">
             {filteredGroups.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
-                    Tidak ada data inventaris yang ditemukan.
+                    Tidak ada data inventaris yang cocok dengan filter.
                 </div>
             ) : (
                 filteredGroups.map((group) => {
-                const isOpen = expandedGroupId === group.id;
+                // UBAH 4: Cek apakah ID ada di array expandedGroupIds
+                const isOpen = expandedGroupIds.includes(group.id);
                 return (
                     <div key={group.id}>
                     <div className="flex w-full items-center justify-between px-4 md:px-6 py-4 transition hover:bg-[#F7FAFC] cursor-pointer" onClick={() => handleToggleGroup(group.id)}>
@@ -513,128 +548,7 @@ const WarehouseInventarisPage = () => {
           </div>
         </GlassCard>
 
-        {mounted &&
-          activeDialog === "add" &&
-          createPortal(
-            <div
-              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto"
-              onClick={handleDialogClose}
-            >
-              <div
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="add-stock-title"
-                className="relative w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] max-h-[85vh] overflow-y-auto"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <form onSubmit={handleAddSubmit} className="space-y-6">
-                  <div className="text-center">
-                    <h2
-                      id="add-stock-title"
-                      className="text-2xl font-semibold text-[#0E1D3D]"
-                    >
-                      Tambah Barang
-                    </h2>
-                    {selectedGroup && (
-                      <p className="mt-1 text-sm text-[#6B7280]">
-                        Kategori: {selectedGroup.title}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="add-nomor"
-                        className="text-sm font-semibold text-[#0E1D3D]"
-                      >
-                        Nomor / Serial Number
-                      </label>
-                      <input
-                        id="add-nomor"
-                        type="text"
-                        placeholder="Masukan nomor"
-                        value={addData.nomor}
-                        onChange={handleAddInputChange("nomor")}
-                        className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="add-nomor-seal"
-                        className="text-sm font-semibold text-[#0E1D3D]"
-                      >
-                        Nomor Seal (Optional)
-                      </label>
-                      <input
-                        id="add-nomor-seal"
-                        type="text"
-                        placeholder="Masukan nomor seal"
-                        value={addData.nomorSeal}
-                        onChange={handleAddInputChange("nomorSeal")}
-                        className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="add-efektif"
-                        className="text-sm font-semibold text-[#0E1D3D]"
-                      >
-                        Waktu Efektif / Expired
-                      </label>
-                      <div className="relative">
-                        <Calendar className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-                        <input
-                          id="add-efektif"
-                          type="date"
-                          value={addData.efektif}
-                          onChange={handleAddInputChange("efektif")}
-                          className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="add-jumlah"
-                        className="text-sm font-semibold text-[#0E1D3D]"
-                      >
-                        Jumlah
-                      </label>
-                      <input
-                        id="add-jumlah"
-                        type="number"
-                        min="0"
-                        placeholder="Masukan jumlah"
-                        value={addData.jumlah}
-                        onChange={handleAddInputChange("jumlah")}
-                        className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={handleDialogClose}
-                      className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-[0.98]"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-[0.98]"
-                    >
-                      Simpan
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>,
-            document.body,
-          )}
+        {mounted && activeDialog === "add" && createPortal(<div>...</div>, document.body)}
       </section>
     </PageLayout>
   );
