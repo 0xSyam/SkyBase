@@ -462,22 +462,27 @@ const StokBarangPage = () => {
   );
 
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedItem?.gcId) return;
-    setDeleteLoading(true);
-    try {
-      if (selectedItem.type === 'doc') await skybase.inventory.deleteDoc(selectedItem.gcId);
-      else await skybase.inventory.deleteAse(selectedItem.gcId);
-      window.location.reload();
-    } catch {
-      setNotification({ type: "error", message: "Gagal menghapus stok barang" });
-    } finally {
-      setDeleteLoading(false);
-    }
-  }, [selectedItem]);
+      if (!selectedItem?.gcId) return;
+      setDeleteLoading(true);
+      try {
+        if (selectedItem.type === 'doc') await skybase.inventory.deleteDoc(selectedItem.gcId);
+        else await skybase.inventory.deleteAse(selectedItem.gcId);
+        setNotification({ type: "success", message: "Berhasil menghapus stok barang" });
+        window.location.reload();
+      } catch {
+        setNotification({ type: "error", message: "Gagal menghapus stok barang" });
+      } finally {
+        setDeleteLoading(false);
+      }
+    }, [selectedItem]);
 
   const handleRequestSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!selectedItem || activeDialog !== "request") return;
+      if (!selectedItem.itemId) {
+        setNotification({ type: "error", message: "Item ID tidak ditemukan. Silakan pilih item yang valid." });
+        return;
+      }
       const jumlah = Number(requestData.jumlah) || 0;
       if (jumlah <= 0) {
         setNotification({ type: "error", message: "Jumlah harus lebih dari 0" });
