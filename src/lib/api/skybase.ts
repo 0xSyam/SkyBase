@@ -16,7 +16,7 @@ import type {
   WarehouseRequest,
   WarehouseRequestCreateData,
   AircraftStatusReport,
-  Aircraft, // Pastikan Aircraft diimport atau tambahkan di types/api.ts jika belum ada
+  Aircraft, 
 } from "@/types/api";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://skybase.novarentech.web.id/api";
@@ -270,12 +270,20 @@ export const inventoryApi = {
   deleteDoc(gcDocId: number) {
     return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/doc/${gcDocId}`, { method: "DELETE" });
   },
-  addAse(data: { item_id: number; serial_number: string; seal_number: string; expires_at: string; condition?: string }) {
-    return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", { method: "POST", body: data });
+  
+  // --- PERBAIKAN DI SINI: Mapping 'quantity' ke 'unit' untuk ASE ---
+  addAse(data: { item_id: number; serial_number: string; seal_number: string; expires_at: string; condition?: string; quantity?: number }) {
+    const { quantity, ...rest } = data;
+    const payload = { ...rest, unit: quantity }; // Ubah key 'quantity' menjadi 'unit'
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", { method: "POST", body: payload });
   },
   updateAse(gcAseId: number, data: { serial_number: string; seal_number: string; expires_at: string; quantity: number }) {
-    return request<ApiResponse<unknown>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "PUT", body: data });
+    const { quantity, ...rest } = data;
+    const payload = { ...rest, unit: quantity }; // Ubah key 'quantity' menjadi 'unit'
+    return request<ApiResponse<unknown>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "PUT", body: payload });
   },
+  // ------------------------------------------------------------------
+
   deleteAse(gcAseId: number) {
     return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "DELETE" });
   },
@@ -382,7 +390,7 @@ export const skybase = {
   auth: authApi,
   dashboard: dashboardApi,
   flights: flightApi,
-  aircraft: aircraftApi, // Added aircraft
+  aircraft: aircraftApi, 
   items: itemApi,
   inventory: inventoryApi,
   inspections: inspectionApi,

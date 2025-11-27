@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -7,10 +8,12 @@ import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
 import skybase from "@/lib/api/skybase";
-import { Filter, X, Check, Plus } from "lucide-react";
+import { Filter, X, Check, Plus, Minus } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+
+// --- HELPER & COMPONENTS ---
 
 const formatDateForApi = (dateStr: string): string | undefined => {
   if (!dateStr || dateStr.trim() === '-' || dateStr.trim() === '') {
@@ -49,12 +52,41 @@ const formatDateForApi = (dateStr: string): string | undefined => {
   return dateStr;
 };
 
+// --- COMPONENT BADGE EXPIRED (DIPERBAIKI) ---
+const ExpiryBadge = ({ days }: { days: number }) => {
+  // Badge hanya muncul jika sisa hari <= 3
+  if (days > 3) return null;
+
+  const isExpired = days < 0;
+  const label = isExpired ? "Sudah Expired" : `${days} hari menuju expired`;
+
+  return (
+    <div className="group flex items-center h-6 bg-[#DC2626] rounded-full text-white shadow-sm cursor-help w-fit transition-all duration-300 ease-in-out">
+      {/* Icon Circle */}
+      <div className="flex-none w-6 h-6 flex items-center justify-center font-bold text-xs">
+        !
+      </div>
+      
+      {/* Text Container (Expandable) */}
+      <div className="max-w-0 opacity-0 group-hover:max-w-[200px] group-hover:opacity-100 transition-all duration-500 ease-out overflow-hidden flex items-center">
+        {/* Text dengan padding bawah sedikit agar pas di tengah secara visual */}
+        <span className="whitespace-nowrap text-[11px] font-medium pr-3 pl-0.5 pb-[2px]">
+          {label}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// --- TYPES ---
+
 interface StockItem {
   namaDokumen: string;
   nomor: string;
   revisi: string;
   efektif: string;
   hasAlert?: boolean;
+  daysRemaining?: number; // Added for badge logic
   jumlah: number;
   itemId: number;
   gcId?: number;
@@ -105,6 +137,8 @@ const initialFilterConfig: FilterConfig = {
 };
 
 type DialogMode = "edit" | "delete" | "request" | "add" | null;
+
+// --- MAIN PAGE COMPONENT ---
 
 const StokBarangPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -165,6 +199,7 @@ const StokBarangPage = () => {
         const docCatalogData = docCatalogRes?.data;
         const aseCatalogData = aseCatalogRes?.data;
 
+        // Normalize catalog items
         const docCatalogItems = Array.isArray(docCatalogData)
           ? docCatalogData
           : (docCatalogData && 'items' in docCatalogData && Array.isArray(docCatalogData.items))
@@ -196,18 +231,26 @@ const StokBarangPage = () => {
           return name || "ASE Lainnya";
         };
 
+        // Helper to calc days remaining
+        const getDaysRemaining = (targetDate: Date | null) => {
+            if (!targetDate) return 999; // No expiry
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const target = new Date(targetDate);
+            target.setHours(0, 0, 0, 0);
+            const diffTime = target.getTime() - today.getTime();
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        };
+
+        // Process Documents
         for (const d of docs) {
           const cat = catalog[Number(d?.item_id)] || {};
           const title = titleFor(cat?.name, 'doc');
           const effectiveDate = d?.effective_date ? new Date(d.effective_date) : null;
+          const daysRemaining = getDaysRemaining(effectiveDate);
           
-          let hasAlert = false;
-          if (effectiveDate) {
-             const today = new Date();
-             const diffTime = effectiveDate.getTime() - today.getTime();
-             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-             if (diffDays <= 30) hasAlert = true;
-          }
+          // Alert logic for filtering (<= 30 days)
+          const hasAlert = daysRemaining <= 30;
 
           const item: StockItem = {
             namaDokumen: cat?.name || title,
@@ -218,6 +261,7 @@ const StokBarangPage = () => {
               : "-",
             jumlah: Number(d?.quantity ?? 0) || 0,
             hasAlert,
+            daysRemaining,
             itemId: Number(d?.item_id),
             gcId: Number(d?.gc_doc_id),
             type: 'doc',
@@ -227,18 +271,14 @@ const StokBarangPage = () => {
           docBucket.get(title)!.push(item);
         }
         
+        // Process ASE
         for (const a of ases) {
           const cat = catalog[Number(a?.item_id)] || {};
           const title = titleFor(cat?.name, 'ase');
           const expireDate = a?.expires_at ? new Date(a.expires_at) : null;
+          const daysRemaining = getDaysRemaining(expireDate);
           
-          let hasAlert = false;
-          if (expireDate) {
-             const today = new Date();
-             const diffTime = expireDate.getTime() - today.getTime();
-             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-             if (diffDays <= 30) hasAlert = true;
-          }
+          const hasAlert = daysRemaining <= 30;
 
           const item: StockItem = {
             namaDokumen: cat?.name || title,
@@ -249,6 +289,7 @@ const StokBarangPage = () => {
               : "-",
             jumlah: 1,
             hasAlert,
+            daysRemaining,
             itemId: Number(a?.item_id),
             gcId: Number(a?.gc_ase_id),
             type: 'ase',
@@ -373,6 +414,11 @@ const StokBarangPage = () => {
     setActiveDialog("request");
   }, []);
 
+  const handleDeleteClick = useCallback((item: StockItem) => {
+    setSelectedItem(item);
+    setActiveDialog("delete");
+  }, []);
+
   const handleDialogClose = useCallback(() => {
     setActiveDialog(null);
     setSelectedItem(null);
@@ -411,85 +457,42 @@ const StokBarangPage = () => {
     [],
   );
 
-  const handleDeleteClick = useCallback((item: StockItem) => {
-    setSelectedItem(item);
-    setActiveDialog("delete");
-  }, []);
-
   const handleDeleteConfirm = useCallback(async () => {
-    if (!selectedItem || !selectedItem.gcId) {
-      setNotification({
-        type: "error",
-        message: "ID dokumen tidak ditemukan",
-      });
-      return;
-    }
-
+    if (!selectedItem?.gcId) return;
     setDeleteLoading(true);
     try {
-      if (selectedItem.type === 'doc') {
-        await skybase.inventory.deleteDoc(selectedItem.gcId);
-        const updatedDocs = docGroups.map(group => ({
-          ...group,
-          items: group.items.filter(item => item.gcId !== selectedItem.gcId)
-        })).filter(group => group.items.length > 0);
-        setDocGroups(updatedDocs);
-      } else {
-        await skybase.inventory.deleteAse(selectedItem.gcId);
-        const updatedAses = aseGroups.map(group => ({
-          ...group,
-          items: group.items.filter(item => item.gcId !== selectedItem.gcId)
-        })).filter(group => group.items.length > 0);
-        setAseGroups(updatedAses);
-      }
-      
-      setNotification({
-        type: "success",
-        message: "Berhasil menghapus stok barang!",
-      });
-      setActiveDialog(null);
-      setSelectedItem(null);
-    } catch (error) {
-      setNotification({
-        type: "error",
-        message: "Gagal menghapus stok barang",
-      });
+      if (selectedItem.type === 'doc') await skybase.inventory.deleteDoc(selectedItem.gcId);
+      else await skybase.inventory.deleteAse(selectedItem.gcId);
+      window.location.reload();
+    } catch {
+      setNotification({ type: "error", message: "Gagal menghapus stok barang" });
     } finally {
       setDeleteLoading(false);
     }
-  }, [selectedItem, docGroups, aseGroups]);
+  }, [selectedItem]);
 
-  const handleRequestSubmit = useCallback(
-    async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleRequestSubmit = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!selectedItem || activeDialog !== "request") return;
-
       const jumlah = Number(requestData.jumlah) || 0;
       if (jumlah <= 0) {
         setNotification({ type: "error", message: "Jumlah harus lebih dari 0" });
         return;
       }
-
       try {
-        // FIX: Mengirim payload dengan struktur flat (item_id, qty)
-        // Menggunakan 'as any' untuk bypass pengecekan tipe items array
         await skybase.warehouseRequests.create({
           item_id: selectedItem.itemId,
           qty: jumlah,
           notes: requestData.catatan || undefined,
         } as any);
-
         setNotification({ type: "success", message: "Request berhasil dikirim ke warehouse!" });
         setActiveDialog(null);
         setSelectedItem(null);
         setRequestData({ jumlah: "", catatan: "" });
-      } catch (error) {
-        console.error("Gagal request stok:", error);
+      } catch {
         setNotification({ type: "error", message: "Gagal mengirim request" });
       }
-    },
-    [activeDialog, requestData, selectedItem],
-  );
+  }, [activeDialog, requestData, selectedItem]);
 
   const handleAddInputChange = useCallback(
     (field: keyof StockAddFormData) =>
@@ -513,35 +516,6 @@ const StokBarangPage = () => {
         return;
       }
 
-      const quantity = Number(addData.jumlah);
-      if (isNaN(quantity) || quantity <= 0) {
-        setNotification({ type: "error", message: "Jumlah harus lebih dari 0" });
-        return;
-      }
-
-      const targetGroups = addData.jenisDokumen === 'doc' ? docGroups : aseGroups;
-      const isDuplicate = targetGroups.some(group => 
-        group.items.some(item => {
-          const itemEffectiveDate = formatDateForApi(item.efektif);
-          const normNomor = item.nomor.trim().toLowerCase();
-          const inputNomor = addData.nomor.trim().toLowerCase();
-          const isDateSame = itemEffectiveDate === effectiveDate;
-
-          if (addData.jenisDokumen === 'doc') {
-            const normRevisi = item.revisi.trim().toLowerCase();
-            const inputRevisi = addData.revisi.trim().toLowerCase();
-            return normNomor === inputNomor && normRevisi === inputRevisi && isDateSame;
-          } else {
-            return normNomor === inputNomor && isDateSame;
-          }
-        })
-      );
-
-      if (isDuplicate) {
-        setNotification({ type: "error", message: "Item sudah terdaftar, silahkan edit item yang ada." });
-        return;
-      }
-
       try {
         const newItem = await skybase.items.create({
           name: addData.nomor, 
@@ -549,6 +523,9 @@ const StokBarangPage = () => {
         });
 
         if (!newItem.data.item_id) throw new Error("Failed to create item");
+        
+        // Ambil jumlah dari form, pastikan number
+        const quantity = Number(addData.jumlah);
 
         if (addData.jenisDokumen === 'doc') {
           await skybase.inventory.addDoc({
@@ -560,23 +537,25 @@ const StokBarangPage = () => {
             condition: "Good",
           });
         } else {
+          // Fix: Sekarang mengirim quantity ke endpoint ASE juga
           await skybase.inventory.addAse({
             item_id: newItem.data.item_id,
             serial_number: addData.nomor,
             seal_number: addData.seal_number,
             expires_at: effectiveDate,
             condition: "Good",
+            quantity: quantity
           });
         }
 
-        setNotification({ type: "success", message: `Berhasil menambah stok ${addData.jenisDokumen.toUpperCase()}!` });
+        setNotification({ type: "success", message: `Berhasil menambah stok!` });
         window.location.reload();
       } catch (error) {
         setNotification({ type: "error", message: "Gagal menambah stok" });
       }
       setActiveDialog(null);
     },
-    [activeDialog, addData, docGroups, aseGroups],
+    [activeDialog, addData],
   );
 
   const handleDialogSubmit = useCallback(
@@ -629,6 +608,8 @@ const StokBarangPage = () => {
     });
   }, [activeDialog, selectedItem]);
 
+  // --- TABLE COLUMNS ---
+
   const columns = useMemo<ColumnDef<StockItem>[]>(
     () => [
       { key: "nomor", header: "Nomor", align: "left" },
@@ -640,9 +621,8 @@ const StokBarangPage = () => {
         render: (value, row) => (
           <div className="flex items-center gap-2">
             <span>{String(value)}</span>
-            {row.hasAlert && (
-              <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" title="Expired / Soon" />
-            )}
+            {/* Render Badge Expiry secara kondisional */}
+            {row.daysRemaining !== undefined && <ExpiryBadge days={row.daysRemaining} />}
           </div>
         ),
       },
@@ -654,9 +634,15 @@ const StokBarangPage = () => {
         className: "w-48 flex-shrink-0",
         render: (_, row) => (
           <div className="flex justify-end gap-2">
-            <button onClick={() => handleEditClick(row)} className="grid h-8 w-8 place-items-center rounded-lg bg-[#F5C044] text-white hover:bg-[#EAB308] active:scale-95"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
-            <button onClick={() => handleDeleteClick(row)} className="grid h-8 w-8 place-items-center rounded-lg bg-[#F04438] text-white hover:bg-[#DC2626] active:scale-95"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
-            <button onClick={() => handleRequestClick(row)} className="flex h-8 items-center gap-1 rounded-lg bg-[#0D63F3] px-3 text-xs font-semibold text-white hover:bg-[#0A4EC1] active:scale-95">Request<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.25 10.5L8.75 7L5.25 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
+            <button onClick={() => handleEditClick(row)} className="grid h-8 w-8 place-items-center rounded-lg bg-[#F5C044] text-white hover:bg-[#EAB308] active:scale-95">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M11.333 2.00004C11.5081 1.82494 11.716 1.68605 11.9447 1.59129C12.1735 1.49653 12.4187 1.44775 12.6663 1.44775C12.914 1.44775 13.1592 1.49653 13.3879 1.59129C13.6167 1.68605 13.8246 1.82494 13.9997 2.00004C14.1748 2.17513 14.3137 2.383 14.4084 2.61178C14.5032 2.84055 14.552 3.08575 14.552 3.33337C14.552 3.58099 14.5032 3.82619 14.4084 4.05497C14.3137 4.28374 14.1748 4.49161 13.9997 4.66671L5.33301 13.3334L1.99967 14L2.66634 10.6667L11.333 2.00004Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            <button onClick={() => handleDeleteClick(row)} className="grid h-8 w-8 place-items-center rounded-lg bg-[#F04438] text-white hover:bg-[#DC2626] active:scale-95">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4H14M12.6667 4V13.3333C12.6667 14 12 14.6667 11.3333 14.6667H4.66667C4 14.6667 3.33333 14 3.33333 13.3333V4M5.33333 4V2.66667C5.33333 2 6 1.33333 6.66667 1.33333H9.33333C10 1.33333 10.6667 2 10.6667 2.66667V4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+            <button onClick={() => handleRequestClick(row)} className="flex h-8 items-center gap-1 rounded-lg bg-[#0D63F3] px-3 text-xs font-semibold text-white hover:bg-[#0A4EC1] active:scale-95">
+                Request<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5.25 10.5L8.75 7L5.25 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
           </div>
         ),
       },
@@ -687,25 +673,10 @@ const StokBarangPage = () => {
                     <button
                     type="button"
                     onClick={() => handleToggleGroup(group.id)}
-                    className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${isOpen ? "rotate-180 border-[#0D63F3]" : ""
-                        }`}
+                    className={`grid h-9 w-9 place-items-center rounded-full border border-[#E0E7FF] text-[#0D63F3] transition ${isOpen ? "rotate-180 border-[#0D63F3]" : ""}`}
                     aria-label={isOpen ? "Tutup" : "Buka"}
                     >
-                    <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        <path
-                        d="M4 6L8 10L12 6"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        />
-                    </svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 6L8 10L12 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                     </button>
                 </div>
                 </div>
@@ -759,7 +730,10 @@ const StokBarangPage = () => {
                                 <span className="text-[#6B7280]">Revisi</span>
                                 <span className="font-medium">: {item.revisi}</span>
                                 <span className="text-[#6B7280]">Efektif</span>
-                                <span className="font-medium inline-flex items-center gap-2">: {item.efektif}{item.hasAlert && <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" />}</span>
+                                <span className="font-medium inline-flex items-center gap-2 flex-wrap">
+                                    : {item.efektif}
+                                    {item.daysRemaining !== undefined && <ExpiryBadge days={item.daysRemaining} />}
+                                </span>
                                 <span className="text-[#6B7280]">Jumlah</span>
                                 <span className="font-medium">: {item.jumlah}</span>
                               </div>
@@ -803,7 +777,6 @@ const StokBarangPage = () => {
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[#0D63F3]" width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" /><path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" /></svg>
             </div>
             
-            {/* Popover Filter Button */}
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <PopoverTrigger asChild>
                 <button className="hidden md:flex items-center gap-2 rounded-lg bg-[#0D63F3] px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0A4EC1]">
