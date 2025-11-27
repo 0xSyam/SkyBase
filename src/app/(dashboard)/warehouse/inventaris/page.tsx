@@ -1,6 +1,5 @@
 "use client";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
@@ -67,18 +66,15 @@ const initialFilterConfig: FilterConfig = {
   sort: "name_asc",
 };
 
-type DialogMode = "add" | null;
-
 const columns: ColumnDef<StockItem>[] = [
   {
     key: "namaDokumen",
     header: "Nama Item",
     align: "left",
     className: "flex-1 min-w-[180px]", 
-    // UBAH: ganti tipe 'value' menjadi 'any' agar menerima semua kemungkinan tipe dari Table
-    render: (value: any, row: StockItem) => (
+    render: (value: unknown, row: StockItem) => (
         <div className="flex flex-col">
-            <span className="font-medium text-[#111827]">{value}</span>
+            <span className="font-medium text-[#111827]">{value as string}</span>
             <span className="text-xs text-gray-500 md:hidden">{row.nomor}</span>
         </div>
     )
@@ -94,9 +90,8 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Revisi",
     align: "left",
     className: "hidden md:flex w-32 flex-none",
-    // UBAH: ganti tipe 'value' menjadi 'any'
-    render: (value: any) => (
-        <span className={value === "-" || !value ? "text-gray-400" : ""}>{value || "-"}</span>
+    render: (value: unknown) => (
+        <span className={(value as string) === "-" || !value ? "text-gray-400" : ""}>{(value as string) || "-"}</span>
     )
   },
   {
@@ -104,10 +99,9 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Efektif / Exp",
     align: "left",
     className: "w-40 flex-none",
-    // UBAH: ganti tipe 'value' menjadi 'any'
-    render: (value: any, row: StockItem) => (
+    render: (value: unknown, row: StockItem) => (
       <div className="flex items-center gap-2">
-        <span>{value}</span>
+        <span>{value as string}</span>
         {row.hasAlert && (
           <span className="inline-flex h-2 w-2 rounded-full bg-[#F04438]" title="Expired / Warning" />
         )}
@@ -119,10 +113,9 @@ const columns: ColumnDef<StockItem>[] = [
     header: "Qty",
     align: "right", 
     className: "w-28 flex-none",
-    // UBAH: ganti tipe 'value' menjadi 'any'
-    render: (value: any, row: StockItem) => (
+    render: (value: unknown, row: StockItem) => (
         <span className="font-semibold text-[#0D63F3]">
-            {value} {row.unit || ""}
+            {value as number} {row.unit || ""}
         </span>
     )
   },
@@ -134,23 +127,13 @@ const WarehouseInventarisPage = () => {
 
   const [stockGroups, setStockGroups] = useState<StockGroup[]>([]);
 
-  
-
-  // UBAH 1: State expandedGroupIds menjadi array string untuk multiple expand
-
   const [expandedGroupIds, setExpandedGroupIds] = useState<string[]>([]);
 
-  
-
   const [loading, setLoading] = useState(true);
-
-  
 
   const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
 
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-
-  
 
   const fetchInventoryData = useCallback(async () => {
 
@@ -314,10 +297,6 @@ const WarehouseInventarisPage = () => {
 
       setStockGroups(groups);
 
-      
-
-      // UBAH 2: Logic default expand (hanya jika array kosong)
-
       if (groups.length > 0) {
 
         setExpandedGroupIds((prev) => prev.length === 0 ? [groups[0].id] : prev);
@@ -474,17 +453,15 @@ const WarehouseInventarisPage = () => {
 
 
 
-  // UBAH 3: Fungsi toggle untuk handle multiple expand
-
   const handleToggleGroup = (groupId: string) => {
 
     setExpandedGroupIds((current) => 
 
       current.includes(groupId) 
 
-        ? current.filter(id => id !== groupId) // Tutup: Hapus ID dari array
+        ? current.filter(id => id !== groupId) 
 
-        : [...current, groupId] // Buka: Tambah ID ke array
+        : [...current, groupId] 
 
     );
 
@@ -573,8 +550,6 @@ const WarehouseInventarisPage = () => {
             </div>
 
             
-
-            {/* KEMBALI KE 1 TOMBOL FILTER */}
 
             <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
 
@@ -781,8 +756,6 @@ const WarehouseInventarisPage = () => {
             ) : (
 
                 filteredGroups.map((group) => {
-
-                // UBAH 4: Cek apakah ID ada di array expandedGroupIds
 
                 const isOpen = expandedGroupIds.includes(group.id);
 
