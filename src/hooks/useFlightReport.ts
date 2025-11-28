@@ -1,10 +1,9 @@
-// src/hooks/useFlightReport.ts
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
 import type { Flight } from "@/types/api";
 
-// Kita standarisasi tipe data jadwal untuk semua role
+// 1. Definisi tipe jadwal laporan
 export interface ReportSchedule {
   id: string;
   timeRange: string;
@@ -13,14 +12,19 @@ export interface ReportSchedule {
   destination: string;
   aircraftId?: number;
   depISO?: string | null;
-  status: string;       // Disertakan untuk semua role
-  delayReason?: string; // Disertakan untuk semua role
+  status: string;
+  delayReason?: string;
 }
 
 export interface ReportSectionUI {
   id: string;
   title: string;
   schedules: ReportSchedule[];
+}
+
+// 2. Interface untuk Error yang memiliki status
+interface ApiErrorWithStatus {
+  status?: number;
 }
 
 export const useFlightReport = () => {
@@ -39,11 +43,20 @@ export const useFlightReport = () => {
         const data = res?.data;
         let list: Flight[] = [];
 
-        // Normalisasi response API
+        // --- PERBAIKAN 1 & 2: Handling Data tanpa 'any' ---
+        // TypeScript akan otomatis mengenali tipe setelah pengecekan 'in' operator atau Array.isArray
         if (Array.isArray(data)) {
-           if (data.length > 0 && 'flight_id' in data[0]) list = data as unknown as Flight[];
-        } else if (data && 'flights' in data && Array.isArray((data as any).flights)) {
-           list = (data as any).flights;
+           // Jika data langsung array Flight[]
+           list = data;
+        } else if (data && typeof data === 'object') {
+           // Cek apakah properti 'flights' ada di dalam object data
+           if ('flights' in data && Array.isArray((data as { flights: Flight[] }).flights)) {
+               list = (data as { flights: Flight[] }).flights;
+           } 
+           // Cek apakah properti 'data' ada (format API alternatif)
+           else if ('data' in data && Array.isArray((data as { data: Flight[] }).data)) {
+               list = (data as { data: Flight[] }).data;
+           }
         }
 
         if (!ignore) {
@@ -82,12 +95,16 @@ export const useFlightReport = () => {
             sec.schedules.push(schedule);
             byDate.set(id, sec);
           }
-          // Sort by date descending
           const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
           setSections(sorted);
         }
       } catch (e) {
-        if ((e as any)?.status === 401) router.replace("/");
+        // --- PERBAIKAN 3: Handling Error tanpa 'any' ---
+        // Cast ke unknown dulu, lalu cek properti status
+        const error = e as ApiErrorWithStatus;
+        if (error?.status === 401) {
+            router.replace("/");
+        }
         if (!ignore) setSections([]);
       } finally {
         if (!ignore) setLoading(false);
