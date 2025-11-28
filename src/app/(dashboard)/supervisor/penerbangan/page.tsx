@@ -91,8 +91,6 @@ export default function SupervisorPenerbanganPage() {
         }
       }
 
-      // PERBAIKAN PENTING: Normalisasi data type vs type_code
-      // Pastikan field 'type' selalu terisi, ambil dari 'type_code' jika 'type' kosong
       const normalizedList = list.map(ac => ({
         ...ac,
         type: ac.type || ac.type_code || "Unknown"
@@ -116,7 +114,9 @@ export default function SupervisorPenerbanganPage() {
       if (!d) return "--:--";
       try {
         const dt = new Date(d);
-        return dt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        // PERBAIKAN: Gunakan en-GB agar formatnya HH:mm (bukan HH.mm)
+        // Ini penting agar input type="time" bisa membaca nilainya saat Edit
+        return dt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
       } catch { return "--:--"; }
     };
     return flights.map((f) => ({
@@ -125,14 +125,14 @@ export default function SupervisorPenerbanganPage() {
       destinasi: f?.route_to ?? "-",
       arrival: fmtTime(f?.sched_dep ?? null),
       takeOff: fmtTime(f?.sched_arr ?? null),
-      flightDate: f?.sched_dep ? new Date(f.sched_dep).toISOString().split("T")[0] : "-",
+      // PERBAIKAN: Gunakan format YYYY-MM-DD lokal agar form date terisi dengan benar
+      flightDate: f?.sched_dep ? new Date(f.sched_dep).toLocaleDateString('en-CA') : "-",
       rawDate: f?.sched_dep ? new Date(f.sched_dep) : null,
       flightId: f.flight_id
     }));
   }, [flights]);
 
   const availableAircraftTypes = useMemo(() => {
-    // Filter jenis pesawat yang unik
     const types = new Set(aircraftList.map(a => a.type).filter(Boolean) as string[]);
     return Array.from(types).sort();
   }, [aircraftList]);
@@ -178,7 +178,9 @@ export default function SupervisorPenerbanganPage() {
 
   const openEditDialog = useCallback((row: FlightRow, index: number) => {
     setEditingIndex(index);
-    setEditForm({ ...row });
+    // Pastikan flightDate diformat ulang ke YYYY-MM-DD (lokal) saat membuka edit
+    const safeDate = row.rawDate ? row.rawDate.toLocaleDateString('en-CA') : new Date().toLocaleDateString('en-CA');
+    setEditForm({ ...row, flightDate: safeDate });
     setIsEditOpen(true);
     setIsCreateMode(false);
   }, []);
@@ -194,19 +196,13 @@ export default function SupervisorPenerbanganPage() {
       if (!editForm) return;
   
       if (key === "jenisPesawat" && value !== editForm.jenisPesawat) {
-         // Reset ID Pesawat jika Jenis Pesawat berubah
          setEditForm({ ...editForm, [key]: value, idPesawat: "" });
          return;
       }
 
       if ((key === "arrival" || key === "takeOff") && typeof value === "string") {
-          let valStr: string = value;
-          if (/^\d{1,4}$/.test(valStr)) {
-              const num = valStr.padStart(4, "0");
-              valStr = `${num.slice(0, 2)}:${num.slice(2)}`;
-          }
-          
-          setEditForm(prev => prev ? ({ ...prev, [key]: valStr }) : null);
+          // Validasi format waktu saat mengetik (optional, input type=time sudah membatasi)
+          setEditForm({ ...editForm, [key]: value });
           return;
       }
   
@@ -217,38 +213,30 @@ export default function SupervisorPenerbanganPage() {
     event.preventDefault();
     if (!editForm) return;
     
-    const timeFields = ["arrival", "takeOff"];
-    for (const field of timeFields) {
-        const value = editForm[field as keyof FlightRow];
-        if (typeof value === 'string' && value) {
-            const timeRegex = /^([01]\d|2[0-3]):[0-5]\d$/; 
-            if (!timeRegex.test(value)) {
-                setNotification({
-                    type: "error",
-                    message: `Format waktu pada kolom ${field} tidak valid. Gunakan format HH:mm.`,
-                });
-                return;
-            }
-        }
-    }
+    // PERBAIKAN: Gunakan Date.UTC untuk memaksa angka jam yang dikirim SAMA PERSIS dengan input
+    // Ini mencegah konversi timezone browser (misal input 07:00 WIB -> 00:00 UTC)
+    // Dengan Date.UTC, input 07:00 -> dikirim 07:00 UTC
+    const parseTime = (timeString: string, dateString: string) => {
+       if (!timeString || !dateString) return null;
+       const [y, m, d] = dateString.split('-').map(Number);
+       const [hours, minutes] = timeString.split(':').map(Number);
+       
+       // Gunakan Date.UTC agar string ISO-nya persis sesuai angka input
+       const utcMs = Date.UTC(y, m - 1, d, hours, minutes, 0);
+       return new Date(utcMs).toISOString(); 
+    };
 
     if (isCreateMode) {
       try {
         const now = new Date();
-        const parseTime = (timeString: string, dateString: string) => {
-           const d = new Date(dateString); 
-           const parts = timeString.split(':');
-           if (parts.length === 2) {
-               d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-               return d.toISOString();
-           }
-           return null;
-        };
-
-        const flightDate = editForm.flightDate || now.toISOString().split("T")[0];
+        const todayLocal = now.toLocaleDateString('en-CA');
+        const flightDate = editForm.flightDate || todayLocal;
+        
         const parsedSchedDep = parseTime(editForm.arrival, flightDate);
         
+        // Check conflict (client side simple check)
         if (parsedSchedDep) {
+            // Note: This check might need adjustment if comparing UTC vs Local strings
            const conflict = flights.some(f => 
               f.aircraft?.registration_code === editForm.idPesawat &&
               f.sched_dep === parsedSchedDep
@@ -264,6 +252,7 @@ export default function SupervisorPenerbanganPage() {
         }
 
         const sched_dep = parsedSchedDep || now.toISOString();
+        // Default 3 jam durasi
         const sched_arr = parseTime(editForm.takeOff, flightDate) || new Date(new Date(sched_dep).getTime() + 3 * 3600000).toISOString();
       
         const createData: FlightCreateData = {
@@ -282,12 +271,8 @@ export default function SupervisorPenerbanganPage() {
         closeEditDialog();
       } catch (error) {
         console.error("Failed to create flight:", error);
-        const errorMsg = (error as { payload?: { message?: string }; message?: string })?.payload?.message || (error as Error).message || "Gagal menyimpan jadwal ke server.";
-        
-        setNotification({
-          type: "error",
-          message: errorMsg,
-        });
+        const errorMsg = (error as { payload?: { message?: string }; message?: string })?.payload?.message || (error as Error).message || "Gagal menyimpan jadwal.";
+        setNotification({ type: "error", message: errorMsg });
       }
       return;
     }
@@ -297,21 +282,12 @@ export default function SupervisorPenerbanganPage() {
       if (!flightToUpdate) return;
 
       try {
-         const flightDate = editForm.flightDate || new Date().toISOString().split("T")[0];
-         const parseTime = (timeString: string, dateString: string) => {
-            const d = new Date(dateString); 
-            const parts = timeString.split(':');
-            if (parts.length === 2) {
-                d.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
-                return d.toISOString();
-            }
-            return null;
-         };
+         const flightDate = editForm.flightDate || new Date().toLocaleDateString('en-CA');
+         
+         const sched_dep = parseTime(editForm.arrival, flightDate) || new Date().toISOString();
+         const sched_arr = parseTime(editForm.takeOff, flightDate) || new Date().toISOString();
 
-        const sched_dep = parseTime(editForm.arrival, flightDate) || new Date().toISOString();
-        const sched_arr = parseTime(editForm.takeOff, flightDate) || new Date().toISOString();
-
-        const data: FlightRescheduleData = {
+         const data: FlightRescheduleData = {
           sched_dep: sched_dep,
           sched_arr: sched_arr,
         };
@@ -332,16 +308,16 @@ export default function SupervisorPenerbanganPage() {
     setIsCreateMode(true);
     setEditingIndex(null);
     
-    // Reset form for new entry
     const defaultType = availableAircraftTypes.length > 0 ? availableAircraftTypes[0] : "";
-    
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD local
+
     setEditForm({
       jenisPesawat: defaultType,
-      idPesawat: "", // User must select
+      idPesawat: "",
       destinasi: "",
       arrival: "",
       takeOff: "",
-      flightDate: new Date().toISOString().split("T")[0],
+      flightDate: today,
     });
     setIsEditOpen(true);
   };
@@ -466,7 +442,7 @@ export default function SupervisorPenerbanganPage() {
                     <button
                       type="button"
                       className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-[#FACC15] text-white active:scale-95 transition hover:brightness-95"
-                      onClick={() => openEditDialog({ ...item, flightDate: item.flightDate || new Date().toISOString().split("T")[0] }, index)}
+                      onClick={() => openEditDialog({ ...item }, index)}
                     >
                       <Pencil className="w-5 h-5" />
                     </button>

@@ -1,6 +1,10 @@
+// src/component/PageLayout.tsx
+"use client";
+
 import React from "react";
 import Sidebar, { type SidebarRole } from "./Sidebar";
 import TopBar from "./Topbar";
+import { useAuth } from "@/context/AuthContext";
 
 interface PageLayoutProps {
   children: React.ReactNode;
@@ -16,6 +20,14 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   contentClassName = "",
   sidebarRole = "groundcrew",
 }) => {
+  const { user, isLoading } = useAuth();
+
+  // Jika sedang loading auth atau user tidak ada, jangan render konten
+  // Ini mencegah "flash of unstyled/unauthorized content"
+  if (isLoading || !user) {
+    return null; // Bisa diganti dengan spinner/skeleton loader jika mau
+  }
+
   return (
     <div className="min-h-screen bg-[#F8FAFF] p-4 md:p-6">
       <div className="mx-auto max-w-[1440px] grid grid-cols-1 md:grid-cols-[280px_1fr] gap-4 md:gap-6">

@@ -1,3 +1,4 @@
+// src/component/Topbar.tsx
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -7,8 +8,8 @@ import { Bell, Menu, X, Loader2 } from "lucide-react";
 import GlassCard from "./Glasscard";
 import { type SidebarRole, navigationByRole } from "./Sidebar";
 import { getUser } from "@/lib/auth/storage";
-import { notificationApi } from "@/lib/api/skybase";
-import { Notification } from "@/types/api";
+// Import Hooks
+import { useNotification } from "@/context/NotificationContext";
 
 interface TopBarProps {
   userName?: string;
@@ -26,40 +27,18 @@ export default function TopBar({
   const [userName, setUserName] = useState(userNameProp || "User");
   const menuContentRef = useRef<HTMLDivElement | null>(null);
   
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  // GUNAKAN CONTEXT DI SINI
+  const { notifications, unreadCount, markAllAsRead, isLoading: notifLoading } = useNotification();
+  
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  const parseNotificationData = React.useCallback((data: unknown): Notification[] => {
-    if (Array.isArray(data)) {
-      return data as Notification[];
-    } else if (data && typeof data === 'object' && 'items' in data) {
-      return (data as { items: Notification[] }).items;
-    } else if (data) {
-      return [data as Notification];
-    }
-    return [];
-  }, []);
-
-  const fetchUnreadCount = React.useCallback(async () => {
-    try {
-      const res = await notificationApi.getRecent();
-      const items = parseNotificationData(res.data);
-      setUnreadCount(items.length);
-    } catch (error) {
-      console.error("Gagal mengambil notifikasi", error);
-    }
-  }, [parseNotificationData]);
 
   useEffect(() => {
     const user = getUser();
     if (user?.name) {
       setUserName(user.name);
     }
-    fetchUnreadCount();
-  }, [fetchUnreadCount]);
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -75,18 +54,9 @@ export default function TopBar({
     const newState = !popoverOpen;
     setPopoverOpen(newState);
 
+    // Saat dibuka, tandai semua sudah dibaca (reset badge & update localStorage)
     if (newState) {
-      setIsLoading(true);
-      notificationApi.getRecent()
-        .then((res) => {
-          const items = parseNotificationData(res.data);
-          setNotifications(items);
-          setUnreadCount(0);
-        })
-        .catch((err) => console.error(err))
-        .finally(() => {
-          setIsLoading(false);
-        });
+      markAllAsRead(); 
     }
   };
 
@@ -124,10 +94,8 @@ export default function TopBar({
   };
 
   return (
-    // FIX: overflow-visible agar dropdown tidak terpotong, rounded-[20px] visual card
     <GlassCard className="w-full rounded-[20px] overflow-visible z-50">
       <header className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6" role="banner">
-        {/* Bagian Profile bisa diklik (Link) */}
         <Link
           href={profileHref}
           className="inline-flex items-center gap-3 rounded-full pr-3 py-1 transition hover:bg-white/40 cursor-pointer"
@@ -163,6 +131,7 @@ export default function TopBar({
               className="hidden md:grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
             >
               <Bell className="w-5 h-5 text-white" strokeWidth={2} />
+              {/* Badge berdasarkan unreadCount dari Context */}
               {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center text-white border-2 border-white shadow-sm">
                   {unreadCount > 9 ? "9+" : unreadCount}
@@ -177,12 +146,8 @@ export default function TopBar({
                 </div>
                 
                 <div className="max-h-[320px] overflow-y-auto custom-scrollbar min-h-[100px]">
-                  {isLoading ? (
-                     <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2">
-                        <Loader2 className="w-6 h-6 animate-spin text-[#0D63F3]" />
-                        <span className="text-xs">Memuat...</span>
-                     </div>
-                  ) : notifications.length > 0 ? (
+                  {/* Gunakan data dari Context */}
+                  {notifications.length > 0 ? (
                     notifications.map((notif) => (
                       <Link
                         key={notif.notification_id}

@@ -20,7 +20,9 @@ export interface RecapFlight {
   aircraft: string;
   registration: string;
   destination: string;
-  items: PDFItem[]; // Menggunakan PDFItem agar struktur datanya sama dengan laporan satuan
+  status?: string;       // [BARU] Data status untuk PDF
+  delayReason?: string;  // [BARU] Alasan delay untuk PDF
+  items: PDFItem[];
 }
 
 export interface RecapSection {
@@ -104,7 +106,6 @@ const drawManifestTable = (doc: jsPDF, items: PDFItem[], startY: number) => {
       4: { cellWidth: 25, halign: "center" },
     },
     margin: { left: 14, right: 14 },
-    // Handle page break inside table
     pageBreak: 'auto',
   });
 
@@ -159,17 +160,42 @@ export const generateRecapPDF = (data: RecapData, fileName: string) => {
             currentY = 20;
         }
 
-        // Header Flight
+        // --- BARIS 1: Info Penerbangan ---
         doc.setFontSize(10);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0, 51, 153); // Dark Blue
-        doc.text(`${flight.timeRange} | ${flight.aircraft} - ${flight.registration} | Dest: ${flight.destination}`, 14, currentY);
+        
+        // Format: JAM | PESAWAT | RUTE
+        const flightInfo = `${flight.timeRange} | ${flight.aircraft} - ${flight.registration} | Dest: ${flight.destination}`;
+        doc.text(flightInfo, 14, currentY);
+        
+        // --- BARIS 2: Status & Alasan (Hanya di PDF) ---
+        const status = flight.status || "SCHEDULED";
+        let statusText = `Status: ${status}`;
+        
+        doc.setFontSize(9);
+        // Set warna berdasarkan status
+        if (status === "DELAY") {
+            doc.setTextColor(220, 38, 38); // Merah
+            if (flight.delayReason) {
+                statusText += ` - Alasan: ${flight.delayReason}`;
+            }
+        } else if (status === "READY") {
+            doc.setTextColor(22, 163, 74); // Hijau
+        } else {
+            doc.setTextColor(100, 100, 100); // Abu-abu
+        }
+        
+        currentY += 5;
+        doc.setFont("helvetica", "normal");
+        doc.text(statusText, 14, currentY); // Tulis status di bawah info flight
+
         currentY += 5;
 
-        // Tabel Item (menggunakan helper yang SAMA dengan laporan satuan)
+        // Tabel Item
         if (flight.items.length > 0) {
             currentY = drawManifestTable(doc, flight.items, currentY);
-            currentY += 10; // Spasi setelah tabel
+            currentY += 10; 
         } else {
             doc.setFontSize(9);
             doc.setFont("helvetica", "italic");

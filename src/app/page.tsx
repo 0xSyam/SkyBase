@@ -1,52 +1,50 @@
+// src/app/page.tsx
 "use client";
 
 import React from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
-import { getUser } from "@/lib/auth/storage";
+import { useAuth } from "@/context/AuthContext"; // Import hook
 
 export default function Login() {
-  const router = useRouter();
+  const { user, isLoading, refreshAuth } = useAuth();
+  const router = useRouter(); // Masih perlu router untuk handling error manual jika perlu
+  
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
-  const [loading, setLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   const handleLogin = async () => {
     setError(null);
-    setLoading(true);
+    setIsSubmitting(true);
     try {
-      const res = await skybase.auth.login(email, password);
-      if (res?.data?.user?.role) {
-        const role = res.data.user.role.toLowerCase();
-        const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
-        router.push(target);
-      } else {
-        // default to groundcrew if role is not specified
-        router.push("/groundcrew/dashboard");
-      }
+      await skybase.auth.login(email, password);
+      // PENTING: Panggil refreshAuth agar AuthContext sadar user sudah login
+      refreshAuth(); 
+      // Redirect akan ditangani otomatis oleh AuthContext useEffect
     } catch (e) {
       setError((e as Error)?.message || "Login gagal");
-    } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  React.useEffect(() => {
-    // If already logged in, redirect to role dashboard
-    try {
-      const user = getUser();
-      if (user && user.role) {
-        const role = String(user.role).toLowerCase();
-        const target = role === "supervisor" ? "/supervisor/dashboard" : role === "warehouse" ? "/warehouse/dashboard" : "/groundcrew/dashboard";
-        router.replace(target);
-      }
-    } catch {
-      // ignore
-    }
-  }, [router]);
+  // 1. Tampilkan Loading Screen Penuh jika AuthContext sedang mengecek session
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#fffeff]">
+         <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
 
+  // 2. Jika user sudah terdeteksi login, jangan render form (tunggu redirect)
+  if (user) {
+    return null;
+  }
+
+  // 3. Render Form Login Normal
   return (
     <div className="min-h-svh bg-[#fffeff] flex flex-col lg:flex-row overflow-hidden">
       <div className="w-full lg:hidden px-5 pt-6">
@@ -90,12 +88,7 @@ export default function Login() {
               </div>
 
               <div className="space-y-2">
-                <label
-                  htmlFor="password"
-                  className="text-[#222] text-sm font-medium"
-                >
-                  Password
-                </label>
+                <label htmlFor="password" className="text-[#222] text-sm font-medium">Password</label>
                 <div className="rounded-lg border border-neutral-300 shadow-[0_1px_2px_rgba(0,0,0,0.04)] px-3.5 py-2">
                   <input
                     id="password"
@@ -115,10 +108,10 @@ export default function Login() {
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={isSubmitting}
                 className="w-full rounded-lg bg-[#0a53c1] hover:bg-[#094db4] active:scale-[0.99] transition py-3 text-white font-semibold disabled:opacity-60"
               >
-                {loading ? "Signing in..." : "Login"}
+                {isSubmitting ? "Signing in..." : "Login"}
               </button>
             </form>
           </div>

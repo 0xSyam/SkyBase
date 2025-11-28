@@ -13,8 +13,8 @@ import {
   generateRecapPDF, 
   generateStatusReportPDF, 
   type PDFItem, 
-  type RecapData,
-  type RecapSection
+  type RecapData, 
+  type RecapSection 
 } from "@/lib/pdfGenerator";
 
 interface ReportSchedule {
@@ -25,6 +25,9 @@ interface ReportSchedule {
   destination: string;
   aircraftId?: number;
   depISO?: string | null;
+  // Field baru untuk data PDF (tidak ditampilkan di UI)
+  status: string; 
+  delayReason?: string; 
 }
 
 interface ReportSectionUI {
@@ -66,11 +69,11 @@ export default function SupervisorLaporanPage() {
                   const byDate = new Map<string, ReportSectionUI>();
                   const fmtDate = (d: Date) => d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
                   const toTime = (s?: string | null) => {
-                      if (!s) return "--:-- WIB";
+                      if (!s) return "--:--";
                       try {
                           const d = new Date(s);
-                          return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-                      } catch { return "--:-- WIB"; }
+                          return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                      } catch { return "--:--"; }
                   };
 
                   for (const f of list) {
@@ -81,14 +84,21 @@ export default function SupervisorLaporanPage() {
                       const title = fmtDate(dt);
                       const sec = byDate.get(id) ?? { id, title, schedules: [] };
                       
+                      const depTime = toTime(f?.sched_dep);
+                      const arrTime = toTime(f?.sched_arr);
+
                       const schedule: ReportSchedule = {
                           id: String(f?.flight_id ?? `${id}-${sec.schedules.length + 1}`),
-                          timeRange: `${toTime(f?.sched_dep)} - ${toTime(f?.sched_arr)}`,
+                          // Format waktu lengkap untuk PDF
+                          timeRange: `${depTime} - ${arrTime} WIB`,
                           aircraft: f?.aircraft?.type ?? "-",
                           registration: f?.aircraft?.registration_code ?? "-",
                           destination: f?.route_to ?? "-",
                           aircraftId: f?.aircraft?.aircraft_id,
                           depISO: f?.sched_dep ?? null,
+                          // Simpan data status & reason untuk keperluan PDF Generator nanti
+                          status: f?.status || "SCHEDULED",
+                          delayReason: f?.status === "DELAY" ? "Kendala Operasional / Teknis" : undefined
                       };
                       sec.schedules.push(schedule);
                       byDate.set(id, sec);
@@ -158,7 +168,7 @@ export default function SupervisorLaporanPage() {
     }
   };
 
-  // --- DOWNLOAD REKAP (FIXED STRUCTURE) ---
+  // --- DOWNLOAD REKAP (Range) ---
   const handleDownloadRange = async () => {
     setDownloadingRange(true);
     try {
@@ -171,12 +181,14 @@ export default function SupervisorLaporanPage() {
                  items = await fetchAndMapInventory(sch.aircraftId);
              }
              
-             // FIXED: Structure matches RecapFlight interface (flat properties)
              return {
                  timeRange: sch.timeRange,
                  aircraft: sch.aircraft,
                  registration: sch.registration,
                  destination: sch.destination,
+                 // KIRIM DATA STATUS KE PDF GENERATOR
+                 status: sch.status,
+                 delayReason: sch.delayReason,
                  items: items
              };
         });
@@ -211,7 +223,7 @@ export default function SupervisorLaporanPage() {
     }
   };
 
-  // --- DOWNLOAD PER HARI ---
+  // --- DOWNLOAD PER HARI (Section) ---
   const handleDownloadSection = async (section: ReportSectionUI) => {
     setDownloadingSectionId(section.id);
     try {
@@ -220,12 +232,14 @@ export default function SupervisorLaporanPage() {
             if (sch.aircraftId) {
                 items = await fetchAndMapInventory(sch.aircraftId);
             }
-            // FIXED: Structure matches RecapFlight interface
             return {
                 timeRange: sch.timeRange,
                 aircraft: sch.aircraft,
                 registration: sch.registration,
                 destination: sch.destination,
+                // KIRIM DATA STATUS KE PDF GENERATOR
+                status: sch.status,
+                delayReason: sch.delayReason,
                 items: items
             };
         });
@@ -270,39 +284,12 @@ export default function SupervisorLaporanPage() {
          },
          period: { from: dateStr, to: dateStr, interval: 'daily' },
          summary: { 
-            inventory_health: {
-              total_items: 0,
-              valid_items: 0,
-              expired_items: 0,
-              expiring_soon: 0,
-              health_percentage: 0,
-            },
-            inspection_performance: {
-              total_inspections: 0,
-              passed_inspections: 0,
-              failed_inspections: 0,
-              pass_rate: 0,
-            }
+            inventory_health: { total_items: 0, valid_items: 0, expired_items: 0, expiring_soon: 0, health_percentage: 0 },
+            inspection_performance: { total_inspections: 0, passed_inspections: 0, failed_inspections: 0, pass_rate: 0 }
           },
           current_inventory: {
-            total_items: 0,
-            valid_items: 0,
-            expired_items: 0,
-            expiring_soon: 0,
-            by_category: {
-              ASE: {
-                total: 0,
-                valid: 0,
-                expired: 0,
-                expiring_soon: 0,
-              },
-              DOC: {
-                total: 0,
-                valid: 0,
-                expired: 0,
-                expiring_soon: 0,
-              },
-            },
+            total_items: 0, valid_items: 0, expired_items: 0, expiring_soon: 0,
+            by_category: { ASE: { total: 0, valid: 0, expired: 0, expiring_soon: 0 }, DOC: { total: 0, valid: 0, expired: 0, expiring_soon: 0 } },
           },
          timeline: {}
       };
@@ -433,6 +420,7 @@ export default function SupervisorLaporanPage() {
                         index === 0 ? "" : "border-t border-[#E4E9F2]"
                       }`}
                     >
+                      {/* UI TETAP SEPERTI SEMULA (TANPA STATUS) */}
                       <div className="space-y-2">
                         <p className="text-xs font-semibold uppercase tracking-[0.08em] text-[#475467]">
                           {schedule.timeRange}
