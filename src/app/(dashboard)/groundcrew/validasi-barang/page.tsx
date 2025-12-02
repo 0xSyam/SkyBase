@@ -75,6 +75,7 @@ const ValidasiBarangPage = () => {
         if (!ignore) {
           const mapped: FlightSchedule[] = apiData
             .filter((it) => {
+              // Filter: Hanya yang belum di-inspeksi atau masih dalam proses
               const inspectionStatus = it?.inspection?.status;
               return inspectionStatus === 'NOT_STARTED' || inspectionStatus === 'IN_PROGRESS';
             })

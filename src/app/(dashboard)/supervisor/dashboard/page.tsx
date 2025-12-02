@@ -15,6 +15,34 @@ type ScheduleItem = {
   destinasi: string;
   arrival: string;
   takeOff: string;
+  status?: string;
+};
+
+const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+  const statusLower = (status || "").toLowerCase();
+  let bgColor = "bg-gray-100";
+  let textColor = "text-gray-600";
+  let label = status || "-";
+
+  if (statusLower === "ready") {
+    bgColor = "bg-green-100";
+    textColor = "text-green-700";
+    label = "Ready";
+  } else if (statusLower === "delay") {
+    bgColor = "bg-red-100";
+    textColor = "text-red-700";
+    label = "Delay";
+  } else if (statusLower === "scheduled") {
+    bgColor = "bg-blue-100";
+    textColor = "text-blue-700";
+    label = "Scheduled";
+  }
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+      {label}
+    </span>
+  );
 };
 
 export default function SupervisorDashboardPage() {
@@ -98,6 +126,7 @@ export default function SupervisorDashboardPage() {
                 destinasi: f?.route_to ?? "-",
                 arrival: fmtTime(f?.sched_dep ?? null),
                 takeOff: fmtTime(f?.sched_arr ?? null),
+                status: f?.status ?? "-",
               };
             });
           setScheduleData(mapped);
@@ -161,6 +190,7 @@ export default function SupervisorDashboardPage() {
               <div className="flex-1">Destinasi</div>
               <div className="flex-1">Arrival</div>
               <div className="flex-1">Take Off</div>
+              <div className="flex-1">Status</div>
             </div>
 
             <div className="divide-y divide-[#E9EEF3]">
@@ -189,6 +219,9 @@ export default function SupervisorDashboardPage() {
                     </div>
                     <div className="flex-1 text-sm text-[#4B5563]">
                       {item.takeOff}
+                    </div>
+                    <div className="flex-1">
+                      <StatusBadge status={item.status} />
                     </div>
                   </div>
                 ))

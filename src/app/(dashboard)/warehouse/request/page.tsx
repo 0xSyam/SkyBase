@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
-import { Check, X } from "lucide-react";
+import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
@@ -39,9 +39,10 @@ export default function RequestPage() {
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   
-  // State Approve (Updated: Key menggunakan item_id (number) untuk grouping)
+  // State Approve (Updated: Key menggunakan index untuk setiap item ASE)
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [approveFormData, setApproveFormData] = useState<Record<number, { seal_number: string; expires_at: string }>>({});
+  const [approveFormData, setApproveFormData] = useState<Array<{ item_id: number; seal_number: string; expires_at: string }>>([]);
+  const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0); // Accordion state
   
   const [selectedRequest, setSelectedRequest] = useState<RequestRow | null>(null);
   const [requests, setRequests] = useState<WarehouseRequest[]>([]);
@@ -141,14 +142,18 @@ export default function RequestPage() {
     const hasAseItems = row.rawData.items?.some(item => item.item?.category === 'ASE');
 
     if (hasAseItems) {
-      // Inisialisasi form data, GROUPING berdasarkan item_id
-      const initialFormData: Record<number, { seal_number: string; expires_at: string }> = {};
+      // Inisialisasi form data untuk SETIAP item ASE (berdasarkan qty)
+      const initialFormData: Array<{ item_id: number; seal_number: string; expires_at: string }> = [];
       
       row.rawData.items?.forEach((item) => {
         if (item.item?.category === 'ASE') {
-          // Hanya buat entry jika belum ada untuk item_id ini (mencegah duplikasi form)
-          if (!initialFormData[item.item_id]) {
-            initialFormData[item.item_id] = { seal_number: '', expires_at: '' };
+          // Buat form sejumlah qty yang direquest
+          for (let i = 0; i < item.qty; i++) {
+            initialFormData.push({
+              item_id: item.item_id,
+              seal_number: '',
+              expires_at: ''
+            });
           }
         }
       });
@@ -184,36 +189,42 @@ export default function RequestPage() {
 
   const handleApproveSubmit = async () => {
     if (!selectedRequest) return;
-
-    // Ambil item unik berdasarkan item_id untuk validasi
-    const uniqueAseItems = selectedRequest.rawData.items
-        ?.filter(i => i.item?.category === 'ASE')
-        .filter((item, index, self) => 
-            index === self.findIndex((t) => t.item_id === item.item_id)
-        ) || [];
     
-    // Validasi input
-    for (const item of uniqueAseItems) {
-        const data = approveFormData[item.item_id];
-        if (!data?.seal_number || !data?.expires_at) {
-            setNotification({ type: "error", message: `Mohon lengkapi data untuk item ${item.item?.name || 'ASE'}` });
-            return;
-        }
+    // Validasi: semua form harus diisi
+    for (let i = 0; i < approveFormData.length; i++) {
+      const data = approveFormData[i];
+      if (!data?.seal_number || !data?.expires_at) {
+        const itemName = selectedRequest.rawData.items?.find(it => it.item_id === data.item_id)?.item?.name || 'ASE';
+        setNotification({ type: "error", message: `Mohon lengkapi data untuk ${itemName} #${i + 1}` });
+        return;
+      }
     }
 
     try {
       setActionLoading(true);
-      // Map semua item original ke payload
-      const itemsPayload = selectedRequest.rawData.items?.map((item) => {
-        // Jika item ASE, ambil data dari approveFormData berdasarkan item_id
-        // (Satu data input diterapkan ke semua item dengan ID yang sama)
-        const extraData = item.item?.category === 'ASE' ? approveFormData[item.item_id] : {};
-        return {
-          item_id: item.item_id,
-          qty: item.qty,
-          ...extraData
-        };
-      }) || [];
+      
+      // Build items payload: untuk ASE, kirim setiap item dengan qty=1 dan data masing-masing
+      const itemsPayload: Array<{ item_id: number; qty: number; seal_number?: string; expires_at?: string }> = [];
+      
+      // Tambahkan item DOC seperti biasa
+      selectedRequest.rawData.items?.forEach((item) => {
+        if (item.item?.category !== 'ASE') {
+          itemsPayload.push({
+            item_id: item.item_id,
+            qty: item.qty,
+          });
+        }
+      });
+      
+      // Tambahkan setiap item ASE dengan data individu
+      approveFormData.forEach((formItem) => {
+        itemsPayload.push({
+          item_id: formItem.item_id,
+          qty: 1,
+          seal_number: formItem.seal_number,
+          expires_at: formItem.expires_at,
+        });
+      });
 
       await skybase.warehouseRequests.approve(selectedRequest.id, { items: itemsPayload });
       
@@ -358,12 +369,12 @@ export default function RequestPage() {
       {/* REJECT DIALOG */}
       {mounted && isRejectDialogOpen &&
         createPortal(
-          <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto px-4">
+          <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto scrollbar-hide px-4">
             <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="reject-dialog-title"
-              className="w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[85vh] overflow-y-auto"
+              className="w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[85vh] overflow-y-auto scrollbar-hide"
             >
               <h2 id="reject-dialog-title" className="text-2xl font-semibold text-[#0E1D3D]">
                 Tolak Request
@@ -387,59 +398,120 @@ export default function RequestPage() {
           document.body,
         )}
 
-      {/* APPROVE DIALOG (KHUSUS ASE) */}
+      {/* APPROVE DIALOG (KHUSUS ASE) - Accordion Style */}
       {mounted && isApproveDialogOpen && selectedRequest &&
         createPortal(
-          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm p-4 overflow-y-auto">
-            <div className="w-full mx-auto max-w-[500px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-semibold text-[#0E1D3D] mb-6">Lengkapi Data Item</h2>
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm p-4 overflow-y-auto scrollbar-hide">
+            <div className="w-full mx-auto max-w-[500px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[90vh] overflow-y-auto scrollbar-hide">
+              <h2 className="text-2xl font-semibold text-[#0E1D3D] mb-2 text-center">Lengkapi Data Item</h2>
+              <p className="text-sm text-gray-500 mb-6 text-center">
+                Total {approveFormData.length} item ASE yang perlu dilengkapi
+              </p>
               
-              <div className="space-y-6 text-left">
-                {/* RENDER ITEM UNIK SAJA */}
-                {selectedRequest.rawData.items
-                  ?.filter(i => i.item?.category === 'ASE')
-                  .filter((item, index, self) => 
-                     // Filter duplicate based on item_id
-                     index === self.findIndex((t) => t.item_id === item.item_id)
-                  )
-                  .map((item) => (
-                    <div key={item.item_id} className="p-4 border border-gray-200 rounded-2xl bg-gray-50 space-y-4">
-                        <h3 className="font-semibold text-[#0E1D3D] border-b pb-2">{item.item?.name || `Item #${item.item_id}`}</h3>
-                        
-                        <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#0E1D3D]">Seal Number</label>
-                        <input
-                            type="text"
-                            placeholder="Masukkan Seal Number"
-                            value={approveFormData[item.item_id]?.seal_number || ""}
-                            onChange={(e) => setApproveFormData(prev => ({
-                            ...prev,
-                            [item.item_id]: { ...prev[item.item_id], seal_number: e.target.value }
-                            }))}
-                            className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                        />
+              {/* Progress indicator */}
+              <div className="flex items-center justify-center gap-1 mb-6">
+                {approveFormData.map((formItem, idx) => {
+                  const isComplete = formItem.seal_number && formItem.expires_at;
+                  return (
+                    <div 
+                      key={idx}
+                      className={`w-3 h-3 rounded-full transition-colors ${
+                        isComplete ? 'bg-green-500' : 
+                        expandedAccordion === idx ? 'bg-blue-500' : 'bg-gray-300'
+                      }`}
+                      title={`Item ${idx + 1}: ${isComplete ? 'Lengkap' : 'Belum lengkap'}`}
+                    />
+                  );
+                })}
+              </div>
+              
+              <div className="space-y-3 text-left">
+                {/* RENDER ACCORDION UNTUK SETIAP ITEM ASE */}
+                {approveFormData.map((formItem, index) => {
+                  const itemInfo = selectedRequest.rawData.items?.find(it => it.item_id === formItem.item_id);
+                  const itemName = itemInfo?.item?.name || `Item #${formItem.item_id}`;
+                  const isExpanded = expandedAccordion === index;
+                  const isComplete = formItem.seal_number && formItem.expires_at;
+                  
+                  return (
+                    <div key={index} className={`border rounded-2xl overflow-hidden transition-colors ${
+                      isComplete ? 'border-green-300 bg-green-50/50' : 'border-gray-200 bg-gray-50'
+                    }`}>
+                      {/* Accordion Header */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedAccordion(isExpanded ? null : index)}
+                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className={`w-6 h-6 rounded-full text-xs font-semibold flex items-center justify-center ${
+                            isComplete ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
+                          }`}>
+                            {isComplete ? '✓' : index + 1}
+                          </span>
+                          <span className="font-semibold text-[#0E1D3D] text-sm">
+                            {itemName} #{index + 1}
+                          </span>
                         </div>
+                        {isExpanded ? (
+                          <ChevronUp className="w-5 h-5 text-gray-500" />
+                        ) : (
+                          <ChevronDown className="w-5 h-5 text-gray-500" />
+                        )}
+                      </button>
+                      
+                      {/* Accordion Content */}
+                      {isExpanded && (
+                        <div className="px-4 pb-4 space-y-4 border-t border-gray-200">
+                          <div className="space-y-2 pt-4">
+                            <label className="text-sm font-medium text-[#0E1D3D]">Seal Number</label>
+                            <input
+                              type="text"
+                              placeholder="Masukkan Seal Number"
+                              value={formItem.seal_number}
+                              onChange={(e) => setApproveFormData(prev => {
+                                const newData = [...prev];
+                                newData[index] = { ...newData[index], seal_number: e.target.value };
+                                return newData;
+                              })}
+                              className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            />
+                          </div>
 
-                        <div className="space-y-2">
-                        <label className="text-sm font-medium text-[#0E1D3D]">Expired Date</label>
-                        {/* PERBAIKAN: Menggunakan input type date */}
-                        <input
-                            type="date"
-                            value={approveFormData[item.item_id]?.expires_at || ""}
-                            onChange={(e) => setApproveFormData(prev => ({
-                            ...prev,
-                            [item.item_id]: { ...prev[item.item_id], expires_at: e.target.value }
-                            }))}
-                            className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                        />
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-[#0E1D3D]">Expired Date</label>
+                            <input
+                              type="date"
+                              value={formItem.expires_at}
+                              onChange={(e) => setApproveFormData(prev => {
+                                const newData = [...prev];
+                                newData[index] = { ...newData[index], expires_at: e.target.value };
+                                return newData;
+                              })}
+                              className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            />
+                          </div>
+                          
+                          {/* Next button in accordion */}
+                          {index < approveFormData.length - 1 && formItem.seal_number && formItem.expires_at && (
+                            <button
+                              type="button"
+                              onClick={() => setExpandedAccordion(index + 1)}
+                              className="w-full mt-2 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              Lanjut ke item berikutnya →
+                            </button>
+                          )}
                         </div>
+                      )}
                     </div>
-                   ))}
+                  );
+                })}
               </div>
 
               <div className="mt-8 flex gap-4">
                 <button 
-                  onClick={() => { setIsApproveDialogOpen(false); setSelectedRequest(null); }} 
+                  onClick={() => { setIsApproveDialogOpen(false); setSelectedRequest(null); setExpandedAccordion(0); }} 
                   disabled={actionLoading}
                   className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-95"
                 >

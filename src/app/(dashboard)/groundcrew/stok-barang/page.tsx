@@ -110,11 +110,11 @@ interface StockRequestFormData {
 
 interface StockAddFormData {
   nomor: string;
-  revisi: string;
   efektif: string;
   jumlah: string;
   jenisDokumen: "doc" | "ase";
   seal_number: string;
+  revisi?: string;
   itemId: string;
 }
 
@@ -167,7 +167,6 @@ const StokBarangPage = () => {
   });
   const [addData, setAddData] = useState<StockAddFormData>({
     nomor: "",
-    revisi: "",
     efektif: "",
     jumlah: "",
     jenisDokumen: "doc",
@@ -397,7 +396,6 @@ const StokBarangPage = () => {
     setSelectedItem(null);
     setAddData({
       nomor: "",
-      revisi: "",
       efektif: "",
       jumlah: "1",
       jenisDokumen: "doc",
@@ -428,7 +426,6 @@ const StokBarangPage = () => {
     setRequestData({ jumlah: "", catatan: "" });
     setAddData({
       nomor: "",
-      revisi: "",
       efektif: "",
       jumlah: "",
       jenisDokumen: "doc",
@@ -538,7 +535,7 @@ const StokBarangPage = () => {
           await skybase.inventory.addDoc({
             item_id: itemId,
             doc_number: addData.nomor,
-            revision_no: addData.revisi,
+            revision_no: addData.revisi || "-",
             effective_date: effectiveDate,
             quantity: quantity,
             condition: "Good",
@@ -971,13 +968,13 @@ const StokBarangPage = () => {
           activeDialog &&
           createPortal(
             <div
-              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto"
+              className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto scrollbar-hide"
               onClick={handleDialogClose}
             >
               <div
                 role="dialog"
                 aria-modal="true"
-                className={`relative rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] w-full mx-4 sm:mx-0 max-h-[85vh] overflow-y-auto ${activeDialog === "delete" ? "max-w-[360px]" : "max-w-[420px]"
+                className={`relative rounded-[32px] bg-white p-6 sm:p-8 shadow-[0_24px_60px_rgba(15,23,42,0.15)] w-full mx-4 sm:mx-0 max-h-[85vh] overflow-y-auto scrollbar-hide ${activeDialog === "delete" ? "max-w-[360px]" : "max-w-[420px]"
                   }`}
                 onClick={(event) => event.stopPropagation()}
               >
@@ -1241,6 +1238,7 @@ const StokBarangPage = () => {
                             onChange={(e) => {
                                 setAddData(prev => ({ ...prev, jenisDokumen: e.target.value as "doc" | "ase", itemId: "" }));
                             }}
+                            required
                             className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           >
                             <option value="doc">DOC</option>
@@ -1279,6 +1277,7 @@ const StokBarangPage = () => {
                                 id="add-item-id"
                                 value={addData.itemId}
                                 onChange={(e) => setAddData(prev => ({ ...prev, itemId: e.target.value }))}
+                                required
                                 className="w-full appearance-none rounded-2xl border border-[#E2E8F0] bg-white px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                              >
                                 <option value="" disabled>Pilih Item</option>
@@ -1309,29 +1308,14 @@ const StokBarangPage = () => {
                         <input
                           id="add-nomor"
                           type="text"
-                          placeholder={addData.jenisDokumen === 'doc' ? "Masukan nomor dokumen" : "Masukan serial number"}
+                          placeholder={addData.jenisDokumen === 'doc' ? "Masukan nomor dokumen (wajib)" : "Masukan serial number (wajib)"}
                           value={addData.nomor}
                           onChange={handleAddInputChange("nomor")}
+                          required
                           className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                         />
                       </div>
 
-                      <div className="space-y-2">
-                        <label
-                          htmlFor="add-revisi"
-                          className="text-sm font-semibold text-[#0E1D3D]"
-                        >
-                          Revisi
-                        </label>
-                        <input
-                          id="add-revisi"
-                          type="text"
-                          placeholder="Masukan nomor revisi (opsional)"
-                          value={addData.revisi}
-                          onChange={handleAddInputChange("revisi")}
-                          className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                        />
-                      </div>
 
                       {addData.jenisDokumen === 'ase' && (
                         <div className="space-y-2">
@@ -1344,10 +1328,30 @@ const StokBarangPage = () => {
                           <input
                             id="add-seal-number"
                             type="text"
-                            placeholder="Masukan nomor seal"
+                            placeholder="Masukan nomor seal (wajib)"
                             value={addData.seal_number}
                             onChange={handleAddInputChange("seal_number")}
+                            required
                             className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                          />
+                        </div>
+                      )}
+                      {addData.jenisDokumen === 'doc' && (
+                        <div className="space-y-2">
+                          <label
+                            htmlFor="add-revisi"
+                            className="text-sm font-semibold text-[#0E1D3D]"
+                          >
+                            Revisi
+                          </label>
+                          <input
+                            id="add-revisi"
+                            type="text"
+                            placeholder="Masukan nomor revisi"
+                            value={addData.revisi}
+                            onChange={handleAddInputChange("revisi")}
+                            className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                            required={addData.jenisDokumen === 'doc'}
                           />
                         </div>
                       )}
@@ -1365,6 +1369,7 @@ const StokBarangPage = () => {
                             type="date"
                             value={addData.efektif}
                             onChange={handleAddInputChange("efektif")}
+                            required
                             className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           />
                         </div>
@@ -1382,9 +1387,10 @@ const StokBarangPage = () => {
                             id="add-jumlah"
                             type="number"
                             min="0"
-                            placeholder="Masukan jumlah"
+                            placeholder="Masukan jumlah (wajib)"
                             value={addData.jumlah}
                             onChange={handleAddInputChange("jumlah")}
+                            required
                             className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                           />
                         </div>

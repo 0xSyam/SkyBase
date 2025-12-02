@@ -7,6 +7,7 @@ import { getUser, clearAuth, StoredUser } from "@/lib/auth/storage";
 interface AuthContextType {
   user: StoredUser | null;
   isLoading: boolean;
+  isLoggingOut: boolean;
   refreshAuth: () => void;
   logout: () => void;
 }
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<StoredUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -28,9 +30,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    setIsLoggingOut(true);
     clearAuth();
     setUser(null);
-    router.replace("/");
+    // Delay sedikit agar overlay tampil dulu
+    setTimeout(() => {
+      router.replace("/");
+    }, 100);
   };
 
   // Cek auth saat pertama kali load
@@ -40,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Proteksi Route & Redirect Otomatis
   useEffect(() => {
-    if (isLoading) return; // Jangan lakukan apa-apa jika masih loading
+    if (isLoading || isLoggingOut) return; // Jangan lakukan apa-apa jika masih loading atau logout
 
     const isLoginPage = pathname === "/";
     
@@ -60,10 +66,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         router.replace("/");
       }
     }
-  }, [user, isLoading, pathname, router]);
+  }, [user, isLoading, isLoggingOut, pathname, router]);
+
+  // Reset logging out state ketika sudah sampai di halaman login
+  useEffect(() => {
+    if (pathname === "/" && isLoggingOut) {
+      // Delay reset agar transisi smooth
+      const timer = setTimeout(() => {
+        setIsLoggingOut(false);
+      }, 200);
+      return () => clearTimeout(timer);
+    }
+  }, [pathname, isLoggingOut]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, refreshAuth, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, isLoggingOut, refreshAuth, logout }}>
+      {/* Logout overlay */}
+      {isLoggingOut && (
+        <div className="fixed inset-0 z-[99999] bg-white flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <p className="text-gray-600 text-sm font-medium">Logging out...</p>
+          </div>
+        </div>
+      )}
       {children}
     </AuthContext.Provider>
   );

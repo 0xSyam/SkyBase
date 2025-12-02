@@ -14,6 +14,7 @@ type ScheduleItem = {
   time: string;
   flight_id?: number;
   aircraft_id?: number;
+  status?: string;
 };
 type StockRow = { document: string; jumlah: number };
 
@@ -33,6 +34,33 @@ const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   </div>
 );
 
+const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
+  const statusLower = (status || "").toLowerCase();
+  let bgColor = "bg-gray-100";
+  let textColor = "text-gray-600";
+  let label = status || "-";
+
+  if (statusLower === "ready") {
+    bgColor = "bg-green-100";
+    textColor = "text-green-700";
+    label = "Ready";
+  } else if (statusLower === "delay") {
+    bgColor = "bg-red-100";
+    textColor = "text-red-700";
+    label = "Delay";
+  } else if (statusLower === "scheduled") {
+    bgColor = "bg-blue-100";
+    textColor = "text-blue-700";
+    label = "Scheduled";
+  }
+
+  return (
+    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+      {label}
+    </span>
+  );
+};
+
 const ScheduleGroup: React.FC<{
   title: string;
   items: ScheduleItem[];
@@ -43,30 +71,36 @@ const ScheduleGroup: React.FC<{
   router,
 }) => (
     <GlassCard className="p-0">
-      <div className="flex h-[56px] md:h-[60px] px-4 md:px-3 justify-between items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
+      <div className="grid grid-cols-[1fr_100px_100px_60px] h-[56px] md:h-[60px] px-4 md:px-3 items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
         <span>{title}</span>
-        <span>Arrival</span>
-        <span>Action</span>
+        <span className="text-center">Arrival</span>
+        <span className="text-center">Status</span>
+        <span className="text-center">Action</span>
       </div>
       <div className="divide-y divide-[#E9EEF3]">
         {items.map((it, idx) => (
           <div
             key={idx}
-            className="flex h-[60px] px-4 md:px-3 justify-between items-center text-[#222222]"
+            className="grid grid-cols-[1fr_100px_100px_60px] h-[60px] px-4 md:px-3 items-center text-[#222222]"
           >
             <span className="font-medium tracking-tight">{it.reg}</span>
-            <span className="text-sm md:text-[15px]">{it.time}</span>
-            <button
-              onClick={() => {
-                router.push(
-                  `/groundcrew/validasi-barang/${encodeURIComponent(it.reg)}?aircraft=${encodeURIComponent(it.aircraft)}${it.aircraft_id ? `&aircraftId=${it.aircraft_id}` : ""}`
-                );
-              }}
-              className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
-              aria-label="Detail"
-            >
-              <span className="-mt-[1px]">›</span>
-            </button>
+            <span className="text-sm md:text-[15px] text-center">{it.time}</span>
+            <span className="text-center">
+              <StatusBadge status={it.status} />
+            </span>
+            <div className="flex justify-center">
+              <button
+                onClick={() => {
+                  router.push(
+                    `/groundcrew/validasi-barang/${encodeURIComponent(it.reg)}?aircraft=${encodeURIComponent(it.aircraft)}${it.aircraft_id ? `&aircraftId=${it.aircraft_id}` : ""}`
+                  );
+                }}
+                className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
+                aria-label="Detail"
+              >
+                <span className="-mt-[1px]">›</span>
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -155,6 +189,7 @@ export default function DashboardPage() {
                 time,
                 flight_id: f?.flight_id,
                 aircraft_id: f?.aircraft?.aircraft_id,
+                status: f?.status ?? "-",
               };
             });
           setScheduleData(mapped);

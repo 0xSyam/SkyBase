@@ -409,7 +409,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({ params, searchPar
                <button onClick={() => setIsTransferOpen(false)} className="p-2 hover:bg-gray-200 rounded-full transition"><X className="w-5 h-5 text-[#6B7280]" /></button>
             </div>
             
-            <div className="p-0 overflow-y-auto flex-1">
+            <div className="p-0 overflow-y-auto scrollbar-hide flex-1">
                {loadingStock ? (
                   <div className="p-10 text-center text-gray-500 flex flex-col items-center gap-2">
                      <Loader2 className="animate-spin w-8 h-8 text-[#0D63F3]" />

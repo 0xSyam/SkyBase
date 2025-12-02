@@ -17,6 +17,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import GlassCard from "./Glasscard";
 import skybase from "@/lib/api/skybase";
+import { useAuth } from "@/context/AuthContext";
 
 export type SidebarRole = "groundcrew" | "warehouse" | "supervisor";
 
@@ -55,6 +56,7 @@ interface SidebarProps {
 export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { logout, isLoggingOut } = useAuth();
 
   const navigationItems = navigationByRole[role] ?? navigationByRole.groundcrew;
 
@@ -63,23 +65,13 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
   };
 
   const handleLogout = async () => {
+    if (isLoggingOut) return; // Prevent double click
     try {
       await skybase.auth.logout();
     } catch {
-      // ignore
-    } finally {
-      try {
-        router.replace("/");
-      } finally {
-        if (typeof window !== "undefined") {
-          setTimeout(() => {
-            if (window.location.pathname !== "/") {
-              window.location.href = "/";
-            }
-          }, 50);
-        }
-      }
+      // ignore API error
     }
+    logout(); // Use context logout which handles state and redirect
   };
 
   return (
@@ -123,16 +115,18 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
 
         <button
           onClick={handleLogout}
+          disabled={isLoggingOut}
           className="
           flex items-center gap-3 w-full px-4 py-3 rounded-xl
           text-gray-700 transition-all duration-200 ease-in-out
           hover:bg-red-50 hover:text-red-600
           focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2
+          disabled:opacity-50 disabled:cursor-not-allowed
         "
           aria-label="Logout from application"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-          <span className="font-medium text-sm whitespace-nowrap">Logout</span>
+          <span className="font-medium text-sm whitespace-nowrap">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
         </button>
       </nav>
     </GlassCard>

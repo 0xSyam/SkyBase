@@ -177,7 +177,7 @@ export const generateRecapPDF = (data: RecapData, fileName: string) => {
         // Set warna berdasarkan status
         if (status === "DELAY") {
             doc.setTextColor(220, 38, 38); // Merah
-            if (flight.delayReason) {
+            if (flight.delayReason && flight.delayReason !== "-") {
                 statusText += ` - Alasan: ${flight.delayReason}`;
             }
         } else if (status === "READY") {

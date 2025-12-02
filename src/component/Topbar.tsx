@@ -145,7 +145,7 @@ export default function TopBar({
                   <h3 className="font-semibold text-[#111827]">Notifikasi</h3>
                 </div>
                 
-                <div className="max-h-[320px] overflow-y-auto custom-scrollbar min-h-[100px]">
+                <div className="max-h-[320px] overflow-y-auto scrollbar-hide min-h-[100px]">
                   {/* Gunakan data dari Context */}
                   {notifications.length > 0 ? (
                     notifications.map((notif) => (

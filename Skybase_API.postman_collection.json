@@ -502,7 +502,11 @@
                         "url": {
                             "raw": "{{BASE_URL}}/inventory/groundcrew/transfer-to-aircraft",
                             "host": ["{{BASE_URL}}"],
-                            "path": ["inventory", "groundcrew", "transfer-to-aircraft"]
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "transfer-to-aircraft"
+                            ]
                         },
                         "description": "Transfer DOC item from groundcrew inventory to aircraft. Use inventory_id (gc_doc_id) and specify quantity."
                     }
@@ -528,7 +532,11 @@
                         "url": {
                             "raw": "{{BASE_URL}}/inventory/groundcrew/transfer-to-aircraft",
                             "host": ["{{BASE_URL}}"],
-                            "path": ["inventory", "groundcrew", "transfer-to-aircraft"]
+                            "path": [
+                                "inventory",
+                                "groundcrew",
+                                "transfer-to-aircraft"
+                            ]
                         },
                         "description": "Transfer ASE item from groundcrew inventory to aircraft. Use inventory_id (gc_ase_id). No quantity needed for ASE."
                     }
@@ -705,7 +713,7 @@
                     }
                 },
                 {
-                    "name": "Approve Request (Fill ASE Seal Numbers)",
+                    "name": "Approve Request - DOC Items (Simple)",
                     "request": {
                         "method": "PUT",
                         "header": [
@@ -720,7 +728,7 @@
                         ],
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"items\": [\n    {\n      \"id\": 24,\n      \"seal_number\": \"YE-2025-001\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 25,\n      \"seal_number\": \"YE-2025-002\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 26,\n      \"seal_number\": \"YE-2025-003\",\n      \"expires_at\": \"2026-12-31\"\n    }\n  ]\n}"
+                            "raw": "{\n  \"notes\": \"Approved for immediate use\",\n  \"items\": [\n    {\n      \"id\": 27\n    }\n  ]\n}"
                         },
                         "url": {
                             "raw": "{{BASE_URL}}/warehouse-requests/{{request_id}}/approve",
@@ -731,7 +739,37 @@
                                 "approve"
                             ]
                         },
-                        "description": "UPDATED: For ASE items, use 'id' (wh_request_items.id) not item_id. Can approve ALL items at once or partial. Validates: duplicates in request, seal exists in gc_ase_inventory, seal exists in other wh_request_items. Status becomes APPROVED when all seal_numbers filled."
+                        "description": "For DOC items: Just provide item 'id' from wh_request_items table. No seal_number or expires_at needed. System will auto-create/update inventory quantity after fulfillment."
+                    }
+                },
+                {
+                    "name": "Approve Request - ASE Items (Fill Seal Numbers)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{warehouse_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"notes\": \"All seal numbers verified and recorded\",\n  \"items\": [\n    {\n      \"id\": 24,\n      \"seal_number\": \"YE-2025-001\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 25,\n      \"seal_number\": \"YE-2025-002\",\n      \"expires_at\": \"2026-12-31\"\n    },\n    {\n      \"id\": 26,\n      \"seal_number\": \"YE-2025-003\",\n      \"expires_at\": \"2026-12-31\"\n    }\n  ]\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/warehouse-requests/{{request_id}}/approve",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "warehouse-requests",
+                                "{{request_id}}",
+                                "approve"
+                            ]
+                        },
+                        "description": "For ASE items: Must provide seal_number & expires_at for each unit. Use 'id' (wh_request_items.id) to identify each physical unit. Can approve ALL items at once or partial. Validates: duplicates in request, seal exists in gc_ase_inventory, seal exists in other wh_request_items. Status becomes APPROVED when all seal_numbers filled."
                     }
                 },
                 {
@@ -887,49 +925,6 @@
                             "raw": "{{BASE_URL}}/inspections/flight/{{flight_id}}",
                             "host": ["{{BASE_URL}}"],
                             "path": ["inspections", "flight", "{{flight_id}}"]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Aircraft Validation (DEPRECATED)",
-                    "event": [
-                        {
-                            "listen": "test",
-                            "script": {
-                                "exec": [
-                                    "pm.test(\"Status code is 200\", function () {",
-                                    "    pm.response.to.have.status(200);",
-                                    "});",
-                                    "",
-                                    "pm.test(\"Response has inspection data\", function () {",
-                                    "    var jsonData = pm.response.json();",
-                                    "    pm.expect(jsonData.data.inspection).to.exist;",
-                                    "    if (jsonData.data.inspection) {",
-                                    "        pm.collectionVariables.set(\"inspection_id\", jsonData.data.inspection.inspection_id);",
-                                    "    }",
-                                    "});"
-                                ],
-                                "type": "text/javascript"
-                            }
-                        }
-                    ],
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{auth_token}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{BASE_URL}}/inspections/aircraft/{{aircraft_id}}/validation",
-                            "host": ["{{BASE_URL}}"],
-                            "path": [
-                                "inspections",
-                                "aircraft",
-                                "{{aircraft_id}}",
-                                "validation"
-                            ]
                         }
                     }
                 },

@@ -27,6 +27,7 @@ interface FlightRow {
   flightDate: string;
   rawDate?: Date | null;
   flightId?: number;
+  status?: string;
 }
 
 interface FilterConfig {
@@ -133,7 +134,8 @@ export default function SupervisorPenerbanganPage() {
       // PERBAIKAN: Gunakan format YYYY-MM-DD lokal agar form date terisi dengan benar
       flightDate: f?.sched_dep ? new Date(f.sched_dep).toLocaleDateString('en-CA') : "-",
       rawDate: f?.sched_dep ? new Date(f.sched_dep) : null,
-      flightId: f.flight_id
+      flightId: f.flight_id,
+      status: f?.status ?? "-"
     }));
   }, [flights]);
 
@@ -430,6 +432,7 @@ export default function SupervisorPenerbanganPage() {
             <div className="flex-1">Destinasi</div>
             <div className="flex-1">Arrival</div>
             <div className="flex-1">Take Off</div>
+            <div className="flex-1">Status</div>
             <div className="w-28 sm:w-44 text-right">Action</div>
           </div>
           <div className="divide-y divide-[#E9EEF3]">
@@ -443,6 +446,23 @@ export default function SupervisorPenerbanganPage() {
                   <div className="flex-1 pr-4 text-[18px] sm:text-lg font-bold text-[#111827]">{item.destinasi}</div>
                   <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">{item.arrival}</div>
                   <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">{item.takeOff}</div>
+                  <div className="flex-1 pr-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      item.status === 'SCHEDULED' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : item.status === 'DELAY' 
+                        ? 'bg-amber-100 text-amber-700' 
+                        : item.status === 'DEPARTED' 
+                        ? 'bg-green-100 text-green-700'
+                        : item.status === 'ARRIVED'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : item.status === 'CANCELLED'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {item.status}
+                    </span>
+                  </div>
                   <div className="w-28 sm:w-44 flex justify-end gap-2 sm:gap-3">
                     <button
                       type="button"
@@ -463,8 +483,8 @@ export default function SupervisorPenerbanganPage() {
         isEditOpen &&
         editForm &&
         createPortal(
-          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto">
-            <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-8 shadow-[0px_28px_60px_rgba(14,29,61,0.12)] max-h-[85vh] overflow-y-auto">
+          <div className="fixed inset-0 z-[999] flex items-center justify-center bg-[#050022]/40 px-4 backdrop-blur-sm overflow-y-auto scrollbar-hide">
+            <div className="w-full max-w-[480px] rounded-[32px] bg-white p-6 sm:p-8 shadow-[0px_28px_60px_rgba(14,29,61,0.12)] max-h-[85vh] overflow-y-auto scrollbar-hide">
               <h2 className="text-center text-2xl font-semibold text-[#0E1D3D]">
                 {isCreateMode ? "Tambah Jadwal Penerbangan" : "Edit Jadwal Penerbangan"}
               </h2>

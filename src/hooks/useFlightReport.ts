@@ -89,7 +89,7 @@ export const useFlightReport = () => {
               aircraftId: f?.aircraft?.aircraft_id,
               depISO: f?.sched_dep ?? null,
               status: f?.status || "SCHEDULED",
-              delayReason: f?.status === "DELAY" ? "Kendala Operasional / Teknis" : undefined
+              delayReason: f?.status === "DELAY" ? "-" : undefined
             };
             
             sec.schedules.push(schedule);
