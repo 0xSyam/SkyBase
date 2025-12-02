@@ -294,9 +294,13 @@ export type WarehouseRequest = {
   flight?: Flight;
   requested_by?: User;
   items?: Array<{
-    item_id: number;
+    id: number;          // ID dari wh_request_items table (untuk approve)
+    item_id: number;     // ID dari items catalog
     qty: number;
     reason?: string | null;
+    seal_number?: string | null;  // Diisi saat approve untuk ASE
+    expires_at?: string | null;   // Diisi saat approve untuk ASE
+    item?: ItemCatalog;           // Detail item dari catalog
   }>;
 };
 

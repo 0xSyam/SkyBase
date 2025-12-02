@@ -42,7 +42,7 @@ export default function RequestPage() {
   // State Approve (Updated: Key menggunakan index untuk setiap item ASE)
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveFormData, setApproveFormData] = useState<
-    Array<{ item_id: number; seal_number: string; expires_at: string }>
+    Array<{ id: number; item_id: number; seal_number: string; expires_at: string }>
   >([]);
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0); // Accordion state
 
@@ -158,23 +158,23 @@ export default function RequestPage() {
     );
 
     if (hasAseItems) {
-      // Inisialisasi form data untuk SETIAP item ASE (berdasarkan qty)
+      // Inisialisasi form data untuk SETIAP item ASE (menggunakan id dari wh_request_items)
       const initialFormData: Array<{
-        item_id: number;
+        id: number;        // ID dari wh_request_items
+        item_id: number;   // ID dari items catalog
         seal_number: string;
         expires_at: string;
       }> = [];
 
       row.rawData.items?.forEach((item) => {
         if (item.item?.category === "ASE") {
-          // Buat form sejumlah qty yang direquest
-          for (let i = 0; i < item.qty; i++) {
-            initialFormData.push({
-              item_id: item.item_id,
-              seal_number: "",
-              expires_at: "",
-            });
-          }
+          // Setiap item ASE sudah qty=1 (di-expand oleh backend)
+          initialFormData.push({
+            id: item.id,            // Gunakan id dari wh_request_items
+            item_id: item.item_id,
+            seal_number: item.seal_number || "",  // Mungkin sudah ada nilai sebelumnya
+            expires_at: item.expires_at || "",
+          });
         }
       });
 
@@ -187,10 +187,10 @@ export default function RequestPage() {
     // Jika tidak ada ASE, approve langsung seperti biasa (DOC)
     try {
       setActionLoading(true);
+      // Untuk DOC, kirim array items dengan id dari wh_request_items
       const itemsPayload =
         row.rawData.items?.map((item) => ({
-          item_id: item.item_id,
-          qty: item.qty,
+          id: item.id,  // Gunakan id dari wh_request_items
         })) || [];
 
       await skybase.warehouseRequests.approve(row.id, { items: itemsPayload });
@@ -222,7 +222,7 @@ export default function RequestPage() {
       if (!data?.seal_number || !data?.expires_at) {
         const itemName =
           selectedRequest.rawData.items?.find(
-            (it) => it.item_id === data.item_id
+            (it) => it.id === data.id
           )?.item?.name || "ASE";
         setNotification({
           type: "error",
@@ -235,29 +235,28 @@ export default function RequestPage() {
     try {
       setActionLoading(true);
 
-      // Build items payload: untuk ASE, kirim setiap item dengan qty=1 dan data masing-masing
+      // Build items payload sesuai format Postman
+      // Untuk ASE: kirim id, seal_number, expires_at
+      // Untuk DOC: kirim hanya id
       const itemsPayload: Array<{
-        item_id: number;
-        qty: number;
+        id: number;
         seal_number?: string;
         expires_at?: string;
       }> = [];
 
-      // Tambahkan item DOC seperti biasa
+      // Tambahkan item DOC (hanya id)
       selectedRequest.rawData.items?.forEach((item) => {
         if (item.item?.category !== "ASE") {
           itemsPayload.push({
-            item_id: item.item_id,
-            qty: item.qty,
+            id: item.id,
           });
         }
       });
 
-      // Tambahkan setiap item ASE dengan data individu
+      // Tambahkan setiap item ASE dengan seal_number dan expires_at
       approveFormData.forEach((formItem) => {
         itemsPayload.push({
-          item_id: formItem.item_id,
-          qty: 1,
+          id: formItem.id,
           seal_number: formItem.seal_number,
           expires_at: formItem.expires_at,
         });

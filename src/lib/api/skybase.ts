@@ -367,11 +367,11 @@ export const warehouseRequestApi = {
     return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", { method: "POST", body: data });
   },
   approve(id: number | string, data?: { 
+    notes?: string;
     items: Array<{ 
-      item_id: number; 
-      qty: number;
-      seal_number?: string;
-      expires_at?: string;
+      id: number;              // ID dari wh_request_items table
+      seal_number?: string;    // Required untuk ASE
+      expires_at?: string;     // Required untuk ASE
     }> 
   }) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT", body: data });

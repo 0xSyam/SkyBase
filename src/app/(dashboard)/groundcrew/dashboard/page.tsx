@@ -183,9 +183,23 @@ export default function DashboardPage() {
               const arrRaw = f?.sched_arr || f?.sched_dep || null;
               let time = "--:-- WIB";
               if (arrRaw) {
-                const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
-                if (timeMatch) {
-                  time = `${timeMatch[1]}:${timeMatch[2]} WIB`;
+                try {
+                  // Parse sebagai Date dan format ke timezone WIB (Asia/Jakarta)
+                  const date = new Date(arrRaw);
+                  if (!isNaN(date.getTime())) {
+                    time = date.toLocaleTimeString("id-ID", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: "Asia/Jakarta",
+                      hour12: false
+                    }) + " WIB";
+                  }
+                } catch {
+                  // Fallback jika parsing gagal
+                  const timeMatch = arrRaw.match(/(\d{2}):(\d{2}):/);
+                  if (timeMatch) {
+                    time = `${timeMatch[1]}:${timeMatch[2]} WIB`;
+                  }
                 }
               }
               return {

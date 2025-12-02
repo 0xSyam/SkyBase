@@ -86,7 +86,7 @@ export default function SupervisorDashboardPage() {
         }
 
         if (!ignore) {
-          // Helper untuk format waktu
+          // Helper untuk format waktu dengan timezone WIB
           const fmtTime = (d?: string | null) => {
             if (!d) return "--:-- WIB";
             try {
@@ -95,6 +95,8 @@ export default function SupervisorDashboardPage() {
                 dt.toLocaleTimeString("id-ID", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "Asia/Jakarta",
+                  hour12: false
                 }) + " WIB"
               );
             } catch {

@@ -80,9 +80,11 @@ export const useFlightReport = () => {
             try {
               const d = new Date(s);
               return (
-                d.toLocaleTimeString([], {
+                d.toLocaleTimeString("id-ID", {
                   hour: "2-digit",
                   minute: "2-digit",
+                  timeZone: "Asia/Jakarta",
+                  hour12: false
                 }) + " WIB"
               );
             } catch {
