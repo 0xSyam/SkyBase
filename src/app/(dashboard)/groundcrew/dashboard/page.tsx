@@ -187,12 +187,13 @@ export default function DashboardPage() {
                   // Parse sebagai Date dan format ke timezone WIB (Asia/Jakarta)
                   const date = new Date(arrRaw);
                   if (!isNaN(date.getTime())) {
-                    time = date.toLocaleTimeString("id-ID", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      timeZone: "Asia/Jakarta",
-                      hour12: false
-                    }) + " WIB";
+                    time =
+                      date.toLocaleTimeString("id-ID", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        timeZone: "Asia/Jakarta",
+                        hour12: false,
+                      }) + " WIB";
                   }
                 } catch {
                   // Fallback jika parsing gagal

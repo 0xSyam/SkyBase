@@ -1,4 +1,10 @@
-import { getToken, setToken, setUser, clearAuth, type StoredUser } from "@/lib/auth/storage";
+import {
+  getToken,
+  setToken,
+  setUser,
+  clearAuth,
+  type StoredUser,
+} from "@/lib/auth/storage";
 import type {
   ApiResponse,
   ApiListResponse,
@@ -16,10 +22,12 @@ import type {
   WarehouseRequest,
   WarehouseRequestCreateData,
   AircraftStatusReport,
-  Aircraft, 
+  Aircraft,
 } from "@/types/api";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "https://skybase.novarentech.web.id/api";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+  "https://skybase.novarentech.web.id/api";
 
 type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -42,7 +50,10 @@ function buildUrl(path: string, query?: RequestOptions["query"]) {
   return url.toString();
 }
 
-async function request<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
+async function request<T = unknown>(
+  path: string,
+  opts: RequestOptions = {}
+): Promise<T> {
   const {
     method = "GET",
     headers = {},
@@ -53,11 +64,15 @@ async function request<T = unknown>(path: string, opts: RequestOptions = {}): Pr
   } = opts;
 
   const finalHeaders: Record<string, string> = {
-    "Accept": "application/json",
+    Accept: "application/json",
     ...headers,
   };
 
-  if (body !== undefined && body !== null && finalHeaders["Content-Type"] === undefined) {
+  if (
+    body !== undefined &&
+    body !== null &&
+    finalHeaders["Content-Type"] === undefined
+  ) {
     finalHeaders["Content-Type"] = "application/json";
   }
 
@@ -69,18 +84,28 @@ async function request<T = unknown>(path: string, opts: RequestOptions = {}): Pr
   const res = await fetch(buildUrl(path, query), {
     method,
     headers: finalHeaders,
-    body: body !== undefined && body !== null ? (finalHeaders["Content-Type"]?.includes("application/json") ? JSON.stringify(body) : (body as BodyInit)) : undefined,
+    body:
+      body !== undefined && body !== null
+        ? finalHeaders["Content-Type"]?.includes("application/json")
+          ? JSON.stringify(body)
+          : (body as BodyInit)
+        : undefined,
     credentials: "omit",
     signal,
   });
 
   const contentType = res.headers.get("content-type") || "";
   const isJson = contentType.includes("application/json");
-  const payload = isJson ? await res.json().catch(() => ({})) : await res.text();
+  const payload = isJson
+    ? await res.json().catch(() => ({}))
+    : await res.text();
 
   if (!res.ok) {
-    const errorMessage = isJson && payload?.message ? payload.message : res.statusText;
-    const error = new Error(errorMessage || `Request failed: ${res.status}`) as Error & {
+    const errorMessage =
+      isJson && payload?.message ? payload.message : res.statusText;
+    const error = new Error(
+      errorMessage || `Request failed: ${res.status}`
+    ) as Error & {
       status: number;
       payload: unknown;
     };
@@ -112,21 +137,45 @@ export const authApi = {
   },
   async logout() {
     try {
-      await request<ApiResponse<{ message: string }>>("/auth/logout", { method: "POST" });
+      await request<ApiResponse<{ message: string }>>("/auth/logout", {
+        method: "POST",
+      });
     } finally {
       clearAuth();
     }
   },
-  async register(params: { name: string; email: string; password: string; password_confirmation: string; role: "supervisor" | "warehouse" | "groundcrew"; phone?: string | null; }) {
-    type RegisterData = { user: StoredUser & { user_id: number; is_active?: boolean }; token: string; token_type: string };
+  async register(params: {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+    role: "supervisor" | "warehouse" | "groundcrew";
+    phone?: string | null;
+  }) {
+    type RegisterData = {
+      user: StoredUser & { user_id: number; is_active?: boolean };
+      token: string;
+      token_type: string;
+    };
     return request<ApiResponse<RegisterData>>("/auth/register", {
       method: "POST",
       auth: false,
       body: params,
     });
   },
-  async createUser(params: { name: string; email: string; password: string; role: "warehouse" | "groundcrew"; phone?: string | null; }) {
-    type UserData = { user_id: number; name: string; email: string; role: string };
+  async createUser(params: {
+    name: string;
+    email: string;
+    password: string;
+    role: "warehouse" | "groundcrew";
+    phone?: string | null;
+  }) {
+    type UserData = {
+      user_id: number;
+      name: string;
+      email: string;
+      role: string;
+    };
     return request<ApiResponse<UserData>>("/users", {
       method: "POST",
       body: params,
@@ -146,13 +195,27 @@ export const authApi = {
     });
   },
   async roles() {
-    return request<ApiResponse<{ roles: Array<{ role_id: number; name: string }> }>>("/auth/roles");
+    return request<
+      ApiResponse<{ roles: Array<{ role_id: number; name: string }> }>
+    >("/auth/roles");
   },
   async permissions() {
     return request<ApiResponse<{ permissions: string[] }>>("/auth/permissions");
   },
   async getAllUsers() {
-    return request<ApiResponse<Array<{ user_id: number; name: string; email: string; phone?: string; role: string; is_active: boolean; created_at: string }>>>("/users");
+    return request<
+      ApiResponse<
+        Array<{
+          user_id: number;
+          name: string;
+          email: string;
+          phone?: string;
+          role: string;
+          is_active: boolean;
+          created_at: string;
+        }>
+      >
+    >("/users");
   },
   async deleteUser(userId: string | number) {
     return request<ApiResponse<{ message: string }>>(`/users/${userId}`, {
@@ -160,13 +223,16 @@ export const authApi = {
     });
   },
   async resetPassword(userId: string | number) {
-    return request<ApiResponse<{ message: string }>>(`/users/${userId}/reset-password`, {
-      method: "PUT",
-      body: {
-        new_password: "password123",
-        new_password_confirmation: "password123"
+    return request<ApiResponse<{ message: string }>>(
+      `/users/${userId}/reset-password`,
+      {
+        method: "PUT",
+        body: {
+          new_password: "password123",
+          new_password_confirmation: "password123",
+        },
       }
-    });
+    );
   },
 };
 
@@ -189,13 +255,21 @@ export const flightApi = {
     return request<ApiResponse<{ flights: Flight[] }>>("/flights");
   },
   create(data: FlightCreateData) {
-    return request<ApiResponse<{ flight_id: number }>>("/flights", { method: "POST", body: data });
+    return request<ApiResponse<{ flight_id: number }>>("/flights", {
+      method: "POST",
+      body: data,
+    });
   },
   reschedule(flightId: number, data: FlightRescheduleData) {
-    return request<ApiResponse<Flight>>(`/flights/${flightId}/reschedule`, { method: "PUT", body: data });
+    return request<ApiResponse<Flight>>(`/flights/${flightId}/reschedule`, {
+      method: "PUT",
+      body: data,
+    });
   },
   delete(flightId: number) {
-    return request<ApiResponse<{ message: string }>>(`/flights/${flightId}`, { method: "DELETE" });
+    return request<ApiResponse<{ message: string }>>(`/flights/${flightId}`, {
+      method: "DELETE",
+    });
   },
 };
 
@@ -215,26 +289,38 @@ export const itemApi = {
     return request<ApiResponse<ItemCatalog>>(`/items/${id}`);
   },
   create(data: Partial<ItemCatalog>) {
-    return request<ApiResponse<ItemCatalog>>("/items", { method: "POST", body: data });
+    return request<ApiResponse<ItemCatalog>>("/items", {
+      method: "POST",
+      body: data,
+    });
   },
   update(id: number | string, data: Partial<ItemCatalog>) {
-    return request<ApiResponse<ItemCatalog>>(`/items/${id}`, { method: "PUT", body: data });
+    return request<ApiResponse<ItemCatalog>>(`/items/${id}`, {
+      method: "PUT",
+      body: data,
+    });
   },
   remove(id: number | string) {
-    return request<ApiResponse<{ message: string }>>(`/items/${id}`, { method: "DELETE" });
+    return request<ApiResponse<{ message: string }>>(`/items/${id}`, {
+      method: "DELETE",
+    });
   },
   requirements(id: number | string) {
     return request<ApiListResponse<unknown>>(`/items/${id}/requirements`);
   },
   byCategory(category: string) {
-    return request<ApiListResponse<ItemCatalog>>(`/items/category/${encodeURIComponent(category)}`);
+    return request<ApiListResponse<ItemCatalog>>(
+      `/items/category/${encodeURIComponent(category)}`
+    );
   },
 };
 
 // Inventory
 export const inventoryApi = {
   groundcrewAll() {
-    return request<ApiResponse<GroundcrewInventoryResponse>>("/inventory/groundcrew");
+    return request<ApiResponse<GroundcrewInventoryResponse>>(
+      "/inventory/groundcrew"
+    );
   },
   groundcrewDoc() {
     return request<ApiListResponse<unknown>>("/inventory/groundcrew/doc");
@@ -242,50 +328,105 @@ export const inventoryApi = {
   groundcrewAse() {
     return request<ApiListResponse<unknown>>("/inventory/groundcrew/ase");
   },
-  
-  transferToAircraft(data: { 
-    type: "doc" | "ase"; 
-    inventory_id: number; 
-    aircraft_id: number; 
-    quantity?: number 
+
+  transferToAircraft(data: {
+    type: "doc" | "ase";
+    inventory_id: number;
+    aircraft_id: number;
+    quantity?: number;
   }) {
-    return request<ApiResponse<unknown>>("/inventory/groundcrew/transfer-to-aircraft", { 
-      method: "POST", 
-      body: data 
-    });
+    return request<ApiResponse<unknown>>(
+      "/inventory/groundcrew/transfer-to-aircraft",
+      {
+        method: "POST",
+        body: data,
+      }
+    );
   },
 
   aircraftInventory(aircraftId: number | string) {
-    return request<ApiResponse<AircraftInventoryResponse>>(`/inventory/aircraft/${aircraftId}`);
+    return request<ApiResponse<AircraftInventoryResponse>>(
+      `/inventory/aircraft/${aircraftId}`
+    );
   },
   itemsByCategory(category: string) {
-    return request<ApiListResponse<ItemCatalog>>(`/inventory/items/${encodeURIComponent(category)}`);
+    return request<ApiListResponse<ItemCatalog>>(
+      `/inventory/items/${encodeURIComponent(category)}`
+    );
   },
-  addDoc(data: { item_id: number; quantity: number; doc_number: string; revision_no: string; effective_date: string; condition?: string }) {
-    return request<ApiResponse<unknown>>("/inventory/groundcrew/doc", { method: "POST", body: data });
+  addDoc(data: {
+    item_id: number;
+    quantity: number;
+    doc_number: string;
+    revision_no: string;
+    effective_date: string;
+    condition?: string;
+  }) {
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/doc", {
+      method: "POST",
+      body: data,
+    });
   },
-  updateDoc(gcDocId: number, data: { doc_number: string; revision_no: string; effective_date: string; quantity: number }) {
-    return request<ApiResponse<unknown>>(`/inventory/groundcrew/doc/${gcDocId}`, { method: "PUT", body: data });
+  updateDoc(
+    gcDocId: number,
+    data: {
+      doc_number: string;
+      revision_no: string;
+      effective_date: string;
+      quantity: number;
+    }
+  ) {
+    return request<ApiResponse<unknown>>(
+      `/inventory/groundcrew/doc/${gcDocId}`,
+      { method: "PUT", body: data }
+    );
   },
   deleteDoc(gcDocId: number) {
-    return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/doc/${gcDocId}`, { method: "DELETE" });
+    return request<ApiResponse<{ message: string }>>(
+      `/inventory/groundcrew/doc/${gcDocId}`,
+      { method: "DELETE" }
+    );
   },
-  
+
   // --- PERBAIKAN DI SINI: Mapping 'quantity' ke 'unit' untuk ASE ---
-  addAse(data: { item_id: number; serial_number: string; seal_number: string; expires_at: string; condition?: string; quantity?: number }) {
+  addAse(data: {
+    item_id: number;
+    serial_number: string;
+    seal_number: string;
+    expires_at: string;
+    condition?: string;
+    quantity?: number;
+  }) {
     const { quantity, ...rest } = data;
     const payload = { ...rest, unit: quantity }; // Ubah key 'quantity' menjadi 'unit'
-    return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", { method: "POST", body: payload });
+    return request<ApiResponse<unknown>>("/inventory/groundcrew/ase", {
+      method: "POST",
+      body: payload,
+    });
   },
-  updateAse(gcAseId: number, data: { serial_number: string; seal_number: string; expires_at: string; quantity: number }) {
+  updateAse(
+    gcAseId: number,
+    data: {
+      serial_number: string;
+      seal_number: string;
+      expires_at: string;
+      quantity: number;
+    }
+  ) {
     const { quantity, ...rest } = data;
     const payload = { ...rest, unit: quantity }; // Ubah key 'quantity' menjadi 'unit'
-    return request<ApiResponse<unknown>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "PUT", body: payload });
+    return request<ApiResponse<unknown>>(
+      `/inventory/groundcrew/ase/${gcAseId}`,
+      { method: "PUT", body: payload }
+    );
   },
   // ------------------------------------------------------------------
 
   deleteAse(gcAseId: number) {
-    return request<ApiResponse<{ message: string }>>(`/inventory/groundcrew/ase/${gcAseId}`, { method: "DELETE" });
+    return request<ApiResponse<{ message: string }>>(
+      `/inventory/groundcrew/ase/${gcAseId}`,
+      { method: "DELETE" }
+    );
   },
 };
 
@@ -300,17 +441,34 @@ export const inspectionApi = {
     return request<ApiListResponse<Inspection>>("/inspections/my-inspections");
   },
   aircraftValidation(aircraftId: number | string) {
-    return request<ApiResponse<AircraftValidation>>(`/inspections/aircraft/${aircraftId}/validation`);
+    return request<ApiResponse<AircraftValidation>>(
+      `/inspections/aircraft/${aircraftId}/validation`
+    );
   },
-  
+
   toggleItem(inspectionItemId: number | string) {
-    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/toggle`, { method: "PUT" });
+    return request<ApiResponse<unknown>>(
+      `/inspections/items/${inspectionItemId}/toggle`,
+      { method: "PUT" }
+    );
   },
-  replaceItem(inspectionItemId: number | string, data: { replacement_item_id: number; notes?: string }) {
-    return request<ApiResponse<unknown>>(`/inspections/items/${inspectionItemId}/replace`, { method: "POST", body: data });
+  replaceItem(
+    inspectionItemId: number | string,
+    data: { replacement_item_id: number; notes?: string }
+  ) {
+    return request<ApiResponse<unknown>>(
+      `/inspections/items/${inspectionItemId}/replace`,
+      { method: "POST", body: data }
+    );
   },
-  submit(inspectionId: number | string, data: { status: "READY" | "DELAY"; notes?: string }) {
-    return request<ApiResponse<unknown>>(`/inspections/${inspectionId}/submit`, { method: "PUT", body: data });
+  submit(
+    inspectionId: number | string,
+    data: { status: "READY" | "DELAY"; notes?: string }
+  ) {
+    return request<ApiResponse<unknown>>(
+      `/inspections/${inspectionId}/submit`,
+      { method: "PUT", body: data }
+    );
   },
   summary() {
     return request<ApiResponse<InspectionSummary>>("/inspections/summary");
@@ -335,20 +493,40 @@ export const notificationApi = {
     return request<ApiResponse<NotificationStats>>("/notifications/stats");
   },
   getByType(type: string) {
-    return request<ApiListResponse<Notification>>(`/notifications/type/${encodeURIComponent(type)}`);
+    return request<ApiListResponse<Notification>>(
+      `/notifications/type/${encodeURIComponent(type)}`
+    );
   },
   getForItem(relatedType: string, relatedId: number | string) {
-    return request<ApiListResponse<Notification>>(`/notifications/item/${encodeURIComponent(relatedType)}/${relatedId}`);
+    return request<ApiListResponse<Notification>>(
+      `/notifications/item/${encodeURIComponent(relatedType)}/${relatedId}`
+    );
   },
 };
 
 // Reports
 export const reportApi = {
-  aircraftStatus(params: { aircraft_id: number; from_date: string; to_date: string; group_by?: "daily" | "weekly" | "monthly" | null; type?: "ASE" | "DOC" | "ALL" | null }) {
-    return request<ApiResponse<AircraftStatusReport>>("/reports/aircraft-status", { query: params as Record<string, string | number | boolean | undefined | null> });
+  aircraftStatus(params: {
+    aircraft_id: number;
+    from_date: string;
+    to_date: string;
+    group_by?: "daily" | "weekly" | "monthly" | null;
+    type?: "ASE" | "DOC" | "ALL" | null;
+  }) {
+    return request<ApiResponse<AircraftStatusReport>>(
+      "/reports/aircraft-status",
+      {
+        query: params as Record<
+          string,
+          string | number | boolean | undefined | null
+        >,
+      }
+    );
   },
   fleetSummary(params: { from_date: string; to_date: string }) {
-    return request<ApiResponse<{ message: string }>>("/reports/fleet-summary", { query: params });
+    return request<ApiResponse<{ message: string }>>("/reports/fleet-summary", {
+      query: params,
+    });
   },
 };
 
@@ -358,29 +536,52 @@ export const warehouseRequestApi = {
     return request<ApiListResponse<WarehouseRequest>>("/warehouse-requests");
   },
   myRequests() {
-    return request<ApiListResponse<WarehouseRequest>>("/warehouse-requests/my-requests");
+    return request<ApiListResponse<WarehouseRequest>>(
+      "/warehouse-requests/my-requests"
+    );
   },
   get(id: number | string) {
     return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}`);
   },
   create(data: WarehouseRequestCreateData) {
-    return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", { method: "POST", body: data });
+    return request<ApiResponse<WarehouseRequest>>("/warehouse-requests", {
+      method: "POST",
+      body: data,
+    });
   },
-  approve(id: number | string, data?: { 
-    notes?: string;
-    items: Array<{ 
-      id: number;              // ID dari wh_request_items table
-      seal_number?: string;    // Required untuk ASE
-      expires_at?: string;     // Required untuk ASE
-    }> 
-  }) {
-    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/approve`, { method: "PUT", body: data });
+  approve(
+    id: number | string,
+    data?: {
+      notes?: string;
+      items: Array<{
+        id: number; // ID dari wh_request_items table
+        seal_number?: string; // Required untuk ASE
+        expires_at?: string; // Required untuk ASE
+      }>;
+    }
+  ) {
+    return request<ApiResponse<WarehouseRequest>>(
+      `/warehouse-requests/${id}/approve`,
+      { method: "PUT", body: data }
+    );
   },
-  reject(id: number | string, data: { rejection_reason: string; items?: Array<{ item_id: number; qty: number }> }) {
-    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/reject`, { method: "PUT", body: data });
+  reject(
+    id: number | string,
+    data: {
+      rejection_reason: string;
+      items?: Array<{ item_id: number; qty: number }>;
+    }
+  ) {
+    return request<ApiResponse<WarehouseRequest>>(
+      `/warehouse-requests/${id}/reject`,
+      { method: "PUT", body: data }
+    );
   },
   fulfill(id: number | string) {
-    return request<ApiResponse<WarehouseRequest>>(`/warehouse-requests/${id}/fulfill`, { method: "PUT" });
+    return request<ApiResponse<WarehouseRequest>>(
+      `/warehouse-requests/${id}/fulfill`,
+      { method: "PUT" }
+    );
   },
 };
 
@@ -390,7 +591,7 @@ export const skybase = {
   auth: authApi,
   dashboard: dashboardApi,
   flights: flightApi,
-  aircraft: aircraftApi, 
+  aircraft: aircraftApi,
   items: itemApi,
   inventory: inventoryApi,
   inspections: inspectionApi,

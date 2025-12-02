@@ -84,7 +84,7 @@ export const useFlightReport = () => {
                   hour: "2-digit",
                   minute: "2-digit",
                   timeZone: "Asia/Jakarta",
-                  hour12: false
+                  hour12: false,
                 }) + " WIB"
               );
             } catch {

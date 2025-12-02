@@ -42,7 +42,12 @@ export default function RequestPage() {
   // State Approve (Updated: Key menggunakan index untuk setiap item ASE)
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
   const [approveFormData, setApproveFormData] = useState<
-    Array<{ id: number; item_id: number; seal_number: string; expires_at: string }>
+    Array<{
+      id: number;
+      item_id: number;
+      seal_number: string;
+      expires_at: string;
+    }>
   >([]);
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0); // Accordion state
 
@@ -160,8 +165,8 @@ export default function RequestPage() {
     if (hasAseItems) {
       // Inisialisasi form data untuk SETIAP item ASE (menggunakan id dari wh_request_items)
       const initialFormData: Array<{
-        id: number;        // ID dari wh_request_items
-        item_id: number;   // ID dari items catalog
+        id: number; // ID dari wh_request_items
+        item_id: number; // ID dari items catalog
         seal_number: string;
         expires_at: string;
       }> = [];
@@ -170,9 +175,9 @@ export default function RequestPage() {
         if (item.item?.category === "ASE") {
           // Setiap item ASE sudah qty=1 (di-expand oleh backend)
           initialFormData.push({
-            id: item.id,            // Gunakan id dari wh_request_items
+            id: item.id, // Gunakan id dari wh_request_items
             item_id: item.item_id,
-            seal_number: item.seal_number || "",  // Mungkin sudah ada nilai sebelumnya
+            seal_number: item.seal_number || "", // Mungkin sudah ada nilai sebelumnya
             expires_at: item.expires_at || "",
           });
         }
@@ -190,7 +195,7 @@ export default function RequestPage() {
       // Untuk DOC, kirim array items dengan id dari wh_request_items
       const itemsPayload =
         row.rawData.items?.map((item) => ({
-          id: item.id,  // Gunakan id dari wh_request_items
+          id: item.id, // Gunakan id dari wh_request_items
         })) || [];
 
       await skybase.warehouseRequests.approve(row.id, { items: itemsPayload });
@@ -221,9 +226,8 @@ export default function RequestPage() {
       const data = approveFormData[i];
       if (!data?.seal_number || !data?.expires_at) {
         const itemName =
-          selectedRequest.rawData.items?.find(
-            (it) => it.id === data.id
-          )?.item?.name || "ASE";
+          selectedRequest.rawData.items?.find((it) => it.id === data.id)?.item
+            ?.name || "ASE";
         setNotification({
           type: "error",
           message: `Mohon lengkapi data untuk ${itemName} #${i + 1}`,
