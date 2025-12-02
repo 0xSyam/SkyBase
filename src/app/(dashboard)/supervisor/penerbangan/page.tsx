@@ -152,8 +152,8 @@ export default function SupervisorPenerbanganPage() {
       jenisPesawat: f?.aircraft?.type || f?.aircraft?.type_code || "-",
       idPesawat: f?.aircraft?.registration_code ?? "-",
       destinasi: f?.route_to ?? "-",
-      arrival: fmtTime(f?.sched_arr ?? null),  // arrival = sched_arr (waktu tiba)
-      takeOff: fmtTime(f?.sched_dep ?? null),  // takeOff = sched_dep (waktu berangkat)
+      arrival: fmtTime(f?.sched_arr ?? null), // arrival = sched_arr (waktu tiba)
+      takeOff: fmtTime(f?.sched_dep ?? null), // takeOff = sched_dep (waktu berangkat)
       // PERBAIKAN: Gunakan format YYYY-MM-DD lokal agar form date terisi dengan benar
       flightDate: f?.sched_dep
         ? new Date(f.sched_dep).toLocaleDateString("en-CA")

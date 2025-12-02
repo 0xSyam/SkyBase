@@ -241,8 +241,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
 
       // Filter by item name if specified
       if (itemName) {
-        mapped = mapped.filter((item) => 
-          item.name.toLowerCase() === itemName.toLowerCase()
+        mapped = mapped.filter(
+          (item) => item.name.toLowerCase() === itemName.toLowerCase()
         );
       }
 
@@ -416,7 +416,10 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
           <button
             type="button"
             onClick={() =>
-              openTransferModal(row.category === "ASE" ? "ASE" : "DOC", row.name)
+              openTransferModal(
+                row.category === "ASE" ? "ASE" : "DOC",
+                row.name
+              )
             }
             className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
             aria-label="Transfer item"
@@ -595,14 +598,16 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
                   <h2 className="text-xl font-bold text-[#111827]">
                     Transfer {transferType} ke Pesawat
                     {selectedItemName && (
-                      <span className="text-[#0D63F3]"> - {selectedItemName}</span>
+                      <span className="text-[#0D63F3]">
+                        {" "}
+                        - {selectedItemName}
+                      </span>
                     )}
                   </h2>
                   <p className="text-sm text-[#6B7280]">
-                    {selectedItemName 
+                    {selectedItemName
                       ? `Pilih ${selectedItemName} dari stok groundcrew untuk ditransfer`
-                      : "Pilih item dari stok groundcrew untuk ditransfer"
-                    }
+                      : "Pilih item dari stok groundcrew untuk ditransfer"}
                   </p>
                 </div>
                 <button
@@ -621,10 +626,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
                   </div>
                 ) : stockList.length === 0 ? (
                   <div className="p-10 text-center text-gray-500">
-                    {selectedItemName 
+                    {selectedItemName
                       ? `Tidak ada "${selectedItemName}" di inventory Anda.`
-                      : `Stok ${transferType} kosong di inventory Anda.`
-                    }
+                      : `Stok ${transferType} kosong di inventory Anda.`}
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">
