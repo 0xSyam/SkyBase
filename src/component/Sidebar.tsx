@@ -76,8 +76,11 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
     if (isLoggingOut) return; // Prevent double click
     try {
       await skybase.auth.logout();
-    } catch {
-      // ignore API error
+    } catch (error) {
+      // Log for debugging but continue with local logout
+      if (process.env.NODE_ENV === "development") {
+        console.error("Logout API failed:", error);
+      }
     }
     logout(); // Use context logout which handles state and redirect
   };

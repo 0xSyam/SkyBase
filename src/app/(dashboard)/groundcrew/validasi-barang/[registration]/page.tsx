@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import Notification from "@/component/Notification";
 import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
@@ -68,7 +74,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
     typeof resolvedSearchParams?.aircraftId === "string"
       ? resolvedSearchParams.aircraftId
       : "1";
-  const aircraftId = parseInt(aircraftIdParam);
+  const parsedAircraftId = parseInt(aircraftIdParam, 10);
+  const aircraftId = isNaN(parsedAircraftId) ? 1 : parsedAircraftId;
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
@@ -94,8 +101,15 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Mounted ref to prevent state updates after unmount
+  const mountedRef = useRef(true);
+
   useEffect(() => {
     setMounted(true);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const loadInspection = useCallback(async () => {
@@ -186,8 +200,11 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
     loadInspection();
   }, [loadInspection]);
 
-  const openTransferModal = async (type: "DOC" | "ASE") => {
+  const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
+
+  const openTransferModal = async (type: "DOC" | "ASE", itemName?: string) => {
     setTransferType(type);
+    setSelectedItemName(itemName || null);
     setIsTransferOpen(true);
     setLoadingStock(true);
     setStockList([]);
@@ -222,6 +239,13 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
         }));
       }
 
+      // Filter by item name if specified
+      if (itemName) {
+        mapped = mapped.filter((item) => 
+          item.name.toLowerCase() === itemName.toLowerCase()
+        );
+      }
+
       const initialQuantities: Record<number, number> = {};
       mapped.forEach((item) => (initialQuantities[item.id] = 1));
       setTransferQuantities(initialQuantities);
@@ -243,7 +267,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
   };
 
   const handleTransfer = async (item: StockTransferItem) => {
-    if (!aircraftId) return;
+    if (!aircraftId || isNaN(aircraftId)) return;
     setTransferingId(item.id);
 
     const qtyToTransfer = transferQuantities[item.id] || 1;
@@ -256,6 +280,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
         quantity: transferType === "DOC" ? qtyToTransfer : undefined,
       });
 
+      // Check if still mounted before updating state
+      if (!mountedRef.current) return;
+
       setNotification({
         type: "success",
         message: `Berhasil transfer ${item.name} ke pesawat`,
@@ -263,13 +290,19 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
       setIsTransferOpen(false);
       loadInspection();
     } catch (e) {
-      console.error("Transfer failed:", e);
+      if (!mountedRef.current) return;
+
+      if (process.env.NODE_ENV === "development") {
+        console.error("Transfer failed:", e);
+      }
       setNotification({
         type: "error",
         message: "Gagal melakukan transfer item",
       });
     } finally {
-      setTransferingId(null);
+      if (mountedRef.current) {
+        setTransferingId(null);
+      }
     }
   };
 
@@ -295,6 +328,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
       } as const;
 
       await skybase.inspections.submit(inspectionId, payload);
+
+      // Check if still mounted before updating state
+      if (!mountedRef.current) return;
 
       setNotification({
         type: "success",
@@ -380,7 +416,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
           <button
             type="button"
             onClick={() =>
-              openTransferModal(row.category === "ASE" ? "ASE" : "DOC")
+              openTransferModal(row.category === "ASE" ? "ASE" : "DOC", row.name)
             }
             className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
             aria-label="Transfer item"
@@ -558,9 +594,15 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
                 <div>
                   <h2 className="text-xl font-bold text-[#111827]">
                     Transfer {transferType} ke Pesawat
+                    {selectedItemName && (
+                      <span className="text-[#0D63F3]"> - {selectedItemName}</span>
+                    )}
                   </h2>
                   <p className="text-sm text-[#6B7280]">
-                    Pilih item dari stok groundcrew untuk ditransfer
+                    {selectedItemName 
+                      ? `Pilih ${selectedItemName} dari stok groundcrew untuk ditransfer`
+                      : "Pilih item dari stok groundcrew untuk ditransfer"
+                    }
                   </p>
                 </div>
                 <button
@@ -579,7 +621,10 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
                   </div>
                 ) : stockList.length === 0 ? (
                   <div className="p-10 text-center text-gray-500">
-                    Stok {transferType} kosong di inventory Anda.
+                    {selectedItemName 
+                      ? `Tidak ada "${selectedItemName}" di inventory Anda.`
+                      : `Stok ${transferType} kosong di inventory Anda.`
+                    }
                   </div>
                 ) : (
                   <table className="w-full text-left text-sm">

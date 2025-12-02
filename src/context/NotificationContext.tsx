@@ -1,6 +1,13 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { notificationApi } from "@/lib/api/skybase";
 import { Notification } from "@/types/api";
 import { getUser } from "@/lib/auth/storage";
@@ -13,57 +20,84 @@ interface NotificationContextType {
   refreshNotifications: () => Promise<void>;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextType | undefined>(
+  undefined
+);
 
 const LAST_READ_KEY = "skybase_last_read_id";
+const NOTIFICATION_POLL_INTERVAL_MS = 60 * 1000; // 60 seconds
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
+export function NotificationProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastReadId, setLastReadId] = useState(0);
+
+  // Mounted ref to prevent state updates after unmount
+  const mountedRef = useRef(true);
+
+  // Load lastReadId from localStorage after mount (fixes hydration mismatch)
+  useEffect(() => {
+    const stored = localStorage.getItem(LAST_READ_KEY);
+    if (stored) {
+      setLastReadId(Number(stored));
+    }
+  }, []);
 
   // Helper untuk parsing data API
   const parseNotificationData = (data: unknown): Notification[] => {
     if (Array.isArray(data)) return data as Notification[];
-    if (data && typeof data === 'object' && 'items' in data) return (data as { items: Notification[] }).items;
+    if (data && typeof data === "object" && "items" in data)
+      return (data as { items: Notification[] }).items;
     return [];
   };
 
-  const refreshNotifications = useCallback(async () => {
+  const refreshNotifications = useCallback(async (signal?: AbortSignal) => {
     // Jangan fetch jika user belum login
     const user = getUser();
     if (!user) return;
 
     setIsLoading(true);
     try {
-      const res = await notificationApi.getRecent(); // Ambil 7 hari terakhir
+      const res = await notificationApi.getRecent();
+
+      // Check if aborted or unmounted before updating state
+      if (signal?.aborted || !mountedRef.current) return;
+
       const items = parseNotificationData(res.data);
-      
+
       // Sort by terbaru
-      const sortedItems = items.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      const sortedItems = items.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
 
       setNotifications(sortedItems);
 
       // --- LOGIKA UNREAD COUNT ---
-      // Ambil ID terakhir yang dibaca dari LocalStorage
-      const lastReadId = typeof window !== "undefined" 
-        ? Number(localStorage.getItem(LAST_READ_KEY) || 0) 
-        : 0;
-
       // Hitung item yang ID-nya lebih besar dari lastReadId
-      // Asumsi: ID notifikasi auto-increment (semakin baru semakin besar)
+      const currentLastReadId = Number(
+        localStorage.getItem(LAST_READ_KEY) || 0
+      );
       const newCount = sortedItems.filter(
-        (n) => n.notification_id > lastReadId
+        (n) => n.notification_id > currentLastReadId
       ).length;
 
       setUnreadCount(newCount);
-
     } catch (error) {
-      console.error("Failed to fetch notifications", error);
+      // Ignore abort errors
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      if (mountedRef.current) {
+        console.error("Failed to fetch notifications", error);
+      }
     } finally {
-      setIsLoading(false);
+      if (mountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -71,37 +105,45 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const markAllAsRead = useCallback(() => {
     if (notifications.length > 0) {
       // Ambil ID notifikasi paling baru (paling atas)
-      const latestId = Math.max(...notifications.map(n => n.notification_id));
-      
-      // Simpan ke localStorage
-      if (typeof window !== "undefined") {
-        localStorage.setItem(LAST_READ_KEY, String(latestId));
-      }
-      
+      const latestId = Math.max(...notifications.map((n) => n.notification_id));
+
+      // Simpan ke localStorage dan state
+      localStorage.setItem(LAST_READ_KEY, String(latestId));
+      setLastReadId(latestId);
+
       // Reset count di UI
       setUnreadCount(0);
     }
   }, [notifications]);
 
-  // Initial Fetch & Polling (Setiap 60 detik)
+  // Initial Fetch & Polling with AbortController
   useEffect(() => {
-    refreshNotifications();
+    mountedRef.current = true;
+    const abortController = new AbortController();
+
+    refreshNotifications(abortController.signal);
 
     const interval = setInterval(() => {
-      refreshNotifications();
-    }, 60000); // 60 detik
+      if (mountedRef.current) {
+        refreshNotifications(abortController.signal);
+      }
+    }, NOTIFICATION_POLL_INTERVAL_MS);
 
-    return () => clearInterval(interval);
+    return () => {
+      mountedRef.current = false;
+      abortController.abort();
+      clearInterval(interval);
+    };
   }, [refreshNotifications]);
 
   return (
-    <NotificationContext.Provider 
-      value={{ 
-        notifications, 
-        unreadCount, 
-        isLoading, 
-        markAllAsRead, 
-        refreshNotifications 
+    <NotificationContext.Provider
+      value={{
+        notifications,
+        unreadCount,
+        isLoading,
+        markAllAsRead,
+        refreshNotifications,
       }}
     >
       {children}
@@ -112,7 +154,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 export function useNotification() {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error("useNotification must be used within a NotificationProvider");
+    throw new Error(
+      "useNotification must be used within a NotificationProvider"
+    );
   }
   return context;
 }

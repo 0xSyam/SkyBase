@@ -29,7 +29,6 @@ const ValidasiBarangPage = () => {
       setLoading(true);
       try {
         const res = await skybase.inspections.today();
-        console.log("API Response:", JSON.stringify(res, null, 2));
 
         interface RawFlightData {
           inspection?: { status?: string };
@@ -81,8 +80,6 @@ const ValidasiBarangPage = () => {
           }
         }
 
-        console.log("Extracted apiData:", apiData.length, "items");
-
         if (!ignore) {
           const mapped: FlightSchedule[] = apiData
             .filter((it) => {
@@ -94,8 +91,6 @@ const ValidasiBarangPage = () => {
               );
             })
             .map((it) => {
-              console.log("Processing flight:", it);
-
               const aircraftType =
                 it?.aircraft?.type_code ||
                 it?.aircraft?.type ||
@@ -130,7 +125,9 @@ const ValidasiBarangPage = () => {
             .filter((it) => it.registration !== "-") as FlightSchedule[];
           setFlights(mapped);
         }
-      } catch {
+      } catch (err) {
+        // Log error for debugging but don't show to user as this is a background data load
+        console.error("Failed to load inspection data:", err);
       } finally {
         if (!ignore) setLoading(false);
       }

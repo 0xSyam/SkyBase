@@ -79,6 +79,7 @@ export const useFlightReport = () => {
             if (!s) return "--:-- WIB";
             try {
               const d = new Date(s);
+              if (isNaN(d.getTime())) return "--:-- WIB";
               return (
                 d.toLocaleTimeString("id-ID", {
                   hour: "2-digit",
@@ -95,7 +96,14 @@ export const useFlightReport = () => {
           for (const f of list) {
             const basis = f?.sched_dep || f?.created_at || null;
             if (!basis) continue;
+
+            // Validate date before processing
             const dt = new Date(basis);
+            if (isNaN(dt.getTime())) {
+              // Skip invalid date entries
+              continue;
+            }
+
             const id = dt.toISOString().slice(0, 10);
             const title = fmtDate(dt);
 

@@ -84,13 +84,14 @@ export default function TopBar({
     };
   }, [sidebarRole]);
 
-  const initials = userName
-    .split(" ")
-    .filter(Boolean)
-    .map((n) => n[0])
-    .join("")
-    .substring(0, 2)
-    .toUpperCase();
+  const initials =
+    userName
+      .split(" ")
+      .filter((n) => n && n.length > 0)
+      .map((n) => n[0] ?? "")
+      .join("")
+      .substring(0, 2)
+      .toUpperCase() || "U";
 
   const profileHref = sidebarRole ? `/${sidebarRole}/profile` : "/profile";
 

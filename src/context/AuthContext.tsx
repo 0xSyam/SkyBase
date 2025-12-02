@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { getUser, clearAuth, StoredUser } from "@/lib/auth/storage";
 
@@ -21,15 +27,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Fungsi untuk membaca ulang user dari storage
-  const refreshAuth = () => {
+  // Fungsi untuk membaca ulang user dari storage - wrapped with useCallback
+  const refreshAuth = useCallback(() => {
     setIsLoading(true);
     const storedUser = getUser();
     setUser(storedUser);
     setIsLoading(false);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setIsLoggingOut(true);
     clearAuth();
     setUser(null);
@@ -37,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => {
       router.replace("/");
     }, 100);
-  };
+  }, [router]);
 
   // Cek auth saat pertama kali load
   useEffect(() => {

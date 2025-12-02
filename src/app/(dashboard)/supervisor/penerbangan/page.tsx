@@ -152,8 +152,8 @@ export default function SupervisorPenerbanganPage() {
       jenisPesawat: f?.aircraft?.type || f?.aircraft?.type_code || "-",
       idPesawat: f?.aircraft?.registration_code ?? "-",
       destinasi: f?.route_to ?? "-",
-      arrival: fmtTime(f?.sched_dep ?? null),
-      takeOff: fmtTime(f?.sched_arr ?? null),
+      arrival: fmtTime(f?.sched_arr ?? null),  // arrival = sched_arr (waktu tiba)
+      takeOff: fmtTime(f?.sched_dep ?? null),  // takeOff = sched_dep (waktu berangkat)
       // PERBAIKAN: Gunakan format YYYY-MM-DD lokal agar form date terisi dengan benar
       flightDate: f?.sched_dep
         ? new Date(f.sched_dep).toLocaleDateString("en-CA")
@@ -276,7 +276,8 @@ export default function SupervisorPenerbanganPage() {
         const todayLocal = now.toLocaleDateString("en-CA");
         const flightDate = editForm.flightDate || todayLocal;
 
-        const parsedSchedDep = parseTime(editForm.arrival, flightDate);
+        // takeOff = waktu berangkat = sched_dep
+        const parsedSchedDep = parseTime(editForm.takeOff, flightDate);
 
         // Check conflict (client side simple check)
         if (parsedSchedDep) {
@@ -298,9 +299,9 @@ export default function SupervisorPenerbanganPage() {
         }
 
         const sched_dep = parsedSchedDep || now.toISOString();
-        // Default 3 jam durasi
+        // arrival = waktu tiba = sched_arr, default 3 jam durasi jika tidak diisi
         const sched_arr =
-          parseTime(editForm.takeOff, flightDate) ||
+          parseTime(editForm.arrival, flightDate) ||
           new Date(new Date(sched_dep).getTime() + 3 * 3600000).toISOString();
 
         const createData: FlightCreateData = {
@@ -337,10 +338,12 @@ export default function SupervisorPenerbanganPage() {
         const flightDate =
           editForm.flightDate || new Date().toLocaleDateString("en-CA");
 
+        // takeOff = waktu berangkat = sched_dep
+        // arrival = waktu tiba = sched_arr
         const sched_dep =
-          parseTime(editForm.arrival, flightDate) || new Date().toISOString();
-        const sched_arr =
           parseTime(editForm.takeOff, flightDate) || new Date().toISOString();
+        const sched_arr =
+          parseTime(editForm.arrival, flightDate) || new Date().toISOString();
 
         const data: FlightRescheduleData = {
           sched_dep: sched_dep,
@@ -555,8 +558,8 @@ export default function SupervisorPenerbanganPage() {
             <div className="flex-1">Jenis Pesawat</div>
             <div className="flex-1">ID Pesawat</div>
             <div className="flex-1">Destinasi</div>
-            <div className="flex-1">Arrival</div>
             <div className="flex-1">Take Off</div>
+            <div className="flex-1">Arrival</div>
             <div className="flex-1">Status</div>
             <div className="w-28 sm:w-44 text-right">Action</div>
           </div>
@@ -581,10 +584,10 @@ export default function SupervisorPenerbanganPage() {
                     {item.destinasi}
                   </div>
                   <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">
-                    {item.arrival}
+                    {item.takeOff}
                   </div>
                   <div className="flex-1 pr-4 text-[13px] sm:text-sm text-[#4B5563]">
-                    {item.takeOff}
+                    {item.arrival}
                   </div>
                   <div className="flex-1 pr-4">
                     <span
@@ -736,20 +739,7 @@ export default function SupervisorPenerbanganPage() {
                     Waktu Penerbangan
                   </p>
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-                    <div className="relative">
-                      <Clock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
-                      <input
-                        type="time"
-                        value={editForm.arrival}
-                        onChange={(event) =>
-                          handleEditChange("arrival", event.target.value)
-                        }
-                        className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
-                      />
-                    </div>
-                    <span className="text-sm font-semibold text-[#94A3B8]">
-                      -
-                    </span>
+                    {/* Take Off (Waktu Berangkat) - Sebelah Kiri */}
                     <div className="relative">
                       <Clock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
                       <input
@@ -758,6 +748,23 @@ export default function SupervisorPenerbanganPage() {
                         onChange={(event) =>
                           handleEditChange("takeOff", event.target.value)
                         }
+                        placeholder="Berangkat"
+                        className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
+                      />
+                    </div>
+                    <span className="text-sm font-semibold text-[#94A3B8]">
+                      -
+                    </span>
+                    {/* Arrival (Waktu Tiba) - Sebelah Kanan */}
+                    <div className="relative">
+                      <Clock className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9CA3AF]" />
+                      <input
+                        type="time"
+                        value={editForm.arrival}
+                        onChange={(event) =>
+                          handleEditChange("arrival", event.target.value)
+                        }
+                        placeholder="Tiba"
                         className="w-full rounded-2xl border border-[#E2E8F0] px-4 py-3 pl-11 text-sm text-[#0E1D3D] outline-none transition focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                       />
                     </div>

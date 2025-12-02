@@ -18,7 +18,9 @@ const roleLabels: Record<SidebarRole, string> = {
 };
 
 const isSidebarRole = (value: unknown): value is SidebarRole => {
-  return value === "groundcrew" || value === "supervisor" || value === "warehouse";
+  return (
+    value === "groundcrew" || value === "supervisor" || value === "warehouse"
+  );
 };
 
 const getRoleFromPath = (pathname: string): SidebarRole | null => {
@@ -39,7 +41,10 @@ const ProfilePage = () => {
   const [profile, setProfile] = useState<StoredUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   // State untuk form
   const [formData, setFormData] = useState({
@@ -55,7 +60,6 @@ const ProfilePage = () => {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
 
   useEffect(() => {
     if (pathRole) {
@@ -86,10 +90,12 @@ const ProfilePage = () => {
       try {
         setLoading(true);
         const res = await skybase.auth.profile();
-        
+
         // Casting ke unknown terlebih dahulu untuk menghindari error TS2352
-        const user = ((res.data as unknown) as { user?: StoredUser })?.user ?? (res.data as unknown) as StoredUser;
-        
+        const user =
+          (res.data as unknown as { user?: StoredUser })?.user ??
+          (res.data as unknown as StoredUser);
+
         setProfile(user);
         // Set initial form data
         setFormData((prev) => ({
@@ -114,8 +120,59 @@ const ProfilePage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setNotification(null);
+
+    // Form validation
+    if (!formData.name.trim()) {
+      setNotification({ type: "error", message: "Nama tidak boleh kosong." });
+      return;
+    }
+
+    if (!formData.email.trim()) {
+      setNotification({ type: "error", message: "Email tidak boleh kosong." });
+      return;
+    }
+
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setNotification({ type: "error", message: "Format email tidak valid." });
+      return;
+    }
+
+    // Password change validation
+    if (formData.new_password || formData.current_password) {
+      if (!formData.current_password) {
+        setNotification({
+          type: "error",
+          message: "Password saat ini harus diisi untuk mengubah password.",
+        });
+        return;
+      }
+      if (!formData.new_password) {
+        setNotification({
+          type: "error",
+          message: "Password baru harus diisi.",
+        });
+        return;
+      }
+      if (formData.new_password.length < 8) {
+        setNotification({
+          type: "error",
+          message: "Password baru minimal 8 karakter.",
+        });
+        return;
+      }
+      if (formData.new_password !== formData.new_password_confirmation) {
+        setNotification({
+          type: "error",
+          message: "Konfirmasi password tidak cocok.",
+        });
+        return;
+      }
+    }
+
+    setSaving(true);
 
     type UpdateProfilePayload = {
       name: string;
@@ -141,12 +198,14 @@ const ProfilePage = () => {
       }
 
       const res = await skybase.auth.updateProfile(payload);
-      
+
       // Casting ke unknown terlebih dahulu
-      const updatedUser = ((res.data as unknown) as { user?: StoredUser })?.user ?? (res.data as unknown) as StoredUser;
-      
+      const updatedUser =
+        (res.data as unknown as { user?: StoredUser })?.user ??
+        (res.data as unknown as StoredUser);
+
       setProfile(updatedUser);
-      
+
       // Reset password fields and visibility states on success
       setFormData((prev) => ({
         ...prev,
@@ -158,15 +217,23 @@ const ProfilePage = () => {
       setShowNewPassword(false);
       setShowConfirmPassword(false);
 
-      setNotification({ type: "success", message: "Profil berhasil diperbarui!" });
+      setNotification({
+        type: "success",
+        message: "Profil berhasil diperbarui!",
+      });
     } catch (err: unknown) {
       let msg = "Gagal memperbarui profil.";
-      if (typeof err === 'object' && err !== null) {
-          if ('payload' in err && typeof (err as {payload: unknown}).payload === 'object' && (err as {payload: unknown}).payload !== null && 'message' in (err as {payload: {message: string}}).payload) {
-              msg = (err as { payload: { message: string } }).payload.message;
-          } else if ('message' in err) {
-              msg = (err as { message: string }).message;
-          }
+      if (typeof err === "object" && err !== null) {
+        if (
+          "payload" in err &&
+          typeof (err as { payload: unknown }).payload === "object" &&
+          (err as { payload: unknown }).payload !== null &&
+          "message" in (err as { payload: { message: string } }).payload
+        ) {
+          msg = (err as { payload: { message: string } }).payload.message;
+        } else if ("message" in err) {
+          msg = (err as { message: string }).message;
+        }
       }
       setNotification({ type: "error", message: msg });
     } finally {
@@ -208,7 +275,7 @@ const ProfilePage = () => {
           onClose={() => setNotification(null)}
         />
       )}
-      
+
       <section className="flex flex-col gap-8">
         <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
           {/* Profile summary */}
@@ -228,7 +295,9 @@ const ProfilePage = () => {
                 <h2 className="text-2xl font-semibold text-[#0F172A]">
                   {displayProfile.name}
                 </h2>
-                <span className="text-base text-[#6B7280]">{displayProfile.role}</span>
+                <span className="text-base text-[#6B7280]">
+                  {displayProfile.role}
+                </span>
               </div>
 
               <button
@@ -337,9 +406,10 @@ const ProfilePage = () => {
                 </div>
 
                 <div className="border-t border-gray-100 pt-4">
-                  <h3 className="text-lg font-semibold text-[#0F172A] mb-4">Ganti Password (Opsional)</h3>
+                  <h3 className="text-lg font-semibold text-[#0F172A] mb-4">
+                    Ganti Password (Opsional)
+                  </h3>
                   <div className="grid gap-6 md:grid-cols-2">
-                    
                     {/* FIELD PASSWORD SAAT INI */}
                     <label className="flex flex-col gap-2 text-sm font-medium text-[#0F172A]">
                       Password Saat Ini
@@ -355,7 +425,9 @@ const ProfilePage = () => {
                         />
                         <button
                           type="button" // Penting agar tidak men-submit form
-                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          onClick={() =>
+                            setShowCurrentPassword(!showCurrentPassword)
+                          }
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                           tabIndex={-1} // Agar tidak bisa di-tabbing jika tidak diinginkan
                         >
@@ -367,9 +439,7 @@ const ProfilePage = () => {
                         </button>
                       </div>
                     </label>
-                    
                     <div className="hidden md:block"></div> {/* Spacer */}
-                    
                     {/* FIELD PASSWORD BARU */}
                     <label className="flex flex-col gap-2 text-sm font-medium text-[#0F172A]">
                       Password Baru
@@ -383,7 +453,7 @@ const ProfilePage = () => {
                           // Tambahkan pr-10
                           className="w-full rounded-xl border border-[#E5E7EB] bg-white pl-4 pr-10 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                         />
-                         <button
+                        <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
@@ -397,7 +467,6 @@ const ProfilePage = () => {
                         </button>
                       </div>
                     </label>
-
                     {/* FIELD KONFIRMASI PASSWORD BARU */}
                     <label className="flex flex-col gap-2 text-sm font-medium text-[#0F172A]">
                       Konfirmasi Password Baru
@@ -411,9 +480,11 @@ const ProfilePage = () => {
                           // Tambahkan pr-10
                           className="w-full rounded-xl border border-[#E5E7EB] bg-white pl-4 pr-10 py-3 text-sm text-[#0F172A] outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                         />
-                         <button
+                        <button
                           type="button"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          onClick={() =>
+                            setShowConfirmPassword(!showConfirmPassword)
+                          }
                           className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none"
                           tabIndex={-1}
                         >

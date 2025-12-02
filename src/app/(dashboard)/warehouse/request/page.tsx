@@ -12,9 +12,12 @@ import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
 type WarehouseRequest = Omit<ApiWarehouseRequest, "items"> & {
   items?: Array<{
+    id: number; // ID dari wh_request_items table
     item_id: number;
     qty: number;
     reason?: string | null;
+    seal_number?: string | null; // Diisi saat approve untuk ASE
+    expires_at?: string | null; // Diisi saat approve untuk ASE
     item?: {
       name: string;
       category: string;
@@ -69,6 +72,8 @@ export default function RequestPage() {
 
   useEffect(() => {
     fetchRequests();
+    // fetchRequests is a stable function (no dependencies), safe to call without deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchRequests() {
