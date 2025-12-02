@@ -18,7 +18,6 @@ type ScheduleItem = {
 };
 type StockRow = { document: string; jumlah: number };
 
-
 function chunk<T>(arr: T[], size: number): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -29,7 +28,9 @@ const WhiteCard: React.FC<React.PropsWithChildren<{ className?: string }>> = ({
   children,
   className = "",
 }) => (
-  <div className={`bg-white rounded-xl shadow-sm border border-[#E9EEF3] ${className}`}>
+  <div
+    className={`bg-white rounded-xl shadow-sm border border-[#E9EEF3] ${className}`}
+  >
     {children}
   </div>
 );
@@ -55,7 +56,9 @@ const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
   }
 
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+    <span
+      className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+    >
       {label}
     </span>
   );
@@ -65,49 +68,47 @@ const ScheduleGroup: React.FC<{
   title: string;
   items: ScheduleItem[];
   router: ReturnType<typeof useRouter>;
-}> = ({
-  title,
-  items,
-  router,
-}) => (
-    <GlassCard className="p-0">
-      <div className="grid grid-cols-[1fr_100px_100px_60px] h-[56px] md:h-[60px] px-4 md:px-3 items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
-        <span>{title}</span>
-        <span className="text-center">Arrival</span>
-        <span className="text-center">Status</span>
-        <span className="text-center">Action</span>
-      </div>
-      <div className="divide-y divide-[#E9EEF3]">
-        {items.map((it, idx) => (
-          <div
-            key={idx}
-            className="grid grid-cols-[1fr_100px_100px_60px] h-[60px] px-4 md:px-3 items-center text-[#222222]"
-          >
-            <span className="font-medium tracking-tight">{it.reg}</span>
-            <span className="text-sm md:text-[15px] text-center">{it.time}</span>
-            <span className="text-center">
-              <StatusBadge status={it.status} />
-            </span>
-            <div className="flex justify-center">
-              <button
-                onClick={() => {
-                  router.push(
-                    `/groundcrew/validasi-barang/${encodeURIComponent(it.reg)}?aircraft=${encodeURIComponent(it.aircraft)}${it.aircraft_id ? `&aircraftId=${it.aircraft_id}` : ""}`
-                  );
-                }}
-                className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
-                aria-label="Detail"
-              >
-                <span className="-mt-[1px]">›</span>
-              </button>
-            </div>
+}> = ({ title, items, router }) => (
+  <GlassCard className="p-0">
+    <div className="grid grid-cols-[1fr_100px_100px_60px] h-[56px] md:h-[60px] px-4 md:px-3 items-center bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
+      <span>{title}</span>
+      <span className="text-center">Arrival</span>
+      <span className="text-center">Status</span>
+      <span className="text-center">Action</span>
+    </div>
+    <div className="divide-y divide-[#E9EEF3]">
+      {items.map((it, idx) => (
+        <div
+          key={idx}
+          className="grid grid-cols-[1fr_100px_100px_60px] h-[60px] px-4 md:px-3 items-center text-[#222222]"
+        >
+          <span className="font-medium tracking-tight">{it.reg}</span>
+          <span className="text-sm md:text-[15px] text-center">{it.time}</span>
+          <span className="text-center">
+            <StatusBadge status={it.status} />
+          </span>
+          <div className="flex justify-center">
+            <button
+              onClick={() => {
+                router.push(
+                  `/groundcrew/validasi-barang/${encodeURIComponent(
+                    it.reg
+                  )}?aircraft=${encodeURIComponent(it.aircraft)}${
+                    it.aircraft_id ? `&aircraftId=${it.aircraft_id}` : ""
+                  }`
+                );
+              }}
+              className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
+              aria-label="Detail"
+            >
+              <span className="-mt-[1px]">›</span>
+            </button>
           </div>
-        ))}
-      </div>
-    </GlassCard>
-  );
-
-
+        </div>
+      ))}
+    </div>
+  </GlassCard>
+);
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -128,7 +129,9 @@ export default function DashboardPage() {
       }
     };
     run();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [router]);
 
   React.useEffect(() => {
@@ -140,10 +143,10 @@ export default function DashboardPage() {
         const data = res?.data;
         let list: Flight[] = [];
         if (Array.isArray(data)) {
-          if (data.length > 0 && 'flight_id' in data[0]) {
+          if (data.length > 0 && "flight_id" in data[0]) {
             list = data as unknown as Flight[];
           }
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+        } else if (data && "flights" in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
 
@@ -166,10 +169,12 @@ export default function DashboardPage() {
               const isToday = (date: Date | null) => {
                 if (!date || isNaN(date.getTime())) return false;
                 const now = new Date();
-                now.setHours(0, 0, 0, 0); 
-                return date.getFullYear() === now.getFullYear() &&
+                now.setHours(0, 0, 0, 0);
+                return (
+                  date.getFullYear() === now.getFullYear() &&
                   date.getMonth() === now.getMonth() &&
-                  date.getDate() === now.getDate();
+                  date.getDate() === now.getDate()
+                );
               };
 
               return isToday(arrDate) || isToday(depDate);
@@ -200,7 +205,9 @@ export default function DashboardPage() {
       }
     };
     loadFlights();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, []);
   const groups = chunk(scheduleData, 5);
   const handleSelengkapnya = () => router.push("/groundcrew/stok-barang");
@@ -232,28 +239,47 @@ export default function DashboardPage() {
         const ases = invRes?.data?.ase_inventory ?? [];
         const toArray = (input: { data?: unknown }) => {
           const d = input?.data;
-          return Array.isArray(d) ? d : (d && typeof d === 'object' && 'items' in d && Array.isArray(d.items)) ? d.items : [];
+          return Array.isArray(d)
+            ? d
+            : d &&
+              typeof d === "object" &&
+              "items" in d &&
+              Array.isArray(d.items)
+            ? d.items
+            : [];
         };
-        const docCatalog: Record<number, { item_id?: number; name?: string }> = {};
-        for (const it of toArray(docCatRes)) if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
-        const aseCatalog: Record<number, { item_id?: number; name?: string }> = {};
-        for (const it of toArray(aseCatRes)) if (it?.item_id != null) aseCatalog[Number(it.item_id)] = it;
+        const docCatalog: Record<number, { item_id?: number; name?: string }> =
+          {};
+        for (const it of toArray(docCatRes))
+          if (it?.item_id != null) docCatalog[Number(it.item_id)] = it;
+        const aseCatalog: Record<number, { item_id?: number; name?: string }> =
+          {};
+        for (const it of toArray(aseCatRes))
+          if (it?.item_id != null) aseCatalog[Number(it.item_id)] = it;
 
         const docAgg = new Map<string, number>();
         for (const d of docs) {
-          const name = docCatalog[Number(d?.item_id)]?.name ?? `DOC #${d?.item_id ?? "-"}`;
+          const name =
+            docCatalog[Number(d?.item_id)]?.name ?? `DOC #${d?.item_id ?? "-"}`;
           const qty = Number(d?.quantity ?? 0) || 0;
           docAgg.set(name, (docAgg.get(name) ?? 0) + qty);
         }
         const aseAgg = new Map<string, number>();
         for (const a of ases) {
-          const name = aseCatalog[Number(a?.item_id)]?.name ?? `ASE #${a?.item_id ?? "-"}`;
+          const name =
+            aseCatalog[Number(a?.item_id)]?.name ?? `ASE #${a?.item_id ?? "-"}`;
           aseAgg.set(name, (aseAgg.get(name) ?? 0) + 1);
         }
 
         if (!ignore) {
-          const docRows: StockRow[] = Array.from(docAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a, b) => b.jumlah - a.jumlah).slice(0, 10);
-          const aseRows: StockRow[] = Array.from(aseAgg.entries()).map(([document, jumlah]) => ({ document, jumlah })).sort((a, b) => b.jumlah - a.jumlah).slice(0, 10);
+          const docRows: StockRow[] = Array.from(docAgg.entries())
+            .map(([document, jumlah]) => ({ document, jumlah }))
+            .sort((a, b) => b.jumlah - a.jumlah)
+            .slice(0, 10);
+          const aseRows: StockRow[] = Array.from(aseAgg.entries())
+            .map(([document, jumlah]) => ({ document, jumlah }))
+            .sort((a, b) => b.jumlah - a.jumlah)
+            .slice(0, 10);
           setDocStocks(docRows);
           setAseStocks(aseRows);
         }
@@ -267,7 +293,9 @@ export default function DashboardPage() {
       }
     };
     loadStocks();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   return (
@@ -298,11 +326,17 @@ export default function DashboardPage() {
         <section className="md:col-span-2 p-0">
           <div className="mb-4 grid grid-cols-2">
             <div>
-              <div className="text-sm mb-3 md:mb-8 text-[#222222] capitalize">{todayLabel}</div>
-              <h2 className="text-2xl md:text-3xl font-bold text-[#222222]">Jadwal Hari Ini</h2>
+              <div className="text-sm mb-3 md:mb-8 text-[#222222] capitalize">
+                {todayLabel}
+              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-[#222222]">
+                Jadwal Hari Ini
+              </h2>
             </div>
             <div className="text-right">
-              <div className="text-sm mb-3 md:mb-8 text-[#222222]">Jumlah pesawat hari ini</div>
+              <div className="text-sm mb-3 md:mb-8 text-[#222222]">
+                Jumlah pesawat hari ini
+              </div>
               <div className="text-2xl md:text-3xl font-semibold text-[#222222]">
                 {scheduleData.length} Pesawat
               </div>
@@ -328,7 +362,9 @@ export default function DashboardPage() {
           {/* Stock Section */}
           <div>
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-[#222222]">Stok Barang</h2>
+              <h2 className="text-2xl font-semibold text-[#222222]">
+                Stok Barang
+              </h2>
               <button
                 onClick={handleSelengkapnya}
                 className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-sm"
@@ -376,13 +412,13 @@ export default function DashboardPage() {
             </WhiteCard>
           </div>
 
-          {
-            (loadingStocks && docStocks.length === 0 && aseStocks.length === 0) && (
+          {loadingStocks &&
+            docStocks.length === 0 &&
+            aseStocks.length === 0 && (
               <div className="text-sm text-gray-500">Memuat stok...</div>
-            )
-          }
-        </GlassCard >
-      </div >
-    </PageLayout >
+            )}
+        </GlassCard>
+      </div>
+    </PageLayout>
   );
 }

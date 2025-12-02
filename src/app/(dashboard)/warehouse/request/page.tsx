@@ -10,7 +10,7 @@ import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
-type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
+type WarehouseRequest = Omit<ApiWarehouseRequest, "items"> & {
   items?: Array<{
     item_id: number;
     qty: number;
@@ -34,21 +34,28 @@ type RequestRow = {
 
 export default function RequestPage() {
   const [mounted, setMounted] = useState(false);
-  
+
   // State Reject
   const [isRejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
-  
+
   // State Approve (Updated: Key menggunakan index untuk setiap item ASE)
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
-  const [approveFormData, setApproveFormData] = useState<Array<{ item_id: number; seal_number: string; expires_at: string }>>([]);
+  const [approveFormData, setApproveFormData] = useState<
+    Array<{ item_id: number; seal_number: string; expires_at: string }>
+  >([]);
   const [expandedAccordion, setExpandedAccordion] = useState<number | null>(0); // Accordion state
-  
-  const [selectedRequest, setSelectedRequest] = useState<RequestRow | null>(null);
+
+  const [selectedRequest, setSelectedRequest] = useState<RequestRow | null>(
+    null
+  );
   const [requests, setRequests] = useState<WarehouseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [notification, setNotification] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,8 +75,13 @@ export default function RequestPage() {
       let requestsData: WarehouseRequest[] = [];
       if (Array.isArray(response.data)) {
         requestsData = response.data;
-      } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-        requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
+      } else if (
+        response.data &&
+        typeof response.data === "object" &&
+        "items" in response.data
+      ) {
+        requestsData =
+          (response.data as { items?: WarehouseRequest[] }).items || [];
       }
 
       setRequests(requestsData);
@@ -83,23 +95,25 @@ export default function RequestPage() {
 
   const transformedRequests = useMemo(() => {
     return requests
-      .filter(req => req.status.toLowerCase() === 'pending')
+      .filter((req) => req.status.toLowerCase() === "pending")
       .map((req): RequestRow => {
         const date = new Date(req.created_at);
-        const tanggal = date.toLocaleDateString('id-ID', {
-          day: '2-digit',
-          month: 'long',
-          year: 'numeric'
+        const tanggal = date.toLocaleDateString("id-ID", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
         });
-        const jam = date.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZoneName: 'short'
+        const jam = date.toLocaleTimeString("id-ID", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZoneName: "short",
         });
 
         const firstItem = req.items?.[0];
-        const jenis = firstItem?.item?.name || req.flight?.route_to || 'Unknown';
-        const jumlah = req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
+        const jenis =
+          firstItem?.item?.name || req.flight?.route_to || "Unknown";
+        const jumlah =
+          req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
 
         return {
           id: req.wh_req_id,
@@ -114,14 +128,14 @@ export default function RequestPage() {
   }, [requests]);
 
   const documentRequests = useMemo(() => {
-    return transformedRequests.filter(req =>
-      req.rawData.items?.some(item => item.item?.category === 'DOC')
+    return transformedRequests.filter((req) =>
+      req.rawData.items?.some((item) => item.item?.category === "DOC")
     );
   }, [transformedRequests]);
 
   const itemRequests = useMemo(() => {
-    return transformedRequests.filter(req =>
-      req.rawData.items?.some(item => item.item?.category === 'ASE')
+    return transformedRequests.filter((req) =>
+      req.rawData.items?.some((item) => item.item?.category === "ASE")
     );
   }, [transformedRequests]);
 
@@ -139,25 +153,31 @@ export default function RequestPage() {
 
   const handleApproveClick = useCallback(async (row: RequestRow) => {
     // Cek apakah ada item ASE yang butuh input tambahan
-    const hasAseItems = row.rawData.items?.some(item => item.item?.category === 'ASE');
+    const hasAseItems = row.rawData.items?.some(
+      (item) => item.item?.category === "ASE"
+    );
 
     if (hasAseItems) {
       // Inisialisasi form data untuk SETIAP item ASE (berdasarkan qty)
-      const initialFormData: Array<{ item_id: number; seal_number: string; expires_at: string }> = [];
-      
+      const initialFormData: Array<{
+        item_id: number;
+        seal_number: string;
+        expires_at: string;
+      }> = [];
+
       row.rawData.items?.forEach((item) => {
-        if (item.item?.category === 'ASE') {
+        if (item.item?.category === "ASE") {
           // Buat form sejumlah qty yang direquest
           for (let i = 0; i < item.qty; i++) {
             initialFormData.push({
               item_id: item.item_id,
-              seal_number: '',
-              expires_at: ''
+              seal_number: "",
+              expires_at: "",
             });
           }
         }
       });
-      
+
       setApproveFormData(initialFormData);
       setSelectedRequest(row);
       setIsApproveDialogOpen(true);
@@ -167,55 +187,72 @@ export default function RequestPage() {
     // Jika tidak ada ASE, approve langsung seperti biasa (DOC)
     try {
       setActionLoading(true);
-      const itemsPayload = row.rawData.items?.map((item) => ({
-        item_id: item.item_id,
-        qty: item.qty,
-      })) || [];
+      const itemsPayload =
+        row.rawData.items?.map((item) => ({
+          item_id: item.item_id,
+          qty: item.qty,
+        })) || [];
 
       await skybase.warehouseRequests.approve(row.id, { items: itemsPayload });
-      
+
       await fetchRequests();
-      setNotification({ type: "success", message: "Request berhasil disetujui." });
+      setNotification({
+        type: "success",
+        message: "Request berhasil disetujui.",
+      });
     } catch (err) {
       console.error("Error approving request:", err);
       setNotification({
         type: "error",
-        message: "Gagal menyetujui request: " + (err instanceof Error ? err.message : "Unknown error"),
+        message:
+          "Gagal menyetujui request: " +
+          (err instanceof Error ? err.message : "Unknown error"),
       });
     } finally {
-        setActionLoading(false);
+      setActionLoading(false);
     }
   }, []);
 
   const handleApproveSubmit = async () => {
     if (!selectedRequest) return;
-    
+
     // Validasi: semua form harus diisi
     for (let i = 0; i < approveFormData.length; i++) {
       const data = approveFormData[i];
       if (!data?.seal_number || !data?.expires_at) {
-        const itemName = selectedRequest.rawData.items?.find(it => it.item_id === data.item_id)?.item?.name || 'ASE';
-        setNotification({ type: "error", message: `Mohon lengkapi data untuk ${itemName} #${i + 1}` });
+        const itemName =
+          selectedRequest.rawData.items?.find(
+            (it) => it.item_id === data.item_id
+          )?.item?.name || "ASE";
+        setNotification({
+          type: "error",
+          message: `Mohon lengkapi data untuk ${itemName} #${i + 1}`,
+        });
         return;
       }
     }
 
     try {
       setActionLoading(true);
-      
+
       // Build items payload: untuk ASE, kirim setiap item dengan qty=1 dan data masing-masing
-      const itemsPayload: Array<{ item_id: number; qty: number; seal_number?: string; expires_at?: string }> = [];
-      
+      const itemsPayload: Array<{
+        item_id: number;
+        qty: number;
+        seal_number?: string;
+        expires_at?: string;
+      }> = [];
+
       // Tambahkan item DOC seperti biasa
       selectedRequest.rawData.items?.forEach((item) => {
-        if (item.item?.category !== 'ASE') {
+        if (item.item?.category !== "ASE") {
           itemsPayload.push({
             item_id: item.item_id,
             qty: item.qty,
           });
         }
       });
-      
+
       // Tambahkan setiap item ASE dengan data individu
       approveFormData.forEach((formItem) => {
         itemsPayload.push({
@@ -226,17 +263,24 @@ export default function RequestPage() {
         });
       });
 
-      await skybase.warehouseRequests.approve(selectedRequest.id, { items: itemsPayload });
-      
+      await skybase.warehouseRequests.approve(selectedRequest.id, {
+        items: itemsPayload,
+      });
+
       await fetchRequests();
-      setNotification({ type: "success", message: "Request berhasil disetujui dengan detail item." });
+      setNotification({
+        type: "success",
+        message: "Request berhasil disetujui dengan detail item.",
+      });
       setIsApproveDialogOpen(false);
       setSelectedRequest(null);
     } catch (err) {
       console.error("Error approving request with details:", err);
       setNotification({
         type: "error",
-        message: "Gagal menyetujui request: " + (err instanceof Error ? err.message : "Unknown error"),
+        message:
+          "Gagal menyetujui request: " +
+          (err instanceof Error ? err.message : "Unknown error"),
       });
     } finally {
       setActionLoading(false);
@@ -248,18 +292,22 @@ export default function RequestPage() {
 
     try {
       setActionLoading(true);
-      const itemsPayload = selectedRequest.rawData.items?.map((item) => ({
-        item_id: item.item_id,
-        qty: item.qty,
-      })) || [];
+      const itemsPayload =
+        selectedRequest.rawData.items?.map((item) => ({
+          item_id: item.item_id,
+          qty: item.qty,
+        })) || [];
 
       await skybase.warehouseRequests.reject(selectedRequest.id, {
         rejection_reason: rejectReason.trim(),
-        items: itemsPayload
+        items: itemsPayload,
       });
 
       await fetchRequests();
-      setNotification({ type: "success", message: "Request berhasil ditolak." });
+      setNotification({
+        type: "success",
+        message: "Request berhasil ditolak.",
+      });
       setRejectDialogOpen(false);
       setRejectReason("");
       setSelectedRequest(null);
@@ -267,10 +315,12 @@ export default function RequestPage() {
       console.error("Error rejecting request:", err);
       setNotification({
         type: "error",
-        message: "Gagal menolak request: " + (err instanceof Error ? err.message : "Unknown error"),
+        message:
+          "Gagal menolak request: " +
+          (err instanceof Error ? err.message : "Unknown error"),
       });
     } finally {
-        setActionLoading(false);
+      setActionLoading(false);
     }
   }, [rejectReason, selectedRequest]);
 
@@ -301,33 +351,39 @@ export default function RequestPage() {
     return ActionButtons;
   }, [handleApproveClick, handleRejectClick, actionLoading]);
 
-  const documentColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
-    { key: "jenis", header: "Dokumen", align: "left" },
-    { key: "tanggal", header: "Tanggal", align: "left" },
-    { key: "jam", header: "Jam", align: "left" },
-    { key: "jumlah", header: "Jumlah Request", align: "left" },
-    {
-      key: "action",
-      header: "Action",
-      align: "right",
-      className: "w-44 flex-shrink-0",
-      render: renderActions(),
-    },
-  ], [renderActions]);
+  const documentColumns = useMemo<ColumnDef<RequestRow>[]>(
+    () => [
+      { key: "jenis", header: "Dokumen", align: "left" },
+      { key: "tanggal", header: "Tanggal", align: "left" },
+      { key: "jam", header: "Jam", align: "left" },
+      { key: "jumlah", header: "Jumlah Request", align: "left" },
+      {
+        key: "action",
+        header: "Action",
+        align: "right",
+        className: "w-44 flex-shrink-0",
+        render: renderActions(),
+      },
+    ],
+    [renderActions]
+  );
 
-  const itemColumns = useMemo<ColumnDef<RequestRow>[]>(() => [
-    { key: "jenis", header: "Barang", align: "left" },
-    { key: "tanggal", header: "Tanggal", align: "left" },
-    { key: "jam", header: "Jam", align: "left" },
-    { key: "jumlah", header: "Jumlah Request", align: "left" },
-    {
-      key: "action",
-      header: "Action",
-      align: "right",
-      className: "w-44 flex-shrink-0",
-      render: renderActions(),
-    },
-  ], [renderActions]);
+  const itemColumns = useMemo<ColumnDef<RequestRow>[]>(
+    () => [
+      { key: "jenis", header: "Barang", align: "left" },
+      { key: "tanggal", header: "Tanggal", align: "left" },
+      { key: "jam", header: "Jam", align: "left" },
+      { key: "jumlah", header: "Jumlah Request", align: "left" },
+      {
+        key: "action",
+        header: "Action",
+        align: "right",
+        className: "w-44 flex-shrink-0",
+        render: renderActions(),
+      },
+    ],
+    [renderActions]
+  );
 
   return (
     <PageLayout sidebarRole="warehouse">
@@ -344,9 +400,7 @@ export default function RequestPage() {
         )}
 
         {error && (
-          <div className="text-center py-12 text-[#F04438]">
-            Error: {error}
-          </div>
+          <div className="text-center py-12 text-[#F04438]">Error: {error}</div>
         )}
 
         {!loading && !error && (
@@ -367,7 +421,8 @@ export default function RequestPage() {
       </section>
 
       {/* REJECT DIALOG */}
-      {mounted && isRejectDialogOpen &&
+      {mounted &&
+        isRejectDialogOpen &&
         createPortal(
           <div className="fixed inset-0 z-[1000] grid place-items-center bg-[#050022]/40 backdrop-blur-sm overflow-y-auto scrollbar-hide px-4">
             <div
@@ -376,11 +431,16 @@ export default function RequestPage() {
               aria-labelledby="reject-dialog-title"
               className="w-full mx-4 sm:mx-0 max-w-[420px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 text-center shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[85vh] overflow-y-auto scrollbar-hide"
             >
-              <h2 id="reject-dialog-title" className="text-2xl font-semibold text-[#0E1D3D]">
+              <h2
+                id="reject-dialog-title"
+                className="text-2xl font-semibold text-[#0E1D3D]"
+              >
                 Tolak Request
               </h2>
               <div className="mt-6 space-y-2 text-left">
-                <label className="text-sm font-semibold text-[#0E1D3D]">Alasan penolakan</label>
+                <label className="text-sm font-semibold text-[#0E1D3D]">
+                  Alasan penolakan
+                </label>
                 <textarea
                   id="reject-reason"
                   value={rejectReason}
@@ -390,64 +450,101 @@ export default function RequestPage() {
                 />
               </div>
               <div className="mt-8 flex gap-4">
-                <button onClick={handleRejectCancel} disabled={actionLoading} className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-95">Cancel</button>
-                <button onClick={handleRejectSubmit} disabled={actionLoading || rejectReason.trim().length === 0} className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-60">{actionLoading ? "Processing..." : "Tolak"}</button>
+                <button
+                  onClick={handleRejectCancel}
+                  disabled={actionLoading}
+                  className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-95"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRejectSubmit}
+                  disabled={actionLoading || rejectReason.trim().length === 0}
+                  className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-60"
+                >
+                  {actionLoading ? "Processing..." : "Tolak"}
+                </button>
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {/* APPROVE DIALOG (KHUSUS ASE) - Accordion Style */}
-      {mounted && isApproveDialogOpen && selectedRequest &&
+      {mounted &&
+        isApproveDialogOpen &&
+        selectedRequest &&
         createPortal(
           <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-[#050022]/40 backdrop-blur-sm p-4 overflow-y-auto scrollbar-hide">
             <div className="w-full mx-auto max-w-[500px] rounded-[32px] bg-white px-6 py-8 sm:px-8 sm:py-10 shadow-[0_24px_60px_rgba(15,23,42,0.12)] max-h-[90vh] overflow-y-auto scrollbar-hide">
-              <h2 className="text-2xl font-semibold text-[#0E1D3D] mb-2 text-center">Lengkapi Data Item</h2>
+              <h2 className="text-2xl font-semibold text-[#0E1D3D] mb-2 text-center">
+                Lengkapi Data Item
+              </h2>
               <p className="text-sm text-gray-500 mb-6 text-center">
                 Total {approveFormData.length} item ASE yang perlu dilengkapi
               </p>
-              
+
               {/* Progress indicator */}
               <div className="flex items-center justify-center gap-1 mb-6">
                 {approveFormData.map((formItem, idx) => {
-                  const isComplete = formItem.seal_number && formItem.expires_at;
+                  const isComplete =
+                    formItem.seal_number && formItem.expires_at;
                   return (
-                    <div 
+                    <div
                       key={idx}
                       className={`w-3 h-3 rounded-full transition-colors ${
-                        isComplete ? 'bg-green-500' : 
-                        expandedAccordion === idx ? 'bg-blue-500' : 'bg-gray-300'
+                        isComplete
+                          ? "bg-green-500"
+                          : expandedAccordion === idx
+                          ? "bg-blue-500"
+                          : "bg-gray-300"
                       }`}
-                      title={`Item ${idx + 1}: ${isComplete ? 'Lengkap' : 'Belum lengkap'}`}
+                      title={`Item ${idx + 1}: ${
+                        isComplete ? "Lengkap" : "Belum lengkap"
+                      }`}
                     />
                   );
                 })}
               </div>
-              
+
               <div className="space-y-3 text-left">
                 {/* RENDER ACCORDION UNTUK SETIAP ITEM ASE */}
                 {approveFormData.map((formItem, index) => {
-                  const itemInfo = selectedRequest.rawData.items?.find(it => it.item_id === formItem.item_id);
-                  const itemName = itemInfo?.item?.name || `Item #${formItem.item_id}`;
+                  const itemInfo = selectedRequest.rawData.items?.find(
+                    (it) => it.item_id === formItem.item_id
+                  );
+                  const itemName =
+                    itemInfo?.item?.name || `Item #${formItem.item_id}`;
                   const isExpanded = expandedAccordion === index;
-                  const isComplete = formItem.seal_number && formItem.expires_at;
-                  
+                  const isComplete =
+                    formItem.seal_number && formItem.expires_at;
+
                   return (
-                    <div key={index} className={`border rounded-2xl overflow-hidden transition-colors ${
-                      isComplete ? 'border-green-300 bg-green-50/50' : 'border-gray-200 bg-gray-50'
-                    }`}>
+                    <div
+                      key={index}
+                      className={`border rounded-2xl overflow-hidden transition-colors ${
+                        isComplete
+                          ? "border-green-300 bg-green-50/50"
+                          : "border-gray-200 bg-gray-50"
+                      }`}
+                    >
                       {/* Accordion Header */}
                       <button
                         type="button"
-                        onClick={() => setExpandedAccordion(isExpanded ? null : index)}
+                        onClick={() =>
+                          setExpandedAccordion(isExpanded ? null : index)
+                        }
                         className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-100 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <span className={`w-6 h-6 rounded-full text-xs font-semibold flex items-center justify-center ${
-                            isComplete ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'
-                          }`}>
-                            {isComplete ? '✓' : index + 1}
+                          <span
+                            className={`w-6 h-6 rounded-full text-xs font-semibold flex items-center justify-center ${
+                              isComplete
+                                ? "bg-green-500 text-white"
+                                : "bg-gray-300 text-gray-600"
+                            }`}
+                          >
+                            {isComplete ? "✓" : index + 1}
                           </span>
                           <span className="font-semibold text-[#0E1D3D] text-sm">
                             {itemName} #{index + 1}
@@ -459,49 +556,65 @@ export default function RequestPage() {
                           <ChevronDown className="w-5 h-5 text-gray-500" />
                         )}
                       </button>
-                      
+
                       {/* Accordion Content */}
                       {isExpanded && (
                         <div className="px-4 pb-4 space-y-4 border-t border-gray-200">
                           <div className="space-y-2 pt-4">
-                            <label className="text-sm font-medium text-[#0E1D3D]">Seal Number</label>
+                            <label className="text-sm font-medium text-[#0E1D3D]">
+                              Seal Number
+                            </label>
                             <input
                               type="text"
                               placeholder="Masukkan Seal Number"
                               value={formItem.seal_number}
-                              onChange={(e) => setApproveFormData(prev => {
-                                const newData = [...prev];
-                                newData[index] = { ...newData[index], seal_number: e.target.value };
-                                return newData;
-                              })}
+                              onChange={(e) =>
+                                setApproveFormData((prev) => {
+                                  const newData = [...prev];
+                                  newData[index] = {
+                                    ...newData[index],
+                                    seal_number: e.target.value,
+                                  };
+                                  return newData;
+                                })
+                              }
                               className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-sm font-medium text-[#0E1D3D]">Expired Date</label>
+                            <label className="text-sm font-medium text-[#0E1D3D]">
+                              Expired Date
+                            </label>
                             <input
                               type="date"
                               value={formItem.expires_at}
-                              onChange={(e) => setApproveFormData(prev => {
-                                const newData = [...prev];
-                                newData[index] = { ...newData[index], expires_at: e.target.value };
-                                return newData;
-                              })}
+                              onChange={(e) =>
+                                setApproveFormData((prev) => {
+                                  const newData = [...prev];
+                                  newData[index] = {
+                                    ...newData[index],
+                                    expires_at: e.target.value,
+                                  };
+                                  return newData;
+                                })
+                              }
                               className="w-full rounded-xl border border-[#C5D0DD] px-4 py-2 text-sm outline-none focus:border-[#0D63F3] focus:ring-2 focus:ring-[#0D63F3]/30"
                             />
                           </div>
-                          
+
                           {/* Next button in accordion */}
-                          {index < approveFormData.length - 1 && formItem.seal_number && formItem.expires_at && (
-                            <button
-                              type="button"
-                              onClick={() => setExpandedAccordion(index + 1)}
-                              className="w-full mt-2 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                              Lanjut ke item berikutnya →
-                            </button>
-                          )}
+                          {index < approveFormData.length - 1 &&
+                            formItem.seal_number &&
+                            formItem.expires_at && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedAccordion(index + 1)}
+                                className="w-full mt-2 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                Lanjut ke item berikutnya →
+                              </button>
+                            )}
                         </div>
                       )}
                     </div>
@@ -510,15 +623,19 @@ export default function RequestPage() {
               </div>
 
               <div className="mt-8 flex gap-4">
-                <button 
-                  onClick={() => { setIsApproveDialogOpen(false); setSelectedRequest(null); setExpandedAccordion(0); }} 
+                <button
+                  onClick={() => {
+                    setIsApproveDialogOpen(false);
+                    setSelectedRequest(null);
+                    setExpandedAccordion(0);
+                  }}
                   disabled={actionLoading}
                   className="flex-1 rounded-full border border-[#F04438] px-6 py-3 text-sm font-semibold text-[#F04438] transition hover:bg-[#FFF1F0] active:scale-95"
                 >
                   Batal
                 </button>
-                <button 
-                  onClick={handleApproveSubmit} 
+                <button
+                  onClick={handleApproveSubmit}
                   disabled={actionLoading}
                   className="flex-1 rounded-full bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-60"
                 >
@@ -527,7 +644,7 @@ export default function RequestPage() {
               </div>
             </div>
           </div>,
-          document.body,
+          document.body
         )}
 
       {notification && (

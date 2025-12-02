@@ -9,7 +9,6 @@ import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
 
-
 interface FlightSchedule {
   aircraft: string;
   registration: string;
@@ -30,7 +29,7 @@ const ValidasiBarangPage = () => {
       setLoading(true);
       try {
         const res = await skybase.inspections.today();
-        console.log('API Response:', JSON.stringify(res, null, 2));
+        console.log("API Response:", JSON.stringify(res, null, 2));
 
         interface RawFlightData {
           inspection?: { status?: string };
@@ -56,60 +55,74 @@ const ValidasiBarangPage = () => {
 
         let apiData: RawFlightData[] = [];
 
-        const nestedData = (res?.data as { data?: { flights?: RawFlightData[] } })?.data?.flights;
+        const nestedData = (
+          res?.data as { data?: { flights?: RawFlightData[] } }
+        )?.data?.flights;
         if (Array.isArray(nestedData)) {
           apiData = nestedData;
         } else {
           const flatData = res?.data;
           if (Array.isArray(flatData)) {
             apiData = flatData as RawFlightData[];
-          } else if (flatData && typeof flatData === 'object' && 'items' in flatData && Array.isArray((flatData as { items: unknown[] }).items)) {
+          } else if (
+            flatData &&
+            typeof flatData === "object" &&
+            "items" in flatData &&
+            Array.isArray((flatData as { items: unknown[] }).items)
+          ) {
             apiData = (flatData as { items: RawFlightData[] }).items;
-          } else if (flatData && typeof flatData === 'object' && 'flights' in flatData && Array.isArray((flatData as { flights: unknown[] }).flights)) {
+          } else if (
+            flatData &&
+            typeof flatData === "object" &&
+            "flights" in flatData &&
+            Array.isArray((flatData as { flights: unknown[] }).flights)
+          ) {
             apiData = (flatData as { flights: RawFlightData[] }).flights;
           }
         }
 
-        console.log('Extracted apiData:', apiData.length, 'items');
+        console.log("Extracted apiData:", apiData.length, "items");
 
         if (!ignore) {
           const mapped: FlightSchedule[] = apiData
             .filter((it) => {
               // Filter: Hanya yang belum di-inspeksi atau masih dalam proses
               const inspectionStatus = it?.inspection?.status;
-              return inspectionStatus === 'NOT_STARTED' || inspectionStatus === 'IN_PROGRESS';
+              return (
+                inspectionStatus === "NOT_STARTED" ||
+                inspectionStatus === "IN_PROGRESS"
+              );
             })
             .map((it) => {
-              console.log('Processing flight:', it);
+              console.log("Processing flight:", it);
 
-              const aircraftType = it?.aircraft?.type_code ||
+              const aircraftType =
+                it?.aircraft?.type_code ||
                 it?.aircraft?.type ||
-                it?.aircraft_type || "-";
-              const registration = it?.aircraft?.registration_code ||
-                it?.registration || "-";
-              const destination = it?.route?.to ||
-                it?.destination ||
-                it?.route_to || "-";
-              const departureTime = it?.schedule?.departure ||
-                it?.sched_dep;
-              const arrivalTime = it?.schedule?.arrival ||
-                it?.sched_arr;
+                it?.aircraft_type ||
+                "-";
+              const registration =
+                it?.aircraft?.registration_code || it?.registration || "-";
+              const destination =
+                it?.route?.to || it?.destination || it?.route_to || "-";
+              const departureTime = it?.schedule?.departure || it?.sched_dep;
+              const arrivalTime = it?.schedule?.arrival || it?.sched_arr;
 
               return {
                 aircraft: aircraftType,
                 registration,
                 destination,
                 arrival: arrivalTime
-                  ? new Date(arrivalTime).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
+                  ? new Date(arrivalTime).toLocaleTimeString("id-ID", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : "-",
                 takeOff: departureTime
-                  ? new Date(departureTime).toLocaleTimeString('id-ID', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })
+                  ? new Date(departureTime).toLocaleTimeString("id-ID", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
                   : "-",
                 aircraftId: it?.aircraft?.aircraft_id || it?.aircraft_id,
               };
@@ -123,7 +136,9 @@ const ValidasiBarangPage = () => {
       }
     };
     load();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // KONFIGURASI KOLOM DIPERBAIKI: Menggunakan lebar tetap (w-...) untuk kolom pendek
@@ -132,31 +147,31 @@ const ValidasiBarangPage = () => {
       key: "registration",
       header: "Registrasi",
       align: "left",
-      className: "w-32 flex-none font-semibold" // Fixed width
+      className: "w-32 flex-none font-semibold", // Fixed width
     },
     {
       key: "aircraft",
       header: "Jenis Pesawat",
       align: "left",
-      className: "w-40 flex-none" // Fixed width
+      className: "w-40 flex-none", // Fixed width
     },
     {
       key: "destination",
       header: "Destinasi",
       align: "left",
-      className: "flex-1 min-w-[120px]" // Flex-1 hanya disini agar mengisi sisa ruang
+      className: "flex-1 min-w-[120px]", // Flex-1 hanya disini agar mengisi sisa ruang
     },
     {
       key: "arrival",
       header: "Arrival",
       align: "left",
-      className: "w-28 flex-none" // Fixed width
+      className: "w-28 flex-none", // Fixed width
     },
     {
       key: "takeOff",
       header: "Take Off",
       align: "left",
-      className: "w-28 flex-none" // Fixed width
+      className: "w-28 flex-none", // Fixed width
     },
     {
       key: "aksi",
@@ -170,7 +185,9 @@ const ValidasiBarangPage = () => {
             router.push(
               `/groundcrew/validasi-barang/${encodeURIComponent(
                 row.registration
-              )}?aircraft=${encodeURIComponent(row.aircraft)}${row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""}`
+              )}?aircraft=${encodeURIComponent(row.aircraft)}${
+                row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""
+              }`
             )
           }
           className="h-9 w-9 rounded-lg bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
@@ -179,10 +196,9 @@ const ValidasiBarangPage = () => {
         >
           <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
         </button>
-      )
-    }
+      ),
+    },
   ];
-
 
   return (
     <PageLayout>
@@ -203,16 +219,34 @@ const ValidasiBarangPage = () => {
               </div>
               <div className="divide-y divide-[#E9EEF3]">
                 {group.map((row, i) => (
-                  <div key={i} className="flex items-center justify-between px-4 py-4">
+                  <div
+                    key={i}
+                    className="flex items-center justify-between px-4 py-4"
+                  >
                     <div className="pr-3">
-                      <div className="text-xs text-[#444] mb-1">{row.arrival} - {row.takeOff}</div>
-                      <div className="text-xl font-semibold tracking-tight text-[#222]">{row.registration}</div>
-                      <div className="text-sm text-[#444] mt-1">Destination : <span className="font-semibold text-[#222]">{row.destination}</span></div>
+                      <div className="text-xs text-[#444] mb-1">
+                        {row.arrival} - {row.takeOff}
+                      </div>
+                      <div className="text-xl font-semibold tracking-tight text-[#222]">
+                        {row.registration}
+                      </div>
+                      <div className="text-sm text-[#444] mt-1">
+                        Destination :{" "}
+                        <span className="font-semibold text-[#222]">
+                          {row.destination}
+                        </span>
+                      </div>
                     </div>
                     <button
                       onClick={() =>
                         router.push(
-                          `/groundcrew/validasi-barang/${encodeURIComponent(row.registration)}?aircraft=${encodeURIComponent(row.aircraft)}${row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""}`
+                          `/groundcrew/validasi-barang/${encodeURIComponent(
+                            row.registration
+                          )}?aircraft=${encodeURIComponent(row.aircraft)}${
+                            row.aircraftId
+                              ? `&aircraftId=${row.aircraftId}`
+                              : ""
+                          }`
                         )
                       }
                       className="h-10 w-10 rounded-xl bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"

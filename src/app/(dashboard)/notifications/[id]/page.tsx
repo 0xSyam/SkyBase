@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -8,7 +7,17 @@ import { Notification } from "@/types/api";
 import PageHeader from "@/component/PageHeader";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import { Bell, Plane, AlertTriangle, ClipboardCheck, Package, ArrowLeft, Calendar, Tag, Link as LinkIcon } from "lucide-react";
+import {
+  Bell,
+  Plane,
+  AlertTriangle,
+  ClipboardCheck,
+  Package,
+  ArrowLeft,
+  Calendar,
+  Tag,
+  Link as LinkIcon,
+} from "lucide-react";
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -28,15 +37,35 @@ const getNotificationIcon = (type: string) => {
 const getNotificationColor = (type: string) => {
   switch (type) {
     case "flight":
-      return { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" };
+      return {
+        bg: "bg-blue-100",
+        text: "text-blue-600",
+        border: "border-blue-200",
+      };
     case "expiry":
-      return { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" };
+      return {
+        bg: "bg-orange-100",
+        text: "text-orange-600",
+        border: "border-orange-200",
+      };
     case "inspection":
-      return { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" };
+      return {
+        bg: "bg-green-100",
+        text: "text-green-600",
+        border: "border-green-200",
+      };
     case "request":
-      return { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200" };
+      return {
+        bg: "bg-purple-100",
+        text: "text-purple-600",
+        border: "border-purple-200",
+      };
     default:
-      return { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" };
+      return {
+        bg: "bg-gray-100",
+        text: "text-gray-600",
+        border: "border-gray-200",
+      };
   }
 };
 
@@ -79,7 +108,8 @@ export default function NotificationDetailPage() {
   useEffect(() => {
     if (id) {
       setLoading(true);
-      notificationApi.getById(id as string)
+      notificationApi
+        .getById(id as string)
         .then((res) => {
           setNotification(res.data);
         })
@@ -92,7 +122,9 @@ export default function NotificationDetailPage() {
     }
   }, [id]);
 
-  const colors = notification ? getNotificationColor(notification.type) : getNotificationColor("");
+  const colors = notification
+    ? getNotificationColor(notification.type)
+    : getNotificationColor("");
 
   return (
     <PageLayout>
@@ -107,7 +139,7 @@ export default function NotificationDetailPage() {
         </button>
 
         <PageHeader title="Detail Notifikasi" />
-        
+
         {loading ? (
           <GlassCard className="p-8 text-center text-gray-500">
             Memuat notifikasi...
@@ -120,7 +152,9 @@ export default function NotificationDetailPage() {
                 {getNotificationIcon(notification.type)}
               </div>
               <div>
-                <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text} border ${colors.border}`}>
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${colors.bg} ${colors.text} border ${colors.border}`}
+                >
                   {formatNotificationType(notification.type)}
                 </span>
                 {notification.is_broadcast && (
@@ -146,18 +180,25 @@ export default function NotificationDetailPage() {
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Waktu</h4>
                   <p className="text-[#0E1D3D]">
-                    {new Date(notification.created_at).toLocaleDateString('id-ID', {
-                      weekday: 'long',
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric'
-                    })}
+                    {new Date(notification.created_at).toLocaleDateString(
+                      "id-ID",
+                      {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      }
+                    )}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {new Date(notification.created_at).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })} WIB
+                    {new Date(notification.created_at).toLocaleTimeString(
+                      "id-ID",
+                      {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }
+                    )}{" "}
+                    WIB
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     {notification.time_ago}
@@ -168,8 +209,12 @@ export default function NotificationDetailPage() {
               <div className="flex items-start gap-3">
                 <Tag className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">Tipe Notifikasi</h4>
-                  <p className="text-[#0E1D3D]">{formatNotificationType(notification.type)}</p>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    Tipe Notifikasi
+                  </h4>
+                  <p className="text-[#0E1D3D]">
+                    {formatNotificationType(notification.type)}
+                  </p>
                 </div>
               </div>
 
@@ -177,10 +222,16 @@ export default function NotificationDetailPage() {
                 <div className="flex items-start gap-3">
                   <LinkIcon className="w-5 h-5 text-gray-400 mt-0.5" />
                   <div>
-                    <h4 className="text-sm font-medium text-gray-500">Terkait Dengan</h4>
-                    <p className="text-[#0E1D3D]">{getRelatedTypeLabel(notification.related_type)}</p>
+                    <h4 className="text-sm font-medium text-gray-500">
+                      Terkait Dengan
+                    </h4>
+                    <p className="text-[#0E1D3D]">
+                      {getRelatedTypeLabel(notification.related_type)}
+                    </p>
                     {notification.related_id && (
-                      <p className="text-sm text-gray-500">ID: #{notification.related_id}</p>
+                      <p className="text-sm text-gray-500">
+                        ID: #{notification.related_id}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -189,8 +240,12 @@ export default function NotificationDetailPage() {
               <div className="flex items-start gap-3">
                 <Bell className="w-5 h-5 text-gray-400 mt-0.5" />
                 <div>
-                  <h4 className="text-sm font-medium text-gray-500">ID Notifikasi</h4>
-                  <p className="text-[#0E1D3D]">#{notification.notification_id}</p>
+                  <h4 className="text-sm font-medium text-gray-500">
+                    ID Notifikasi
+                  </h4>
+                  <p className="text-[#0E1D3D]">
+                    #{notification.notification_id}
+                  </p>
                 </div>
               </div>
             </div>

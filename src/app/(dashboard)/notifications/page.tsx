@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -7,9 +6,21 @@ import { Notification, NotificationStats } from "@/types/api";
 import PageHeader from "@/component/PageHeader";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
-import { Bell, Plane, AlertTriangle, ClipboardCheck, Package, Filter } from "lucide-react";
+import {
+  Bell,
+  Plane,
+  AlertTriangle,
+  ClipboardCheck,
+  Package,
+  Filter,
+} from "lucide-react";
 
-type NotificationFilter = "all" | "flight" | "expiry" | "inspection" | "request";
+type NotificationFilter =
+  | "all"
+  | "flight"
+  | "expiry"
+  | "inspection"
+  | "request";
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -29,15 +40,35 @@ const getNotificationIcon = (type: string) => {
 const getNotificationColor = (type: string) => {
   switch (type) {
     case "flight":
-      return { bg: "bg-blue-100", text: "text-blue-600", border: "border-blue-200" };
+      return {
+        bg: "bg-blue-100",
+        text: "text-blue-600",
+        border: "border-blue-200",
+      };
     case "expiry":
-      return { bg: "bg-orange-100", text: "text-orange-600", border: "border-orange-200" };
+      return {
+        bg: "bg-orange-100",
+        text: "text-orange-600",
+        border: "border-orange-200",
+      };
     case "inspection":
-      return { bg: "bg-green-100", text: "text-green-600", border: "border-green-200" };
+      return {
+        bg: "bg-green-100",
+        text: "text-green-600",
+        border: "border-green-200",
+      };
     case "request":
-      return { bg: "bg-purple-100", text: "text-purple-600", border: "border-purple-200" };
+      return {
+        bg: "bg-purple-100",
+        text: "text-purple-600",
+        border: "border-purple-200",
+      };
     default:
-      return { bg: "bg-gray-100", text: "text-gray-600", border: "border-gray-200" };
+      return {
+        bg: "bg-gray-100",
+        text: "text-gray-600",
+        border: "border-gray-200",
+      };
   }
 };
 
@@ -68,9 +99,9 @@ export default function NotificationsPage() {
       try {
         const [notifRes, statsRes] = await Promise.all([
           notificationApi.getAll(),
-          notificationApi.getStats()
+          notificationApi.getStats(),
         ]);
-        
+
         const data = notifRes.data;
         if (Array.isArray(data)) {
           setNotifications(data);
@@ -89,52 +120,89 @@ export default function NotificationsPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
-  const filteredNotifications = filter === "all" 
-    ? notifications 
-    : notifications.filter(n => n.type === filter);
+  const filteredNotifications =
+    filter === "all"
+      ? notifications
+      : notifications.filter((n) => n.type === filter);
 
-  const filterButtons: { label: string; value: NotificationFilter; icon: React.ReactNode }[] = [
+  const filterButtons: {
+    label: string;
+    value: NotificationFilter;
+    icon: React.ReactNode;
+  }[] = [
     { label: "Semua", value: "all", icon: <Filter className="w-4 h-4" /> },
-    { label: "Penerbangan", value: "flight", icon: <Plane className="w-4 h-4" /> },
-    { label: "Kadaluarsa", value: "expiry", icon: <AlertTriangle className="w-4 h-4" /> },
-    { label: "Inspeksi", value: "inspection", icon: <ClipboardCheck className="w-4 h-4" /> },
-    { label: "Request", value: "request", icon: <Package className="w-4 h-4" /> },
+    {
+      label: "Penerbangan",
+      value: "flight",
+      icon: <Plane className="w-4 h-4" />,
+    },
+    {
+      label: "Kadaluarsa",
+      value: "expiry",
+      icon: <AlertTriangle className="w-4 h-4" />,
+    },
+    {
+      label: "Inspeksi",
+      value: "inspection",
+      icon: <ClipboardCheck className="w-4 h-4" />,
+    },
+    {
+      label: "Request",
+      value: "request",
+      icon: <Package className="w-4 h-4" />,
+    },
   ];
 
   return (
     <PageLayout>
       <section className="w-full max-w-[1076px] mx-auto">
-        <PageHeader 
-          title="Notifikasi" 
+        <PageHeader
+          title="Notifikasi"
           description="Semua notifikasi dan pemberitahuan sistem"
         />
-        
+
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <GlassCard className="p-4">
               <div className="text-sm text-gray-500">Total</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">{stats.total}</div>
+              <div className="text-2xl font-bold text-[#0E1D3D]">
+                {stats.total}
+              </div>
             </GlassCard>
             <GlassCard className="p-4">
               <div className="text-sm text-gray-500">Hari Ini</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">{stats.today}</div>
+              <div className="text-2xl font-bold text-[#0E1D3D]">
+                {stats.today}
+              </div>
             </GlassCard>
             <GlassCard className="p-4">
               <div className="text-sm text-gray-500">Minggu Ini</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">{stats.this_week}</div>
+              <div className="text-2xl font-bold text-[#0E1D3D]">
+                {stats.this_week}
+              </div>
             </GlassCard>
             <GlassCard className="p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">Per Tipe</div>
+              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
+                Per Tipe
+              </div>
               <div className="flex gap-2 flex-wrap text-xs">
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">✈ {stats.by_type.flight}</span>
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">⚠ {stats.by_type.expiry}</span>
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full">✓ {stats.by_type.inspection}</span>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">📦 {stats.by_type.request}</span>
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                  ✈ {stats.by_type.flight}
+                </span>
+                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
+                  ⚠ {stats.by_type.expiry}
+                </span>
+                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
+                  ✓ {stats.by_type.inspection}
+                </span>
+                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
+                  📦 {stats.by_type.request}
+                </span>
               </div>
             </GlassCard>
           </div>
@@ -156,7 +224,7 @@ export default function NotificationsPage() {
               {btn.label}
               {filter === btn.value && btn.value !== "all" && (
                 <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
-                  {notifications.filter(n => n.type === btn.value).length}
+                  {notifications.filter((n) => n.type === btn.value).length}
                 </span>
               )}
             </button>
@@ -178,12 +246,16 @@ export default function NotificationsPage() {
                     key={notification.notification_id}
                     className="flex items-start gap-4 p-4"
                   >
-                    <div className={`p-3 rounded-xl ${colors.bg} ${colors.text}`}>
+                    <div
+                      className={`p-3 rounded-xl ${colors.bg} ${colors.text}`}
+                    >
                       {getNotificationIcon(notification.type)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-medium ${colors.bg} ${colors.text}`}
+                        >
                           {formatNotificationType(notification.type)}
                         </span>
                         {notification.is_broadcast && (
@@ -205,10 +277,11 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="p-8 text-center text-gray-500">
-              {filter === "all" 
-                ? "Tidak ada notifikasi." 
-                : `Tidak ada notifikasi ${formatNotificationType(filter).toLowerCase()}.`
-              }
+              {filter === "all"
+                ? "Tidak ada notifikasi."
+                : `Tidak ada notifikasi ${formatNotificationType(
+                    filter
+                  ).toLowerCase()}.`}
             </div>
           )}
         </GlassCard>

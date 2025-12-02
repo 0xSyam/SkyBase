@@ -26,10 +26,15 @@ export default function TopBar({
   const [dropdownHeight, setDropdownHeight] = useState(0);
   const [userName, setUserName] = useState(userNameProp || "User");
   const menuContentRef = useRef<HTMLDivElement | null>(null);
-  
+
   // GUNAKAN CONTEXT DI SINI
-  const { notifications, unreadCount, markAllAsRead, isLoading: notifLoading } = useNotification();
-  
+  const {
+    notifications,
+    unreadCount,
+    markAllAsRead,
+    isLoading: notifLoading,
+  } = useNotification();
+
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
@@ -42,7 +47,10 @@ export default function TopBar({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
+      if (
+        popoverRef.current &&
+        !popoverRef.current.contains(event.target as Node)
+      ) {
         setPopoverOpen(false);
       }
     }
@@ -56,7 +64,7 @@ export default function TopBar({
 
     // Saat dibuka, tandai semua sudah dibaca (reset badge & update localStorage)
     if (newState) {
-      markAllAsRead(); 
+      markAllAsRead();
     }
   };
 
@@ -89,23 +97,33 @@ export default function TopBar({
   const handleProfileClick = () => {
     if (!sidebarRole) return;
     if (typeof window !== "undefined") {
-       window.sessionStorage.setItem("activeRole", sidebarRole);
+      window.sessionStorage.setItem("activeRole", sidebarRole);
     }
   };
 
   return (
     <GlassCard className="w-full rounded-[20px] overflow-visible z-50">
-      <header className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6" role="banner">
+      <header
+        className="flex w-full items-center justify-between px-6 md:px-10 py-4 md:py-6"
+        role="banner"
+      >
         <Link
           href={profileHref}
           className="inline-flex items-center gap-3 rounded-full pr-3 py-1 transition hover:bg-white/40 cursor-pointer"
           onClick={handleProfileClick}
         >
-           <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+          <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
             {userAvatar ? (
-              <Image fill className="object-cover" alt={`Profile picture of ${userName}`} src={userAvatar} />
+              <Image
+                fill
+                className="object-cover"
+                alt={`Profile picture of ${userName}`}
+                src={userAvatar}
+              />
             ) : (
-              <span className="text-white font-semibold text-lg">{initials}</span>
+              <span className="text-white font-semibold text-lg">
+                {initials}
+              </span>
             )}
           </div>
           <h1 className="text-base md:text-lg font-medium text-gray-900 whitespace-nowrap">
@@ -144,7 +162,7 @@ export default function TopBar({
                 <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
                   <h3 className="font-semibold text-[#111827]">Notifikasi</h3>
                 </div>
-                
+
                 <div className="max-h-[320px] overflow-y-auto scrollbar-hide min-h-[100px]">
                   {/* Gunakan data dari Context */}
                   {notifications.length > 0 ? (
@@ -156,10 +174,12 @@ export default function TopBar({
                         onClick={() => setPopoverOpen(false)}
                       >
                         <div className="flex justify-between items-start mb-1">
-                            <p className="text-[11px] font-bold text-[#0D63F3] uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded">
-                              {notif.type}
-                            </p>
-                            <span className="text-[10px] text-gray-400 group-hover:text-gray-500">{notif.time_ago}</span>
+                          <p className="text-[11px] font-bold text-[#0D63F3] uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded">
+                            {notif.type}
+                          </p>
+                          <span className="text-[10px] text-gray-400 group-hover:text-gray-500">
+                            {notif.time_ago}
+                          </span>
                         </div>
                         <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed mt-1">
                           {notif.message}
@@ -168,17 +188,21 @@ export default function TopBar({
                     ))
                   ) : (
                     <div className="py-10 px-4 text-center flex flex-col items-center gap-3 text-gray-400">
-                        <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center">
-                           <Bell className="w-6 h-6 text-gray-300" />
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium text-gray-600">Tidak ada notifikasi</p>
-                          <p className="text-xs text-gray-400">Anda sudah melihat semua pembaruan.</p>
-                        </div>
+                      <div className="h-12 w-12 rounded-full bg-gray-50 flex items-center justify-center">
+                        <Bell className="w-6 h-6 text-gray-300" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-gray-600">
+                          Tidak ada notifikasi
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Anda sudah melihat semua pembaruan.
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
-                
+
                 <div className="p-3 bg-gray-50 border-t border-gray-100 text-center">
                   <Link
                     href="/notifications"

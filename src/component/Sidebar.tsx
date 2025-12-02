@@ -30,7 +30,11 @@ interface SidebarItem {
 export const navigationByRole: Record<SidebarRole, SidebarItem[]> = {
   groundcrew: [
     { href: "/groundcrew/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/groundcrew/validasi-barang", icon: ClipboardCheck, label: "Validasi Barang" },
+    {
+      href: "/groundcrew/validasi-barang",
+      icon: ClipboardCheck,
+      label: "Validasi Barang",
+    },
     { href: "/groundcrew/stok-barang", icon: Package, label: "Stok Barang" },
     { href: "/groundcrew/laporan", icon: FileText, label: "Laporan" },
   ],
@@ -43,7 +47,11 @@ export const navigationByRole: Record<SidebarRole, SidebarItem[]> = {
   ],
   supervisor: [
     { href: "/supervisor/dashboard", icon: Home, label: "Dashboard" },
-    { href: "/supervisor/manajemen-akun", icon: UserCog, label: "Manajemen Akun" },
+    {
+      href: "/supervisor/manajemen-akun",
+      icon: UserCog,
+      label: "Manajemen Akun",
+    },
     { href: "/supervisor/penerbangan", icon: Plane, label: "Penerbangan" },
     { href: "/supervisor/laporan", icon: FileText, label: "Laporan" },
   ],
@@ -84,7 +92,13 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
         <div className="flex flex-col gap-12 w-full">
           <header className="mb-2" role="banner">
             <div className="flex items-center justify-center mt-5">
-              <Image src="/logo.svg" alt="Skybase Logo" width={140} height={40} priority />
+              <Image
+                src="/logo.svg"
+                alt="Skybase Logo"
+                width={140}
+                height={40}
+                priority
+              />
             </div>
           </header>
 
@@ -100,12 +114,21 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
                     flex items-center gap-3 w-full px-4 py-3 rounded-xl
                     transition-all duration-200 ease-in-out
                     hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300 focus:ring-offset-2
-                    ${isActive ? "bg-blue-600 text-white shadow-md" : "text-gray-700 hover:text-blue-600"}
+                    ${
+                      isActive
+                        ? "bg-blue-600 text-white shadow-md"
+                        : "text-gray-700 hover:text-blue-600"
+                    }
                   `}
                     aria-current={isActive ? "page" : undefined}
                   >
-                    <Icon className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-                    <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                    <Icon
+                      className="w-5 h-5 flex-shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span className="font-medium text-sm whitespace-nowrap">
+                      {item.label}
+                    </span>
                   </button>
                 </li>
               );
@@ -126,7 +149,9 @@ export default function Sidebar({ role = "groundcrew" }: SidebarProps) {
           aria-label="Logout from application"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-          <span className="font-medium text-sm whitespace-nowrap">{isLoggingOut ? 'Logging out...' : 'Logout'}</span>
+          <span className="font-medium text-sm whitespace-nowrap">
+            {isLoggingOut ? "Logging out..." : "Logout"}
+          </span>
         </button>
       </nav>
     </GlassCard>

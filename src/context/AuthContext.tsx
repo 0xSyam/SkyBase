@@ -49,7 +49,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (isLoading || isLoggingOut) return; // Jangan lakukan apa-apa jika masih loading atau logout
 
     const isLoginPage = pathname === "/";
-    
+
     if (user) {
       // JIKA USER SUDAH LOGIN:
       // Redirect ke dashboard masing-masing jika berada di login page atau root
@@ -80,7 +80,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [pathname, isLoggingOut]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, isLoggingOut, refreshAuth, logout }}>
+    <AuthContext.Provider
+      value={{ user, isLoading, isLoggingOut, refreshAuth, logout }}
+    >
       {/* Logout overlay */}
       {isLoggingOut && (
         <div className="fixed inset-0 z-[99999] bg-white flex items-center justify-center">

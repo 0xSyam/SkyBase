@@ -46,29 +46,48 @@ export const useFlightReport = () => {
         // --- PERBAIKAN 1 & 2: Handling Data tanpa 'any' ---
         // TypeScript akan otomatis mengenali tipe setelah pengecekan 'in' operator atau Array.isArray
         if (Array.isArray(data)) {
-           // Jika data langsung array Flight[]
-           list = data;
-        } else if (data && typeof data === 'object') {
-           // Cek apakah properti 'flights' ada di dalam object data
-           if ('flights' in data && Array.isArray((data as { flights: Flight[] }).flights)) {
-               list = (data as { flights: Flight[] }).flights;
-           } 
-           // Cek apakah properti 'data' ada (format API alternatif)
-           else if ('data' in data && Array.isArray((data as { data: Flight[] }).data)) {
-               list = (data as { data: Flight[] }).data;
-           }
+          // Jika data langsung array Flight[]
+          list = data;
+        } else if (data && typeof data === "object") {
+          // Cek apakah properti 'flights' ada di dalam object data
+          if (
+            "flights" in data &&
+            Array.isArray((data as { flights: Flight[] }).flights)
+          ) {
+            list = (data as { flights: Flight[] }).flights;
+          }
+          // Cek apakah properti 'data' ada (format API alternatif)
+          else if (
+            "data" in data &&
+            Array.isArray((data as { data: Flight[] }).data)
+          ) {
+            list = (data as { data: Flight[] }).data;
+          }
         }
 
         if (!ignore) {
           const byDate = new Map<string, ReportSectionUI>();
-          
-          const fmtDate = (d: Date) => d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+
+          const fmtDate = (d: Date) =>
+            d.toLocaleDateString("id-ID", {
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
           const toTime = (s?: string | null) => {
             if (!s) return "--:-- WIB";
             try {
               const d = new Date(s);
-              return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " WIB";
-            } catch { return "--:-- WIB"; }
+              return (
+                d.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }) + " WIB"
+              );
+            } catch {
+              return "--:-- WIB";
+            }
           };
 
           for (const f of list) {
@@ -77,7 +96,7 @@ export const useFlightReport = () => {
             const dt = new Date(basis);
             const id = dt.toISOString().slice(0, 10);
             const title = fmtDate(dt);
-            
+
             const sec = byDate.get(id) ?? { id, title, schedules: [] };
 
             const schedule: ReportSchedule = {
@@ -89,13 +108,15 @@ export const useFlightReport = () => {
               aircraftId: f?.aircraft?.aircraft_id,
               depISO: f?.sched_dep ?? null,
               status: f?.status || "SCHEDULED",
-              delayReason: f?.status === "DELAY" ? "-" : undefined
+              delayReason: f?.status === "DELAY" ? "-" : undefined,
             };
-            
+
             sec.schedules.push(schedule);
             byDate.set(id, sec);
           }
-          const sorted = Array.from(byDate.values()).sort((a, b) => b.id.localeCompare(a.id));
+          const sorted = Array.from(byDate.values()).sort((a, b) =>
+            b.id.localeCompare(a.id)
+          );
           setSections(sorted);
         }
       } catch (e) {
@@ -103,7 +124,7 @@ export const useFlightReport = () => {
         // Cast ke unknown dulu, lalu cek properti status
         const error = e as ApiErrorWithStatus;
         if (error?.status === 401) {
-            router.replace("/");
+          router.replace("/");
         }
         if (!ignore) setSections([]);
       } finally {
@@ -111,7 +132,9 @@ export const useFlightReport = () => {
       }
     };
     load();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [router]);
 
   const filteredSections = useMemo(() => {
@@ -122,8 +145,14 @@ export const useFlightReport = () => {
     return sections.filter((sec) => {
       const secDate = new Date(sec.id);
       secDate.setHours(0, 0, 0, 0);
-      if (tStart) { tStart.setHours(0, 0, 0, 0); if (secDate < tStart) return false; }
-      if (tEnd) { tEnd.setHours(0, 0, 0, 0); if (secDate > tEnd) return false; }
+      if (tStart) {
+        tStart.setHours(0, 0, 0, 0);
+        if (secDate < tStart) return false;
+      }
+      if (tEnd) {
+        tEnd.setHours(0, 0, 0, 0);
+        if (secDate > tEnd) return false;
+      }
       return true;
     });
   }, [sections, startDate, endDate]);
@@ -134,6 +163,6 @@ export const useFlightReport = () => {
     endDate,
     setEndDate,
     filteredSections,
-    loading
+    loading,
   };
 };

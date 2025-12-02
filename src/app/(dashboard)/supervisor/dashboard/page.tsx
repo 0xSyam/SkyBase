@@ -39,7 +39,9 @@ const StatusBadge: React.FC<{ status?: string }> = ({ status }) => {
   }
 
   return (
-    <span className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+    <span
+      className={`px-2 py-1 rounded-full text-xs font-medium ${bgColor} ${textColor}`}
+    >
       {label}
     </span>
   );
@@ -62,7 +64,9 @@ export default function SupervisorDashboardPage() {
       }
     };
     run();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [router]);
 
   React.useEffect(() => {
@@ -74,10 +78,10 @@ export default function SupervisorDashboardPage() {
         const data = res?.data;
         let list: Flight[] = [];
         if (Array.isArray(data)) {
-          if (data.length > 0 && 'flight_id' in data[0]) {
+          if (data.length > 0 && "flight_id" in data[0]) {
             list = data as unknown as Flight[];
           }
-        } else if (data && 'flights' in data && Array.isArray(data.flights)) {
+        } else if (data && "flights" in data && Array.isArray(data.flights)) {
           list = data.flights;
         }
 
@@ -87,7 +91,12 @@ export default function SupervisorDashboardPage() {
             if (!d) return "--:-- WIB";
             try {
               const dt = new Date(d);
-              return dt.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" }) + " WIB";
+              return (
+                dt.toLocaleTimeString("id-ID", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }) + " WIB"
+              );
             } catch {
               return "--:-- WIB";
             }
@@ -112,9 +121,11 @@ export default function SupervisorDashboardPage() {
               const isToday = (date: Date | null) => {
                 if (!date) return false;
                 const now = new Date();
-                return date.getFullYear() === now.getFullYear() &&
+                return (
+                  date.getFullYear() === now.getFullYear() &&
                   date.getMonth() === now.getMonth() &&
-                  date.getDate() === now.getDate();
+                  date.getDate() === now.getDate()
+                );
               };
 
               return isToday(arrDate) || isToday(depDate);
@@ -139,7 +150,9 @@ export default function SupervisorDashboardPage() {
       }
     };
     loadFlights();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [router]);
 
   const today = React.useMemo(() => {
@@ -179,7 +192,9 @@ export default function SupervisorDashboardPage() {
           <div className="flex flex-col gap-2">
             <span className="text-sm text-gray-500">{today}</span>
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-semibold text-[#222222]">Jadwal Hari Ini</h2>
+              <h2 className="text-2xl font-semibold text-[#222222]">
+                Jadwal Hari Ini
+              </h2>
             </div>
           </div>
 
@@ -204,7 +219,10 @@ export default function SupervisorDashboardPage() {
                 </div>
               ) : (
                 scheduleData.map((item, idx) => (
-                  <div key={idx} className="px-4 py-4 sm:py-5 flex items-center text-center">
+                  <div
+                    key={idx}
+                    className="px-4 py-4 sm:py-5 flex items-center text-center"
+                  >
                     <div className="flex-1 text-sm text-[#111827]">
                       {item.jenis}
                     </div>
