@@ -99,6 +99,9 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
     type: "success" | "error";
     message: string;
   } | null>(null);
+  const [selectedInspectionItemId, setSelectedInspectionItemId] = useState<
+    number | string | null
+  >(null);
   const [error, setError] = useState<string | null>(null);
 
   // Mounted ref to prevent state updates after unmount
@@ -128,63 +131,78 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
         setInspectionId((resData as { inspection_id: number }).inspection_id);
       }
 
-      const items =
+      // New API response structure with separate doc_items and ase_items
+      const docItemsRaw =
         resData &&
         typeof resData === "object" &&
-        "items" in resData &&
-        Array.isArray((resData as { items: unknown[] }).items)
-          ? (resData as { items: unknown[] }).items
+        "doc_items" in resData &&
+        Array.isArray((resData as { doc_items: unknown[] }).doc_items)
+          ? (resData as { doc_items: unknown[] }).doc_items
           : [];
 
-      const docs: DocumentRow[] = [];
-      const ases: DocumentRow[] = [];
+      const aseItemsRaw =
+        resData &&
+        typeof resData === "object" &&
+        "ase_items" in resData &&
+        Array.isArray((resData as { ase_items: unknown[] }).ase_items)
+          ? (resData as { ase_items: unknown[] }).ase_items
+          : [];
 
-      items.forEach((itemUnknown) => {
+      const docs: DocumentRow[] = docItemsRaw.map((itemUnknown) => {
         const it = itemUnknown as {
-          category?: string;
-          item?: { category?: string; name?: string };
-          serial_number?: string;
+          inspection_item_id?: number;
           nama_dokumen?: string;
-          id?: string | number;
-          inspection_item_id?: string | number;
-          is_checked?: boolean;
-          name?: string;
-          item_name?: string;
-          nomor?: string;
-          doc_number?: string;
+          nomor?: string | null;
           revisi?: string;
-          revision_no?: string;
           efektif?: string;
-          jumlah?: string | number;
+          jumlah?: number;
+          is_checked?: boolean;
+          needs_replacement?: boolean;
+          checked_at?: string | null;
         };
 
-        const rawCategory = it.category || it.item?.category;
-        const isASE =
-          rawCategory === "ASE" ||
-          (!rawCategory &&
-            (it.serial_number || (it.nama_dokumen || "").includes("KIT")));
-
-        const row: DocumentRow = {
-          id: it?.id || it?.inspection_item_id,
-          inspection_item_id: it?.inspection_item_id || it?.id,
-          is_checked: it?.is_checked ?? false,
-          name:
-            it?.nama_dokumen ||
-            it?.name ||
-            it?.item_name ||
-            it?.item?.name ||
-            "-",
-          number: it?.nomor || it?.doc_number || it?.serial_number || "-",
-          revision: it?.revisi || it?.revision_no || "-",
-          effective: it?.efektif || "-",
+        return {
+          id: it.inspection_item_id,
+          inspection_item_id: it.inspection_item_id,
+          is_checked: it.is_checked ?? false,
+          name: it.nama_dokumen || "-",
+          number: it.nomor || "-",
+          revision: it.revisi || "-",
+          effective: it.efektif || "-",
           effectiveStatus: undefined,
-          quantity: Number(it?.jumlah ?? 1) || 1,
-          status: "approved",
-          category: isASE ? "ASE" : "DOC",
+          quantity: Number(it.jumlah ?? 1) || 1,
+          status: "approved" as DocumentStatus,
+          category: "DOC",
+        };
+      });
+
+      // Parse ASE items
+      const ases: DocumentRow[] = aseItemsRaw.map((itemUnknown) => {
+        const it = itemUnknown as {
+          inspection_item_id?: number;
+          nama_ase?: string;
+          serial_number?: string;
+          seal_number?: string;
+          expires_at?: string;
+          condition?: string;
+          is_checked?: boolean;
+          needs_replacement?: boolean;
+          checked_at?: string | null;
         };
 
-        if (isASE) ases.push(row);
-        else docs.push(row);
+        return {
+          id: it.inspection_item_id,
+          inspection_item_id: it.inspection_item_id,
+          is_checked: it.is_checked ?? false,
+          name: it.nama_ase || "-",
+          number: it.serial_number || it.seal_number || "-",
+          revision: "-", // ASE doesn't have revision
+          effective: it.expires_at || "-",
+          effectiveStatus: undefined,
+          quantity: 1, // ASE items are always qty 1
+          status: "approved" as DocumentStatus,
+          category: "ASE",
+        };
       });
 
       setDocItems(docs);
@@ -202,9 +220,14 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
 
   const [selectedItemName, setSelectedItemName] = useState<string | null>(null);
 
-  const openTransferModal = async (type: "DOC" | "ASE", itemName?: string) => {
+  const openTransferModal = async (
+    type: "DOC" | "ASE",
+    itemName?: string,
+    inspectionItemId?: number | string
+  ) => {
     setTransferType(type);
     setSelectedItemName(itemName || null);
+    setSelectedInspectionItemId(inspectionItemId || null);
     setIsTransferOpen(true);
     setLoadingStock(true);
     setStockList([]);
@@ -267,18 +290,31 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
   };
 
   const handleTransfer = async (item: StockTransferItem) => {
-    if (!aircraftId || isNaN(aircraftId)) return;
+    if (!selectedInspectionItemId) {
+      setNotification({
+        type: "error",
+        message: "Inspection item ID tidak valid",
+      });
+      return;
+    }
     setTransferingId(item.id);
 
     const qtyToTransfer = transferQuantities[item.id] || 1;
 
     try {
-      await skybase.inventory.transferToAircraft({
-        type: transferType === "DOC" ? "doc" : "ase",
-        inventory_id: item.id,
-        aircraft_id: aircraftId,
-        quantity: transferType === "DOC" ? qtyToTransfer : undefined,
-      });
+      // Use replaceItem API from Postman collection
+      if (transferType === "DOC") {
+        await skybase.inspections.replaceItem(selectedInspectionItemId, {
+          gc_doc_id: item.id,
+          quantity: qtyToTransfer,
+          notes: `Replace item dengan ${item.name} dari GC inventory`,
+        });
+      } else {
+        await skybase.inspections.replaceItem(selectedInspectionItemId, {
+          gc_ase_id: item.id,
+          notes: `Replace item dengan ${item.name} dari GC inventory`,
+        });
+      }
 
       // Check if still mounted before updating state
       if (!mountedRef.current) return;
@@ -418,11 +454,12 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
             onClick={() =>
               openTransferModal(
                 row.category === "ASE" ? "ASE" : "DOC",
-                row.name
+                row.name,
+                row.inspection_item_id
               )
             }
             className="grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] transition active:scale-95"
-            aria-label="Transfer item"
+            aria-label="Replace item"
           >
             <ArrowLeftRight className="h-4 w-4" strokeWidth={2.5} />
           </button>

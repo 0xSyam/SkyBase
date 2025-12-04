@@ -220,6 +220,31 @@ export type InspectionSummary = {
   avg_inspection_time: number | null;
 };
 
+export type ValidationDocItem = {
+  inspection_item_id: number;
+  nama_dokumen: string;
+  nomor: string | null;
+  revisi: string;
+  efektif: string;
+  jumlah: number;
+  is_checked: boolean;
+  needs_replacement: boolean;
+  checked_at: string | null;
+};
+
+export type ValidationAseItem = {
+  inspection_item_id: number;
+  nama_ase: string;
+  serial_number: string;
+  seal_number: string;
+  expires_at: string;
+  condition: string;
+  is_checked: boolean;
+  needs_replacement: boolean;
+  checked_at: string | null;
+};
+
+// Legacy type for backward compatibility
 export type ValidationItem = {
   inspection_item_id: number | string;
   item_id: number;
@@ -236,22 +261,25 @@ export type ValidationItem = {
 
 export type AircraftValidation = {
   inspection_id: number;
-  aircraft: {
-    aircraft_id: string;
-    jenis_pesawat: string;
-    kode_pesawat: string;
-  };
   flight: {
     flight_id: number;
-    route_to: string;
+    flight_no: string | null;
+    scheduled_time: string;
+    status: string;
   };
+  aircraft: {
+    aircraft_id: number;
+    registration_code: string;
+    type: string;
+  };
+  inspection_status: string;
+  doc_items: ValidationDocItem[];
+  ase_items: ValidationAseItem[];
   progress: {
     total_items: number;
-    checked_items: string | number;
-    completion_percentage: number;
-    items_need_replacement: string | number;
+    checked_items: number;
+    needs_replacement: number;
   };
-  items: ValidationItem[] | unknown;
 };
 
 // Notification Types

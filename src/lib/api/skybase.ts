@@ -234,6 +234,12 @@ export const authApi = {
       }
     );
   },
+  async toggleUserStatus(userId: string | number) {
+    return request<ApiResponse<{ message: string; is_active: boolean }>>(
+      `/users/${userId}/toggle-status`,
+      { method: "PUT" }
+    );
+  },
 };
 
 // Dashboards
@@ -278,6 +284,18 @@ export const aircraftApi = {
   list() {
     return request<ApiResponse<Aircraft[]>>("/aircraft");
   },
+  create(data: {
+    registration_number: string;
+    model: string;
+    manufacturer: string;
+    year_of_manufacture: number;
+    status?: string;
+  }) {
+    return request<ApiResponse<Aircraft>>("/aircraft", {
+      method: "POST",
+      body: data,
+    });
+  },
 };
 
 // Items
@@ -320,6 +338,12 @@ export const inventoryApi = {
   groundcrewAll() {
     return request<ApiResponse<GroundcrewInventoryResponse>>(
       "/inventory/groundcrew"
+    );
+  },
+  // Warehouse can view all groundcrew inventory
+  allGroundcrewInventory() {
+    return request<ApiResponse<GroundcrewInventoryResponse>>(
+      "/inventory/all-groundcrew"
     );
   },
   groundcrewDoc() {
@@ -440,9 +464,9 @@ export const inspectionApi = {
   myInspections() {
     return request<ApiListResponse<Inspection>>("/inspections/my-inspections");
   },
-  aircraftValidation(aircraftId: number | string) {
+  aircraftValidation(flightId: number | string) {
     return request<ApiResponse<AircraftValidation>>(
-      `/inspections/aircraft/${aircraftId}/validation`
+      `/inspections/flight/${flightId}/`
     );
   },
 
@@ -454,11 +478,13 @@ export const inspectionApi = {
   },
   replaceItem(
     inspectionItemId: number | string,
-    data: { replacement_item_id: number; notes?: string }
+    data:
+      | { gc_doc_id: number; quantity: number; notes?: string } // For DOC items
+      | { gc_ase_id: number; notes?: string } // For ASE items
   ) {
     return request<ApiResponse<unknown>>(
       `/inspections/items/${inspectionItemId}/replace`,
-      { method: "POST", body: data }
+      { method: "PUT", body: data }
     );
   },
   submit(

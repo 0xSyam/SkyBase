@@ -951,6 +951,99 @@
                     }
                 },
                 {
+                    "name": "Replace Item - DOC (Different Revision)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"gc_doc_id\": 13,\n  \"quantity\": 1,\n  \"notes\": \"Replace BRAILLE dengan revision baru dari GC inventory\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/items/{{inspection_item_id}}/replace",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "items",
+                                "{{inspection_item_id}}",
+                                "replace"
+                            ]
+                        },
+                        "description": "Transfer DOC item from GC inventory to aircraft.\n\n**Use Case**: Replace aircraft DOC with DIFFERENT revision number\n\n**Behavior**: \n- Replaces ALL data (doc_number, revision_no, effective_date)\n- Sets quantity to transferred amount (NOT added)\n- Deducts from GC inventory\n\n**Example**:\n- Before: Aircraft has BRAILLE BRL-PK-GFD Rev-5 qty 5\n- Transfer: gc_doc_id=13 (DOC-002 Rev-B) qty 1\n- After: Aircraft has BRAILLE DOC-002 Rev-B qty 1 (REPLACED)\n- GC: quantity reduced by 1"
+                    }
+                },
+                {
+                    "name": "Replace Item - DOC (Same Revision)",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"gc_doc_id\": 13,\n  \"quantity\": 1,\n  \"notes\": \"Add BRAILLE dengan revision SAMA (qty akan bertambah)\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/items/{{inspection_item_id}}/replace",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "items",
+                                "{{inspection_item_id}}",
+                                "replace"
+                            ]
+                        },
+                        "description": "Transfer DOC item from GC inventory to aircraft.\n\n**Use Case**: Add DOC with SAME revision number\n\n**Behavior**: \n- ONLY adds quantity (doc_number, revision_no stay the same)\n- Does NOT replace other data\n- Deducts from GC inventory\n\n**Example**:\n- Before: Aircraft has BRAILLE DOC-002 Rev-B qty 1\n- Transfer: gc_doc_id=13 (DOC-002 Rev-B) qty 1\n- After: Aircraft has BRAILLE DOC-002 Rev-B qty 2 (ADDED)\n- GC: quantity reduced by 1"
+                    }
+                },
+                {
+                    "name": "Replace Item - ASE",
+                    "request": {
+                        "method": "PUT",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{auth_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"gc_ase_id\": 5,\n  \"notes\": \"Transfer YELLOW ENVELOPE dari GC inventory ke aircraft\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{BASE_URL}}/inspections/items/{{inspection_item_id}}/replace",
+                            "host": ["{{BASE_URL}}"],
+                            "path": [
+                                "inspections",
+                                "items",
+                                "{{inspection_item_id}}",
+                                "replace"
+                            ]
+                        },
+                        "description": "Transfer ASE item from GC inventory to aircraft.\n\n**Use Case**: Transfer ASE with different serial number from GC inventory\n\n**Behavior**: \n- ALWAYS creates new record in aircraft (seal_number is unique per item)\n- Old ASE item remains in aircraft (both coexist)\n- Completely DELETES from GC inventory (ASE transfers fully)\n- No quantity field (ASE items are always qty 1)\n\n**Important**: ASE item MUST exist in GC inventory first (not manual input)\n\n**Example**:\n- Before: Aircraft has YELLOW ENVELOPE YEL-PK-GFD-7951\n- GC has: gc_ase_id=5 (YE-2025-001)\n- Transfer: gc_ase_id=5 from GC to aircraft\n- After: Aircraft has 2 YELLOW ENVELOPE items:\n  * YEL-PK-GFD-7951 (old, still exists)\n  * YE-2025-001 (new, transferred from GC)\n- GC: item deleted completely"
+                    }
+                },
+                {
                     "name": "Submit/Complete Inspection",
                     "request": {
                         "method": "PUT",
