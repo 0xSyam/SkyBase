@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
+import TableSkeleton from "@/component/TableSkeleton";
 import skybase from "@/lib/api/skybase";
 import { Filter, Plus } from "lucide-react";
 import {
@@ -1280,9 +1281,7 @@ const StokBarangPage = () => {
           {loading &&
             filteredDocGroups.length === 0 &&
             filteredAseGroups.length === 0 && (
-              <div className="text-center text-sm text-gray-500">
-                Memuat stok...
-              </div>
+              <TableSkeleton columns={3} rows={5} />
             )}
 
           {filteredDocGroups.length > 0 && (

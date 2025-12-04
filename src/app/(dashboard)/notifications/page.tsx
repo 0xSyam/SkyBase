@@ -6,6 +6,7 @@ import { Notification, NotificationStats } from "@/types/api";
 import PageHeader from "@/component/PageHeader";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import TableSkeleton, { CardSkeleton } from "@/component/TableSkeleton";
 import { useAuth } from "@/context/AuthContext";
 import { type SidebarRole } from "@/component/Sidebar";
 import {
@@ -131,10 +132,31 @@ export default function NotificationsPage() {
     fetchData();
   }, []);
 
+  // Get allowed notification types based on role
+  const getAllowedTypesForRole = (): string[] => {
+    switch (sidebarRole) {
+      case "supervisor":
+        return ["flight"];
+      case "groundcrew":
+        return ["flight", "expiry", "request"];
+      case "warehouse":
+        return ["request", "expiry"];
+      default:
+        return ["flight", "expiry", "request"];
+    }
+  };
+
+  const allowedTypes = getAllowedTypesForRole();
+
+  // First filter by role, then by selected filter
+  const roleFilteredNotifications = notifications.filter((n) =>
+    allowedTypes.includes(n.type)
+  );
+
   const filteredNotifications =
     filter === "all"
-      ? notifications
-      : notifications.filter((n) => n.type === filter);
+      ? roleFilteredNotifications
+      : roleFilteredNotifications.filter((n) => n.type === filter);
 
   // Filter buttons based on role
   // sv (supervisor): penerbangan
@@ -189,7 +211,13 @@ export default function NotificationsPage() {
         />
 
         {/* Stats Cards */}
-        {stats && (
+        {loading ? (
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <CardSkeleton />
+            <CardSkeleton />
+            <CardSkeleton />
+          </div>
+        ) : stats && (
           <div className="grid grid-cols-3 gap-4 mb-6">
             <GlassCard className="p-4">
               <div className="text-sm text-gray-500">Total</div>
@@ -228,7 +256,7 @@ export default function NotificationsPage() {
               {btn.label}
               {filter === btn.value && btn.value !== "all" && (
                 <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
-                  {notifications.filter((n) => n.type === btn.value).length}
+                  {roleFilteredNotifications.filter((n) => n.type === btn.value).length}
                 </span>
               )}
             </button>
@@ -238,8 +266,17 @@ export default function NotificationsPage() {
         {/* Notifications List */}
         <GlassCard className="overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center text-gray-500">
-              Memuat notifikasi...
+            <div className="divide-y divide-gray-100">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-start gap-4 p-4">
+                  <div className="h-11 w-11 rounded-xl bg-gray-200 animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 w-20 rounded bg-gray-200 animate-pulse" />
+                    <div className="h-4 w-full rounded bg-gray-200 animate-pulse" />
+                    <div className="h-3 w-16 rounded bg-gray-200 animate-pulse" />
+                  </div>
+                </div>
+              ))}
             </div>
           ) : filteredNotifications.length > 0 ? (
             <div className="divide-y divide-gray-100">

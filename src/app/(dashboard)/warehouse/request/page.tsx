@@ -7,6 +7,7 @@ import { Check, X, ChevronDown, ChevronUp } from "lucide-react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
+import TableSkeleton from "@/component/TableSkeleton";
 import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 
@@ -402,13 +403,17 @@ export default function RequestPage() {
         />
 
         {loading && (
-          <div className="text-center py-12 text-[#64748B]">
-            Loading requests...
+          <div className="space-y-6">
+            <TableSkeleton rows={3} columns={5} />
+            <TableSkeleton rows={3} columns={5} />
           </div>
         )}
 
         {error && (
-          <div className="text-center py-12 text-[#F04438]">Error: {error}</div>
+          <div className="text-center py-12 text-[#F04438]">
+            <p className="font-medium">Gagal memuat data</p>
+            <p className="text-sm mt-1">{error}</p>
+          </div>
         )}
 
         {!loading && !error && (

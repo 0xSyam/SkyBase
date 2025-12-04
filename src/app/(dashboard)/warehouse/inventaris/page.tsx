@@ -3,30 +3,18 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
 import GlassDataTable, { ColumnDef } from "@/component/GlassDataTable";
+import TableSkeleton from "@/component/TableSkeleton";
 import { Filter } from "lucide-react"; 
 import skybase from "@/lib/api/skybase";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { formatDate } from "@/lib/utils";
 
 import {
 	GcDocInventory,
 	GcAseInventory,
 } from "@/types/api";
-
-const formatDate = (dateString: string | null | undefined) => {
-	if (!dateString) return "-";
-	try {
-		const date = new Date(dateString);
-		return new Intl.DateTimeFormat("id-ID", {
-			day: "2-digit",
-			month: "2-digit",
-			year: "numeric",
-		}).format(date);
-	} catch {
-		return dateString;
-	}
-};
 
 interface StockItem {
 	id: number | string;
@@ -477,17 +465,23 @@ const WarehouseInventarisPage = () => {
 
         <section className="w-full max-w-[1076px]">
 
-          <div className="flex items-center justify-center min-h-[400px]">
+          <header className="mb-6 flex flex-col gap-4">
 
             <div className="text-center">
 
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#0D63F3] border-r-transparent"></div>
+              <h1 className="text-2xl md:text-3xl font-semibold text-gray-900">Inventaris</h1>
 
-              <p className="mt-4 text-gray-600">Memuat data inventaris...</p>
+              <p className="mt-2 text-gray-600 max-w-prose mx-auto">
+
+                Terima laporan dan validasi request item dari ground crew
+
+              </p>
 
             </div>
 
-          </div>
+          </header>
+
+          <TableSkeleton columns={4} rows={8} />
 
         </section>
 

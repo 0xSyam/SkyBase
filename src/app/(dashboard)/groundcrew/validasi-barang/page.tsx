@@ -5,6 +5,7 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
 import GlassCard from "@/component/Glasscard";
+import TableSkeleton from "@/component/TableSkeleton";
 import { ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import skybase from "@/lib/api/skybase";
@@ -21,7 +22,7 @@ interface FlightSchedule {
 const ValidasiBarangPage = () => {
   const router = useRouter();
   const [flights, setFlights] = React.useState<FlightSchedule[]>([]);
-  const [, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let ignore = false;
@@ -208,63 +209,69 @@ const ValidasiBarangPage = () => {
           className="mt-2 md:mt-0"
         />
 
-        <div className="md:hidden space-y-4">
-          {[flights].map((group, gi) => (
-            <GlassCard key={gi} className="p-0">
-              <div className="flex h-[56px] px-4 items-center justify-between bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
-                <span>{group[0]?.aircraft ?? "Pesawat"}</span>
-                <span>Action</span>
-              </div>
-              <div className="divide-y divide-[#E9EEF3]">
-                {group.map((row, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between px-4 py-4"
-                  >
-                    <div className="pr-3">
-                      <div className="text-xs text-[#444] mb-1">
-                        {row.arrival} - {row.takeOff}
-                      </div>
-                      <div className="text-xl font-semibold tracking-tight text-[#222]">
-                        {row.registration}
-                      </div>
-                      <div className="text-sm text-[#444] mt-1">
-                        Destination :{" "}
-                        <span className="font-semibold text-[#222]">
-                          {row.destination}
-                        </span>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() =>
-                        router.push(
-                          `/groundcrew/validasi-barang/${encodeURIComponent(
-                            row.registration
-                          )}?aircraft=${encodeURIComponent(row.aircraft)}${
-                            row.flightId ? `&flightId=${row.flightId}` : ""
-                          }`
-                        )
-                      }
-                      className="h-10 w-10 rounded-xl bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
-                      aria-label={`Lihat detail ${row.registration}`}
-                      type="button"
-                    >
-                      <span className="text-lg leading-none -mt-[1px]">›</span>
-                    </button>
+        {loading ? (
+          <TableSkeleton columns={4} rows={5} />
+        ) : (
+          <>
+            <div className="md:hidden space-y-4">
+              {[flights].map((group, gi) => (
+                <GlassCard key={gi} className="p-0">
+                  <div className="flex h-[56px] px-4 items-center justify-between bg-[#F4F8FB] text-sm font-semibold rounded-t-xl text-[#222222]">
+                    <span>{group[0]?.aircraft ?? "Pesawat"}</span>
+                    <span>Action</span>
                   </div>
-                ))}
-              </div>
-            </GlassCard>
-          ))}
-        </div>
+                  <div className="divide-y divide-[#E9EEF3]">
+                    {group.map((row, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between px-4 py-4"
+                      >
+                        <div className="pr-3">
+                          <div className="text-xs text-[#444] mb-1">
+                            {row.arrival} - {row.takeOff}
+                          </div>
+                          <div className="text-xl font-semibold tracking-tight text-[#222]">
+                            {row.registration}
+                          </div>
+                          <div className="text-sm text-[#444] mt-1">
+                            Destination :{" "}
+                            <span className="font-semibold text-[#222]">
+                              {row.destination}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() =>
+                            router.push(
+                              `/groundcrew/validasi-barang/${encodeURIComponent(
+                                row.registration
+                              )}?aircraft=${encodeURIComponent(row.aircraft)}${
+                                row.flightId ? `&flightId=${row.flightId}` : ""
+                              }`
+                            )
+                          }
+                          className="h-10 w-10 rounded-xl bg-[#0D63F3] text-white grid place-items-center shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition"
+                          aria-label={`Lihat detail ${row.registration}`}
+                          type="button"
+                        >
+                          <span className="text-lg leading-none -mt-[1px]">›</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </GlassCard>
+              ))}
+            </div>
 
-        <div className="hidden md:block space-y-4">
-          <GlassDataTable
-            columns={columns}
-            data={flights}
-            emptyMessage="Tidak ada jadwal pesawat"
-          />
-        </div>
+            <div className="hidden md:block space-y-4">
+              <GlassDataTable
+                columns={columns}
+                data={flights}
+                emptyMessage="Tidak ada jadwal pesawat"
+              />
+            </div>
+          </>
+        )}
       </section>
     </PageLayout>
   );

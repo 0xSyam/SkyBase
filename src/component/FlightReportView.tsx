@@ -7,6 +7,7 @@ import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassCard from "@/component/Glasscard";
 import Notification from "@/component/Notification";
+import TableSkeleton from "@/component/TableSkeleton";
 import skybase from "@/lib/api/skybase";
 import { useFlightReport, type ReportSectionUI, type ReportSchedule } from "@/hooks/useFlightReport";
 import { 
@@ -230,7 +231,7 @@ export default function FlightReportView({ role }: FlightReportViewProps) {
 
         <div className="space-y-8">
           {(loading && filteredSections.length === 0) && (
-            <div className="text-center text-sm text-gray-500">Memuat laporan...</div>
+            <TableSkeleton columns={3} rows={5} />
           )}
           {!loading && filteredSections.length === 0 && (
              <div className="text-center text-sm text-gray-500">Tidak ada data laporan.</div>

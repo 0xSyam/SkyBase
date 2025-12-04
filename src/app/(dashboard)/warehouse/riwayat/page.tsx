@@ -4,6 +4,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import PageLayout from "@/component/PageLayout";
 import PageHeader from "@/component/PageHeader";
 import GlassDataTable, { type ColumnDef } from "@/component/GlassDataTable";
+import TableSkeleton from "@/component/TableSkeleton";
 import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 // Import Filter Components
@@ -320,7 +321,7 @@ export default function RiwayatPage() {
 
         <div className="space-y-6">
           {loading ? (
-            <div className="text-center py-8 text-[#0D63F3]">Memuat data...</div>
+            <TableSkeleton columns={5} rows={5} />
           ) : error ? (
             <div className="text-center py-8 text-red-600">{error}</div>
           ) : (
