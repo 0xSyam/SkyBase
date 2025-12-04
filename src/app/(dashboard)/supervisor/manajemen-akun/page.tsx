@@ -23,13 +23,11 @@ interface AccountRow {
 
 interface FilterConfig {
   role: "all" | "supervisor" | "warehouse" | "groundcrew";
-  status: "all" | "active" | "inactive";
   sort: "name_asc" | "name_desc" | "newest" | "oldest";
 }
 
 const initialFilterConfig: FilterConfig = {
   role: "all",
-  status: "all",
   sort: "name_asc",
 };
 
@@ -159,13 +157,7 @@ export default function SupervisorManajemenAkunPage() {
       processed = processed.filter((a) => a.role.toLowerCase() === filterConfig.role);
     }
 
-    // 3. Filter Status
-    if (filterConfig.status !== 'all') {
-      const isActive = filterConfig.status === 'active';
-      processed = processed.filter((a) => Boolean(a.is_active) === isActive);
-    }
-
-    // 4. Sort
+    // 3. Sort
     processed.sort((a, b) => {
       switch (filterConfig.sort) {
         case 'name_asc': return a.username.localeCompare(b.username);
@@ -233,21 +225,6 @@ export default function SupervisorManajemenAkunPage() {
                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.role === r ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
                          >
                            {r === 'all' ? 'Semua' : r.charAt(0).toUpperCase() + r.slice(1)}
-                         </button>
-                      ))}
-                   </div>
-                </div>
-
-                <div className="space-y-3">
-                   <Label className="text-xs font-medium text-gray-500">Status</Label>
-                   <div className="flex gap-2">
-                      {['all', 'active', 'inactive'].map((s) => (
-                         <button
-                           key={s}
-                           onClick={() => setFilterConfig(p => ({ ...p, status: s as "all" | "active" | "inactive" }))}
-                           className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.status === s ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-                         >
-                           {s === 'all' ? 'Semua' : s === 'active' ? 'Aktif' : 'Non-Aktif'}
                          </button>
                       ))}
                    </div>

@@ -81,7 +81,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<"delay" | "ready" | null>(null);
 
   const [docItems, setDocItems] = useState<DocumentRow[]>([]);
   const [aseItems, setAseItems] = useState<DocumentRow[]>([]);
@@ -353,7 +353,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
     }
 
     try {
-      setSubmitting(true);
+      setSubmitting(status);
 
       const payload = {
         status: status === "ready" ? "READY" : "DELAY",
@@ -380,7 +380,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
     } catch (err) {
       console.error("Submit error:", err);
       setNotification({ type: "error", message: "Gagal submit inspection" });
-      setSubmitting(false);
+      setSubmitting(null);
     }
   };
 
@@ -562,7 +562,7 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
             type="button"
             className="inline-flex items-center gap-2 rounded-lg bg-[#0D63F3] px-6 py-3 text-sm font-semibold text-white shadow-[0_10px_20px_rgba(13,99,243,0.25)] transition hover:bg-[#0B53D0] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => setIsDialogOpen(true)}
-            disabled={submitting || loading}
+            disabled={submitting !== null || loading}
           >
             Selesai & Submit
             <ArrowRight className="h-4 w-4" strokeWidth={2.5} />
@@ -590,10 +590,10 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
               <div className="space-y-3">
                 <button
                   onClick={() => handleDialogSelection("delay")}
-                  disabled={submitting}
-                  className="w-full h-14 rounded-2xl border-2 border-red-400 bg-red-50 text-red-600 font-semibold flex items-center justify-center gap-2 hover:bg-red-100 active:scale-95 transition-all"
+                  disabled={submitting !== null}
+                  className="w-full h-14 rounded-2xl border-2 border-red-400 bg-red-50 text-red-600 font-semibold flex items-center justify-center gap-2 hover:bg-red-100 active:scale-95 transition-all disabled:opacity-60"
                 >
-                  {submitting ? (
+                  {submitting === "delay" ? (
                     <Loader2 className="animate-spin h-5 w-5" />
                   ) : (
                     <AlertCircle className="h-5 w-5" />
@@ -602,10 +602,10 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
                 </button>
                 <button
                   onClick={() => handleDialogSelection("ready")}
-                  disabled={submitting}
-                  className="w-full h-14 rounded-2xl bg-[#0D63F3] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#0B53D0] active:scale-95 transition-all"
+                  disabled={submitting !== null}
+                  className="w-full h-14 rounded-2xl bg-[#0D63F3] text-white font-semibold flex items-center justify-center gap-2 hover:bg-[#0B53D0] active:scale-95 transition-all disabled:opacity-60"
                 >
-                  {submitting ? (
+                  {submitting === "ready" ? (
                     <Loader2 className="animate-spin h-5 w-5" />
                   ) : (
                     <Check className="h-5 w-5" />
@@ -615,7 +615,8 @@ const DetailValidasiBarangPage: React.FC<DetailPageProps> = ({
               </div>
               <button
                 onClick={() => setIsDialogOpen(false)}
-                className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700"
+                disabled={submitting !== null}
+                className="mt-4 w-full text-center text-sm text-gray-500 hover:text-gray-700 disabled:opacity-50"
               >
                 Batal
               </button>
