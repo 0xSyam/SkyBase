@@ -217,27 +217,29 @@ export default function NotificationsPage() {
             <CardSkeleton />
             <CardSkeleton />
           </div>
-        ) : stats && (
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <GlassCard className="p-4">
-              <div className="text-sm text-gray-500">Total</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">
-                {stats.total}
-              </div>
-            </GlassCard>
-            <GlassCard className="p-4">
-              <div className="text-sm text-gray-500">Hari Ini</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">
-                {stats.today}
-              </div>
-            </GlassCard>
-            <GlassCard className="p-4">
-              <div className="text-sm text-gray-500">Minggu Ini</div>
-              <div className="text-2xl font-bold text-[#0E1D3D]">
-                {stats.this_week}
-              </div>
-            </GlassCard>
-          </div>
+        ) : (
+          stats && (
+            <div className="grid grid-cols-3 gap-4 mb-6">
+              <GlassCard className="p-4">
+                <div className="text-sm text-gray-500">Total</div>
+                <div className="text-2xl font-bold text-[#0E1D3D]">
+                  {stats.total}
+                </div>
+              </GlassCard>
+              <GlassCard className="p-4">
+                <div className="text-sm text-gray-500">Hari Ini</div>
+                <div className="text-2xl font-bold text-[#0E1D3D]">
+                  {stats.today}
+                </div>
+              </GlassCard>
+              <GlassCard className="p-4">
+                <div className="text-sm text-gray-500">Minggu Ini</div>
+                <div className="text-2xl font-bold text-[#0E1D3D]">
+                  {stats.this_week}
+                </div>
+              </GlassCard>
+            </div>
+          )
         )}
 
         {/* Filter Buttons */}
@@ -256,7 +258,11 @@ export default function NotificationsPage() {
               {btn.label}
               {filter === btn.value && btn.value !== "all" && (
                 <span className="ml-1 px-1.5 py-0.5 bg-white/20 rounded-full text-xs">
-                  {roleFilteredNotifications.filter((n) => n.type === btn.value).length}
+                  {
+                    roleFilteredNotifications.filter(
+                      (n) => n.type === btn.value
+                    ).length
+                  }
                 </span>
               )}
             </button>

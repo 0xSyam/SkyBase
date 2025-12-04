@@ -9,11 +9,15 @@ import { skybase } from "@/lib/api/skybase";
 import type { WarehouseRequest as ApiWarehouseRequest } from "@/types/api";
 // Import Filter Components
 import { Filter } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
-type WarehouseRequest = Omit<ApiWarehouseRequest, 'items'> & {
+type WarehouseRequest = Omit<ApiWarehouseRequest, "items"> & {
   items?: Array<{
     item_id: number;
     qty: number;
@@ -55,9 +59,10 @@ export default function RiwayatPage() {
   const [requests, setRequests] = useState<WarehouseRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter State
-  const [filterConfig, setFilterConfig] = useState<FilterConfig>(initialFilterConfig);
+  const [filterConfig, setFilterConfig] =
+    useState<FilterConfig>(initialFilterConfig);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   useEffect(() => {
@@ -70,14 +75,21 @@ export default function RiwayatPage() {
         let requestsData: WarehouseRequest[] = [];
         if (Array.isArray(response.data)) {
           requestsData = response.data;
-        } else if (response.data && typeof response.data === 'object' && 'items' in response.data) {
-          requestsData = (response.data as { items?: WarehouseRequest[] }).items || [];
+        } else if (
+          response.data &&
+          typeof response.data === "object" &&
+          "items" in response.data
+        ) {
+          requestsData =
+            (response.data as { items?: WarehouseRequest[] }).items || [];
         }
 
         setRequests(requestsData);
       } catch (err) {
         console.error("Error fetching warehouse requests:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch requests");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch requests"
+        );
       } finally {
         setLoading(false);
       }
@@ -90,20 +102,21 @@ export default function RiwayatPage() {
   const transformedRequests = useMemo(() => {
     return requests.map((req): HistoryRow => {
       const date = new Date(req.created_at);
-      const tanggal = date.toLocaleDateString('id-ID', {
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
+      const tanggal = date.toLocaleDateString("id-ID", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
       });
-      const jam = date.toLocaleTimeString('id-ID', {
-        hour: '2-digit',
-        minute: '2-digit',
-        timeZoneName: 'short'
+      const jam = date.toLocaleTimeString("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        timeZoneName: "short",
       });
 
       const firstItem = req.items?.[0];
-      const jenis = firstItem?.item?.name || req.flight?.route_to || 'Unknown';
-      const jumlah = req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
+      const jenis = firstItem?.item?.name || req.flight?.route_to || "Unknown";
+      const jumlah =
+        req.items?.reduce((sum, item) => sum + (item.qty || 0), 0) || 0;
       const categoryType = firstItem?.item?.category || "UNKNOWN";
 
       return {
@@ -115,7 +128,7 @@ export default function RiwayatPage() {
         status: req.status,
         rawData: req,
         categoryType,
-        rawDate: date
+        rawDate: date,
       };
     });
   }, [requests]);
@@ -128,7 +141,7 @@ export default function RiwayatPage() {
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
       data = data.filter(
-        item =>
+        (item) =>
           item.jenis.toLowerCase().includes(search) ||
           item.tanggal.toLowerCase().includes(search)
       );
@@ -136,23 +149,28 @@ export default function RiwayatPage() {
 
     // Filter Status
     if (filterConfig.status !== "all") {
-      data = data.filter(item => item.status === filterConfig.status);
+      data = data.filter((item) => item.status === filterConfig.status);
     }
 
     // Filter Type (Doc/ASE)
     if (filterConfig.type !== "all") {
-        data = data.filter(item => item.categoryType === filterConfig.type);
+      data = data.filter((item) => item.categoryType === filterConfig.type);
     }
 
     // Sorting
     data.sort((a, b) => {
-       switch(filterConfig.sort) {
-           case "newest": return (b.rawDate?.getTime() ?? 0) - (a.rawDate?.getTime() ?? 0);
-           case "oldest": return (a.rawDate?.getTime() ?? 0) - (b.rawDate?.getTime() ?? 0);
-           case "qty_high": return b.jumlah - a.jumlah;
-           case "qty_low": return a.jumlah - b.jumlah;
-           default: return 0;
-       }
+      switch (filterConfig.sort) {
+        case "newest":
+          return (b.rawDate?.getTime() ?? 0) - (a.rawDate?.getTime() ?? 0);
+        case "oldest":
+          return (a.rawDate?.getTime() ?? 0) - (b.rawDate?.getTime() ?? 0);
+        case "qty_high":
+          return b.jumlah - a.jumlah;
+        case "qty_low":
+          return a.jumlah - b.jumlah;
+        default:
+          return 0;
+      }
     });
 
     return data;
@@ -160,58 +178,76 @@ export default function RiwayatPage() {
 
   // 3. Split into Document & Item Lists (after filtering)
   const documentRequests = useMemo(() => {
-    return filteredData.filter(req => req.categoryType === 'DOC');
+    return filteredData.filter((req) => req.categoryType === "DOC");
   }, [filteredData]);
 
   const itemRequests = useMemo(() => {
-    return filteredData.filter(req => req.categoryType === 'ASE');
+    return filteredData.filter((req) => req.categoryType === "ASE");
   }, [filteredData]);
 
-  const columnsDocument = useMemo<ColumnDef<HistoryRow>[]>(() => [
-    { key: "jenis", header: "Dokumen", align: "left" },
-    { key: "tanggal", header: "Tanggal", align: "left" },
-    { key: "jam", header: "Jam", align: "left" },
-    { key: "jumlah", header: "Jumlah Request", align: "left" },
-    { 
-      key: "status", 
-      header: "Status", 
-      align: "left",
-      render: (_value, row) => (
-        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-          row.status === "APPROVED" 
-            ? "bg-green-100 text-green-800" 
-            : row.status === "REJECTED"
-            ? "bg-red-100 text-red-800"
-            : "bg-yellow-100 text-yellow-800"
-        }`}>
-          {row.status === "APPROVED" ? "Disetujui" : row.status === "REJECTED" ? "Ditolak" : "Pending"}
-        </span>
-      ),
-    },
-  ], []);
+  const columnsDocument = useMemo<ColumnDef<HistoryRow>[]>(
+    () => [
+      { key: "jenis", header: "Dokumen", align: "left" },
+      { key: "tanggal", header: "Tanggal", align: "left" },
+      { key: "jam", header: "Jam", align: "left" },
+      { key: "jumlah", header: "Jumlah Request", align: "left" },
+      {
+        key: "status",
+        header: "Status",
+        align: "left",
+        render: (_value, row) => (
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+              row.status === "APPROVED"
+                ? "bg-green-100 text-green-800"
+                : row.status === "REJECTED"
+                ? "bg-red-100 text-red-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {row.status === "APPROVED"
+              ? "Disetujui"
+              : row.status === "REJECTED"
+              ? "Ditolak"
+              : "Pending"}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
-  const columnsItem = useMemo<ColumnDef<HistoryRow>[]>(() => [
-    { key: "jenis", header: "Barang", align: "left" },
-    { key: "tanggal", header: "Tanggal", align: "left" },
-    { key: "jam", header: "Jam", align: "left" },
-    { key: "jumlah", header: "Jumlah Request", align: "left" },
-    { 
-      key: "status", 
-      header: "Status", 
-      align: "left",
-      render: (_value, row) => (
-        <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
-          row.status === "APPROVED" 
-            ? "bg-green-100 text-green-800" 
-            : row.status === "REJECTED"
-            ? "bg-red-100 text-red-800"
-            : "bg-yellow-100 text-yellow-800"
-        }`}>
-          {row.status === "APPROVED" ? "Disetujui" : row.status === "REJECTED" ? "Ditolak" : "Pending"}
-        </span>
-      ),
-    },
-  ], []);
+  const columnsItem = useMemo<ColumnDef<HistoryRow>[]>(
+    () => [
+      { key: "jenis", header: "Barang", align: "left" },
+      { key: "tanggal", header: "Tanggal", align: "left" },
+      { key: "jam", header: "Jam", align: "left" },
+      { key: "jumlah", header: "Jumlah Request", align: "left" },
+      {
+        key: "status",
+        header: "Status",
+        align: "left",
+        render: (_value, row) => (
+          <span
+            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${
+              row.status === "APPROVED"
+                ? "bg-green-100 text-green-800"
+                : row.status === "REJECTED"
+                ? "bg-red-100 text-red-800"
+                : "bg-yellow-100 text-yellow-800"
+            }`}
+          >
+            {row.status === "APPROVED"
+              ? "Disetujui"
+              : row.status === "REJECTED"
+              ? "Ditolak"
+              : "Pending"}
+          </span>
+        ),
+      },
+    ],
+    []
+  );
 
   const headerAction = (
     <div className="flex items-center gap-3 justify-center w-full">
@@ -232,78 +268,134 @@ export default function RiwayatPage() {
           xmlns="http://www.w3.org/2000/svg"
         >
           <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="2" />
-          <path d="M12 12L16 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <path
+            d="M12 12L16 16"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       </div>
 
       {/* TOMBOL FILTER IMPLEMENTASI */}
       <Popover open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <PopoverTrigger asChild>
-            <button
-                type="button"
-                className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2 hover:bg-[#0B53D0] transition active:scale-95"
-            >
-                <Filter className="w-4 h-4" />
-                <span className="hidden md:inline font-medium text-sm">Filter</span>
-            </button>
+          <button
+            type="button"
+            className="grid h-12 w-12 place-items-center rounded-xl bg-[#0D63F3] text-white md:h-auto md:w-auto md:px-5 md:py-2.5 md:rounded-lg md:flex md:items-center md:gap-2 hover:bg-[#0B53D0] transition active:scale-95"
+          >
+            <Filter className="w-4 h-4" />
+            <span className="hidden md:inline font-medium text-sm">Filter</span>
+          </button>
         </PopoverTrigger>
-        <PopoverContent className="w-80 p-4 bg-white rounded-2xl shadow-xl" align="end">
-            <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                    <h4 className="font-semibold text-[#111827]">Filter Riwayat</h4>
-                    <button onClick={() => setFilterConfig(initialFilterConfig)} className="text-xs text-[#0D63F3] hover:underline">Reset</button>
-                </div>
-
-                <div className="space-y-3">
-                    <Label className="text-xs font-medium text-gray-500">Status Request</Label>
-                    <div className="flex flex-wrap gap-2">
-                        {[
-                            {k: 'all', l: 'Semua'}, {k: 'PENDING', l: 'Pending'}, {k: 'APPROVED', l: 'Disetujui'}, {k: 'REJECTED', l: 'Ditolak'}
-                        ].map((s) => (
-                            <button
-                                key={s.k}
-                                onClick={() => setFilterConfig(p => ({ ...p, status: s.k as "all" | "APPROVED" | "REJECTED" | "PENDING" }))}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.status === s.k ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-                            >
-                                {s.l}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <Label className="text-xs font-medium text-gray-500">Tipe Item</Label>
-                    <div className="flex gap-2">
-                        {['all', 'DOC', 'ASE'].map((t) => (
-                            <button
-                                key={t}
-                                onClick={() => setFilterConfig(p => ({ ...p, type: t as "all" | "DOC" | "ASE" }))}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${filterConfig.type === t ? 'bg-[#0D63F3] text-white border-[#0D63F3]' : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'}`}
-                            >
-                                {t === 'all' ? 'Semua' : t}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="space-y-3">
-                    <Label className="text-xs font-medium text-gray-500">Urutkan</Label>
-                    <select 
-                        value={filterConfig.sort}
-                        onChange={(e) => setFilterConfig(p => ({ ...p, sort: e.target.value as "newest" | "oldest" | "qty_high" | "qty_low" }))}
-                        className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
-                    >
-                        <option value="newest">Terbaru</option>
-                        <option value="oldest">Terlama</option>
-                        <option value="qty_high">Jumlah Terbanyak</option>
-                        <option value="qty_low">Jumlah Sedikit</option>
-                    </select>
-                </div>
-
-                <Button onClick={() => setIsFilterOpen(false)} className="w-full bg-[#0D63F3] hover:bg-[#0B53D0] rounded-xl">
-                    Terapkan
-                </Button>
+        <PopoverContent
+          className="w-80 p-4 bg-white rounded-2xl shadow-xl"
+          align="end"
+        >
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-[#111827]">Filter Riwayat</h4>
+              <button
+                onClick={() => setFilterConfig(initialFilterConfig)}
+                className="text-xs text-[#0D63F3] hover:underline"
+              >
+                Reset
+              </button>
             </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-gray-500">
+                Status Request
+              </Label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { k: "all", l: "Semua" },
+                  { k: "PENDING", l: "Pending" },
+                  { k: "APPROVED", l: "Disetujui" },
+                  { k: "REJECTED", l: "Ditolak" },
+                ].map((s) => (
+                  <button
+                    key={s.k}
+                    onClick={() =>
+                      setFilterConfig((p) => ({
+                        ...p,
+                        status: s.k as
+                          | "all"
+                          | "APPROVED"
+                          | "REJECTED"
+                          | "PENDING",
+                      }))
+                    }
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${
+                      filterConfig.status === s.k
+                        ? "bg-[#0D63F3] text-white border-[#0D63F3]"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    {s.l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-gray-500">
+                Tipe Item
+              </Label>
+              <div className="flex gap-2">
+                {["all", "DOC", "ASE"].map((t) => (
+                  <button
+                    key={t}
+                    onClick={() =>
+                      setFilterConfig((p) => ({
+                        ...p,
+                        type: t as "all" | "DOC" | "ASE",
+                      }))
+                    }
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition border ${
+                      filterConfig.type === t
+                        ? "bg-[#0D63F3] text-white border-[#0D63F3]"
+                        : "bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    {t === "all" ? "Semua" : t}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label className="text-xs font-medium text-gray-500">
+                Urutkan
+              </Label>
+              <select
+                value={filterConfig.sort}
+                onChange={(e) =>
+                  setFilterConfig((p) => ({
+                    ...p,
+                    sort: e.target.value as
+                      | "newest"
+                      | "oldest"
+                      | "qty_high"
+                      | "qty_low",
+                  }))
+                }
+                className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#0D63F3]"
+              >
+                <option value="newest">Terbaru</option>
+                <option value="oldest">Terlama</option>
+                <option value="qty_high">Jumlah Terbanyak</option>
+                <option value="qty_low">Jumlah Sedikit</option>
+              </select>
+            </div>
+
+            <Button
+              onClick={() => setIsFilterOpen(false)}
+              className="w-full bg-[#0D63F3] hover:bg-[#0B53D0] rounded-xl"
+            >
+              Terapkan
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     </div>
@@ -327,26 +419,34 @@ export default function RiwayatPage() {
           ) : (
             <>
               {/* Tampilkan judul section hanya jika ada data setelah filter */}
-              {(documentRequests.length > 0 || filterConfig.type === 'DOC' || filterConfig.type === 'all') && (
-                  <div className="space-y-2">
-                      <h3 className="text-lg font-semibold text-gray-800 px-1">Request Dokumen</h3>
-                      <GlassDataTable
-                        columns={columnsDocument}
-                        data={documentRequests}
-                        emptyMessage="Tidak ada riwayat request dokumen yang cocok."
-                      />
-                  </div>
+              {(documentRequests.length > 0 ||
+                filterConfig.type === "DOC" ||
+                filterConfig.type === "all") && (
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-800 px-1">
+                    Request Dokumen
+                  </h3>
+                  <GlassDataTable
+                    columns={columnsDocument}
+                    data={documentRequests}
+                    emptyMessage="Tidak ada riwayat request dokumen yang cocok."
+                  />
+                </div>
               )}
 
-              {(itemRequests.length > 0 || filterConfig.type === 'ASE' || filterConfig.type === 'all') && (
-                  <div className="space-y-2 mt-8">
-                      <h3 className="text-lg font-semibold text-gray-800 px-1">Request Barang (ASE)</h3>
-                      <GlassDataTable
-                        columns={columnsItem}
-                        data={itemRequests}
-                        emptyMessage="Tidak ada riwayat request barang yang cocok."
-                      />
-                  </div>
+              {(itemRequests.length > 0 ||
+                filterConfig.type === "ASE" ||
+                filterConfig.type === "all") && (
+                <div className="space-y-2 mt-8">
+                  <h3 className="text-lg font-semibold text-gray-800 px-1">
+                    Request Barang (ASE)
+                  </h3>
+                  <GlassDataTable
+                    columns={columnsItem}
+                    data={itemRequests}
+                    emptyMessage="Tidak ada riwayat request barang yang cocok."
+                  />
+                </div>
               )}
             </>
           )}

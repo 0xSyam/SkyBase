@@ -254,7 +254,9 @@ const ValidasiBarangPage = () => {
                           aria-label={`Lihat detail ${row.registration}`}
                           type="button"
                         >
-                          <span className="text-lg leading-none -mt-[1px]">›</span>
+                          <span className="text-lg leading-none -mt-[1px]">
+                            ›
+                          </span>
                         </button>
                       </div>
                     ))}

@@ -1,23 +1,29 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 /**
  * Format date string to Indonesian locale format (dd/MM/yyyy)
  */
-export function formatDate(dateString: string | null | undefined, options?: Intl.DateTimeFormatOptions): string {
+export function formatDate(
+  dateString: string | null | undefined,
+  options?: Intl.DateTimeFormatOptions
+): string {
   if (!dateString) return "-";
   try {
     const date = new Date(dateString);
     if (isNaN(date.getTime())) return dateString;
-    return new Intl.DateTimeFormat("id-ID", options ?? {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }).format(date);
+    return new Intl.DateTimeFormat(
+      "id-ID",
+      options ?? {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }
+    ).format(date);
   } catch {
     return dateString;
   }
@@ -78,7 +84,10 @@ export function getInitials(name: string): string {
 /**
  * Parse error message from API response or Error object
  */
-export function parseErrorMessage(error: unknown, fallback = "Terjadi kesalahan"): string {
+export function parseErrorMessage(
+  error: unknown,
+  fallback = "Terjadi kesalahan"
+): string {
   if (error instanceof Error) {
     return error.message || fallback;
   }
