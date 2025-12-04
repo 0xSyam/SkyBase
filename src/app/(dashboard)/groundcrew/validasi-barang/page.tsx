@@ -15,7 +15,7 @@ interface FlightSchedule {
   destination: string;
   arrival: string;
   takeOff: string;
-  aircraftId?: number;
+  flightId?: number;
 }
 
 const ValidasiBarangPage = () => {
@@ -50,6 +50,7 @@ const ValidasiBarangPage = () => {
           sched_dep?: string;
           sched_arr?: string;
           aircraft_id?: number;
+          flight_id?: number;
         }
 
         let apiData: RawFlightData[] = [];
@@ -119,7 +120,7 @@ const ValidasiBarangPage = () => {
                       minute: "2-digit",
                     })
                   : "-",
-                aircraftId: it?.aircraft?.aircraft_id || it?.aircraft_id,
+                flightId: it?.flight_id,
               };
             })
             .filter((it) => it.registration !== "-") as FlightSchedule[];
@@ -183,7 +184,7 @@ const ValidasiBarangPage = () => {
               `/groundcrew/validasi-barang/${encodeURIComponent(
                 row.registration
               )}?aircraft=${encodeURIComponent(row.aircraft)}${
-                row.aircraftId ? `&aircraftId=${row.aircraftId}` : ""
+                row.flightId ? `&flightId=${row.flightId}` : ""
               }`
             )
           }
@@ -240,9 +241,7 @@ const ValidasiBarangPage = () => {
                           `/groundcrew/validasi-barang/${encodeURIComponent(
                             row.registration
                           )}?aircraft=${encodeURIComponent(row.aircraft)}${
-                            row.aircraftId
-                              ? `&aircraftId=${row.aircraftId}`
-                              : ""
+                            row.flightId ? `&flightId=${row.flightId}` : ""
                           }`
                         )
                       }

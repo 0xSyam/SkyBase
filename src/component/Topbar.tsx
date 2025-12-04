@@ -1,7 +1,7 @@
 // src/component/Topbar.tsx
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Bell, Menu, X, Loader2 } from "lucide-react";
@@ -37,6 +37,45 @@ export default function TopBar({
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  // Filter notifications based on role
+  // sv (supervisor): penerbangan (flight)
+  // gc (groundcrew): penerbangan (flight), kadaluarsa (expiry), request
+  // wh (warehouse): request, kadaluarsa (expiry)
+  const filteredNotifications = useMemo(() => {
+    const allowedTypes: Record<SidebarRole, string[]> = {
+      supervisor: ["flight"],
+      groundcrew: ["flight", "expiry", "request"],
+      warehouse: ["request", "expiry"],
+    };
+
+    const role = sidebarRole || "groundcrew";
+    const allowed = allowedTypes[role];
+
+    return notifications.filter((notif) => allowed.includes(notif.type));
+  }, [notifications, sidebarRole]);
+
+  // Count unread for filtered notifications only
+  const filteredUnreadCount = useMemo(() => {
+    const allowedTypes: Record<SidebarRole, string[]> = {
+      supervisor: ["flight"],
+      groundcrew: ["flight", "expiry", "request"],
+      warehouse: ["request", "expiry"],
+    };
+
+    const role = sidebarRole || "groundcrew";
+    const allowed = allowedTypes[role];
+
+    // We don't have access to lastReadId here, so we use unreadCount proportionally
+    // This is a simplified approach - ideally we'd have this logic in the context
+    const totalFiltered = notifications.filter((n) =>
+      allowed.includes(n.type)
+    ).length;
+    const total = notifications.length;
+
+    if (total === 0) return 0;
+    return Math.min(unreadCount, totalFiltered);
+  }, [notifications, sidebarRole, unreadCount]);
 
   useEffect(() => {
     const user = getUser();
@@ -150,10 +189,10 @@ export default function TopBar({
               className="hidden md:grid h-9 w-9 place-items-center rounded-lg bg-[#0D63F3] text-white shadow-[0_2px_6px_rgba(13,99,243,0.35)] active:scale-95 transition hover:bg-blue-700"
             >
               <Bell className="w-5 h-5 text-white" strokeWidth={2} />
-              {/* Badge berdasarkan unreadCount dari Context */}
-              {unreadCount > 0 && (
+              {/* Badge berdasarkan filteredUnreadCount (filtered by role) */}
+              {filteredUnreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-red-500 text-[10px] font-bold flex items-center justify-center text-white border-2 border-white shadow-sm">
-                  {unreadCount > 9 ? "9+" : unreadCount}
+                  {filteredUnreadCount > 9 ? "9+" : filteredUnreadCount}
                 </span>
               )}
             </button>
@@ -165,27 +204,25 @@ export default function TopBar({
                 </div>
 
                 <div className="max-h-[320px] overflow-y-auto scrollbar-hide min-h-[100px]">
-                  {/* Gunakan data dari Context */}
-                  {notifications.length > 0 ? (
-                    notifications.map((notif) => (
-                      <Link
+                  {/* Gunakan filteredNotifications - tampilkan maksimal 5 notifikasi */}
+                  {filteredNotifications.length > 0 ? (
+                    filteredNotifications.slice(0, 5).map((notif) => (
+                      <div
                         key={notif.notification_id}
-                        href={`/notifications/${notif.notification_id}`}
-                        className="block p-4 hover:bg-blue-50/50 transition-colors border-b border-gray-50 last:border-0 group"
-                        onClick={() => setPopoverOpen(false)}
+                        className="block p-4 border-b border-gray-50 last:border-0"
                       >
                         <div className="flex justify-between items-start mb-1">
                           <p className="text-[11px] font-bold text-[#0D63F3] uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded">
                             {notif.type}
                           </p>
-                          <span className="text-[10px] text-gray-400 group-hover:text-gray-500">
+                          <span className="text-[10px] text-gray-400">
                             {notif.time_ago}
                           </span>
                         </div>
                         <p className="text-sm text-gray-700 line-clamp-2 leading-relaxed mt-1">
                           {notif.message}
                         </p>
-                      </Link>
+                      </div>
                     ))
                   ) : (
                     <div className="py-10 px-4 text-center flex flex-col items-center gap-3 text-gray-400">

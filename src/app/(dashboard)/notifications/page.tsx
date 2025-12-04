@@ -6,6 +6,8 @@ import { Notification, NotificationStats } from "@/types/api";
 import PageHeader from "@/component/PageHeader";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import { useAuth } from "@/context/AuthContext";
+import { type SidebarRole } from "@/component/Sidebar";
 import {
   Bell,
   Plane,
@@ -88,10 +90,15 @@ const formatNotificationType = (type: string) => {
 };
 
 export default function NotificationsPage() {
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [stats, setStats] = useState<NotificationStats | null>(null);
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [loading, setLoading] = useState(true);
+
+  // Determine sidebar role based on user role
+  const sidebarRole: SidebarRole =
+    (user?.role?.toLowerCase() as SidebarRole) || "groundcrew";
 
   useEffect(() => {
     const fetchData = async () => {
@@ -129,36 +136,52 @@ export default function NotificationsPage() {
       ? notifications
       : notifications.filter((n) => n.type === filter);
 
-  const filterButtons: {
+  // Filter buttons based on role
+  // sv (supervisor): penerbangan
+  // gc (groundcrew): penerbangan, kadaluarsa, request
+  // wh (warehouse): request, kadaluarsa
+  const getFilterButtonsForRole = (): {
     label: string;
     value: NotificationFilter;
     icon: React.ReactNode;
-  }[] = [
-    { label: "Semua", value: "all", icon: <Filter className="w-4 h-4" /> },
-    {
+  }[] => {
+    const allButton = {
+      label: "Semua",
+      value: "all" as NotificationFilter,
+      icon: <Filter className="w-4 h-4" />,
+    };
+    const flightButton = {
       label: "Penerbangan",
-      value: "flight",
+      value: "flight" as NotificationFilter,
       icon: <Plane className="w-4 h-4" />,
-    },
-    {
+    };
+    const expiryButton = {
       label: "Kadaluarsa",
-      value: "expiry",
+      value: "expiry" as NotificationFilter,
       icon: <AlertTriangle className="w-4 h-4" />,
-    },
-    {
-      label: "Inspeksi",
-      value: "inspection",
-      icon: <ClipboardCheck className="w-4 h-4" />,
-    },
-    {
+    };
+    const requestButton = {
       label: "Request",
-      value: "request",
+      value: "request" as NotificationFilter,
       icon: <Package className="w-4 h-4" />,
-    },
-  ];
+    };
+
+    switch (sidebarRole) {
+      case "supervisor":
+        return [allButton, flightButton];
+      case "groundcrew":
+        return [allButton, flightButton, expiryButton, requestButton];
+      case "warehouse":
+        return [allButton, requestButton, expiryButton];
+      default:
+        return [allButton, flightButton, expiryButton, requestButton];
+    }
+  };
+
+  const filterButtons = getFilterButtonsForRole();
 
   return (
-    <PageLayout>
+    <PageLayout sidebarRole={sidebarRole}>
       <section className="w-full max-w-[1076px] mx-auto">
         <PageHeader
           title="Notifikasi"
@@ -167,7 +190,7 @@ export default function NotificationsPage() {
 
         {/* Stats Cards */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-3 gap-4 mb-6">
             <GlassCard className="p-4">
               <div className="text-sm text-gray-500">Total</div>
               <div className="text-2xl font-bold text-[#0E1D3D]">
@@ -184,25 +207,6 @@ export default function NotificationsPage() {
               <div className="text-sm text-gray-500">Minggu Ini</div>
               <div className="text-2xl font-bold text-[#0E1D3D]">
                 {stats.this_week}
-              </div>
-            </GlassCard>
-            <GlassCard className="p-4">
-              <div className="flex items-center gap-2 text-sm text-gray-500 mb-1">
-                Per Tipe
-              </div>
-              <div className="flex gap-2 flex-wrap text-xs">
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-                  ✈ {stats.by_type.flight}
-                </span>
-                <span className="px-2 py-0.5 bg-orange-100 text-orange-700 rounded-full">
-                  ⚠ {stats.by_type.expiry}
-                </span>
-                <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full">
-                  ✓ {stats.by_type.inspection}
-                </span>
-                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">
-                  📦 {stats.by_type.request}
-                </span>
               </div>
             </GlassCard>
           </div>

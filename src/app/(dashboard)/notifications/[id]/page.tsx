@@ -7,6 +7,8 @@ import { Notification } from "@/types/api";
 import PageHeader from "@/component/PageHeader";
 import PageLayout from "@/component/PageLayout";
 import GlassCard from "@/component/Glasscard";
+import { useAuth } from "@/context/AuthContext";
+import { type SidebarRole } from "@/component/Sidebar";
 import {
   Bell,
   Plane,
@@ -102,8 +104,13 @@ const getRelatedTypeLabel = (relatedType: string | null) => {
 export default function NotificationDetailPage() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [notification, setNotification] = useState<Notification | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Determine sidebar role based on user role
+  const sidebarRole: SidebarRole =
+    (user?.role?.toLowerCase() as SidebarRole) || "groundcrew";
 
   useEffect(() => {
     if (id) {
@@ -127,7 +134,7 @@ export default function NotificationDetailPage() {
     : getNotificationColor("");
 
   return (
-    <PageLayout>
+    <PageLayout sidebarRole={sidebarRole}>
       <section className="w-full max-w-[800px] mx-auto">
         {/* Back Button */}
         <button
