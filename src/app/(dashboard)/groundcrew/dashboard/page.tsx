@@ -328,7 +328,7 @@ export default function DashboardPage() {
         className="
           pointer-events-none hidden md:block
           fixed right-0
-          top-12 md:top-8 lg:top-4
+          bottom-0
           w-[460px] lg:w-[560px] xl:w-[640px]
           h-auto
           select-none opacity-90
